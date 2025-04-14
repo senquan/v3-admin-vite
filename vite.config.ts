@@ -25,6 +25,9 @@ export default defineConfig(({ mode }) => {
         "@@": resolve(__dirname, "src/common")
       }
     },
+    define: {
+      "process.env": { ...process.env }
+    },
     // 开发环境服务器配置
     server: {
       // 是否监听所有地址

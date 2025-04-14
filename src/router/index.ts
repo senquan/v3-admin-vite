@@ -56,7 +56,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/dashboard/index.vue"),
         name: "Dashboard",
         meta: {
-          title: "首页",
+          title: "工作台",
           svgIcon: "dashboard",
           affix: true
         }
@@ -64,102 +64,80 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/demo",
+    path: "/",
     component: Layouts,
-    redirect: "/demo/unocss",
-    name: "Demo",
-    meta: {
-      title: "示例集合",
-      elIcon: "DataBoard"
-    },
     children: [
       {
-        path: "unocss",
-        component: () => import("@/pages/demo/unocss/index.vue"),
-        name: "UnoCSS",
+        path: "record",
+        component: () => import("@/pages/record/index.vue"),
+        name: "AccountRecord",
         meta: {
-          title: "UnoCSS"
+          title: "查账记账",
+          elIcon: "DataBoard",
+          affix: true
         }
-      },
-      {
-        path: "element-plus",
-        component: () => import("@/pages/demo/element-plus/index.vue"),
-        name: "ElementPlus",
-        meta: {
-          title: "Element Plus",
-          keepAlive: true
-        }
-      },
-      {
-        path: "vxe-table",
-        component: () => import("@/pages/demo/vxe-table/index.vue"),
-        name: "VxeTable",
-        meta: {
-          title: "Vxe Table",
-          keepAlive: true
-        }
-      },
-      {
-        path: "level2",
-        component: () => import("@/pages/demo/level2/index.vue"),
-        redirect: "/demo/level2/level3",
-        name: "Level2",
-        meta: {
-          title: "二级路由",
-          alwaysShow: true
-        },
-        children: [
-          {
-            path: "level3",
-            component: () => import("@/pages/demo/level2/level3/index.vue"),
-            name: "Level3",
-            meta: {
-              title: "三级路由",
-              keepAlive: true
-            }
-          }
-        ]
-      },
-      {
-        path: "composable-demo",
-        redirect: "/demo/composable-demo/use-fetch-select",
-        name: "ComposableDemo",
-        meta: {
-          title: "组合式函数"
-        },
-        children: [
-          {
-            path: "use-fetch-select",
-            component: () => import("@/pages/demo/composable-demo/use-fetch-select.vue"),
-            name: "UseFetchSelect",
-            meta: {
-              title: "useFetchSelect"
-            }
-          },
-          {
-            path: "use-fullscreen-loading",
-            component: () => import("@/pages/demo/composable-demo/use-fullscreen-loading.vue"),
-            name: "UseFullscreenLoading",
-            meta: {
-              title: "useFullscreenLoading"
-            }
-          },
-          {
-            path: "use-watermark",
-            component: () => import("@/pages/demo/composable-demo/use-watermark.vue"),
-            name: "UseWatermark",
-            meta: {
-              title: "useWatermark"
-            }
-          }
-        ]
       }
     ]
   },
   {
-    path: "/link",
+    path: "/",
+    component: Layouts,
     meta: {
-      title: "文档链接",
+      title: "财务中心",
+      elIcon: "DataBoard"
+    },
+    children: [
+      {
+        path: "account",
+        component: () => import("@/pages/account/index.vue"),
+        name: "Account",
+        meta: {
+          title: "账户管理"
+        }
+      },
+      {
+        path: "project",
+        component: () => import("@/pages/project/index.vue"),
+        name: "Project",
+        meta: {
+          title: "项目审计"
+        }
+      }
+    ]
+  },
+  {
+    path: "/creditcard",
+    component: Layouts,
+    redirect: "/creditcard/mycards",
+    name: "Creditcard",
+    meta: {
+      title: "信用卡",
+      elIcon: "DataBoard"
+    },
+    children: [
+      {
+        path: "mycards",
+        component: () => import("@/pages/creditcard/mycards/index.vue"),
+        name: "MyCards",
+        meta: {
+          title: "我的卡包"
+        }
+      },
+      {
+        path: "cards",
+        component: () => import("@/pages/creditcard/cards/index.vue"),
+        name: "Cards",
+        meta: {
+          title: "卡片大全",
+          keepAlive: true
+        }
+      }
+    ]
+  },
+  {
+    path: "/settings",
+    meta: {
+      title: "系统设置",
       elIcon: "Link"
     },
     children: [
@@ -172,11 +150,11 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "https://juejin.cn/column/7207659644487139387",
+        path: "https://juejin.cn/post/7445151895121543209",
         component: () => {},
-        name: "Link2",
+        name: "Link1",
         meta: {
-          title: "新手教程"
+          title: "中文文档"
         }
       }
     ]
