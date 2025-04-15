@@ -1,58 +1,69 @@
 <script lang="ts" setup>
-import { defineProps, computed } from 'vue'
-import { getDateDiff } from '@/common/utils/datetime'
+import { getDateDiff } from "@/common/utils/datetime"
 
 const props = defineProps({
   todo: {
     type: Object,
-    default: () => []
+    default: () => ({})
   }
 })
 
-const emit = defineEmits(['toggleTodo'])
+const emit = defineEmits(["toggleTodo"])
 
-const toggleTodo = () => {
-  props.todo.isDone = !props.todo.isDone
-  emit('toggleTodo', props.todo)
+function toggleTodo() {
+  // Instead of modifying the prop directly, emit an event to let the parent handle it
+  emit("toggleTodo", {
+    ...props.todo,
+    isDone: !props.todo.isDone
+  })
 }
 
-const endType = computed(() => {
-  return getEndStatus(props.todo.endtime)
+// 定义状态类型
+type EndStatusType = "info" | "danger" | "warning" | "success" | "primary"
+
+const endType = computed<EndStatusType>(() => {
+  return getEndStatus(props.todo.endtime || "")
 })
 
 const endTypeText = computed(() => {
   return getEndStatusText[endType.value]
 })
 
-const getEndStatus = (endtime) => {
-  var status
-  var diff = getDateDiff(undefined, endtime, 'd')
+function getEndStatus(endtime: string): EndStatusType {
+  let status: EndStatusType = "info"
+  const diff = getDateDiff("", endtime, "d")
   if (diff < 0) {
-    status = 'info'
+    status = "info"
   } else if (diff < 1) {
-    status = 'danger'
+    status = "danger"
   } else if (diff === 1) {
-    status = 'warning'
+    status = "warning"
   } else if (diff === 2) {
-    status = 'success'
+    status = "success"
   } else if (diff > 2) {
-    status = 'primary'
+    status = "primary"
   }
   return status
 }
-const getEndStatusText = {
-  info: '过期',
-  danger: '今日',
-  warning: '明天',
-  success: '后天',
-  primary: '周内'
+
+const getEndStatusText: Record<EndStatusType, string> = {
+  info: "过期",
+  danger: "今日",
+  warning: "明天",
+  success: "后天",
+  primary: "周内"
 }
 </script>
+
 <template>
   <div class="todo-item">
-    <el-checkbox v-model="todo.isDone" @change="toggleTodo"/>
-    <el-tag :type="endType" effect="dark" class="todo-tag">{{ endTypeText }}</el-tag>
-    <el-text class="todo-text" truncated>{{ todo.name }}</el-text>
+    <el-checkbox :model-value="todo.isDone" @change="toggleTodo" />
+    <el-tag :type="endType" effect="dark" class="todo-tag">
+      {{ endTypeText }}
+    </el-tag>
+    <el-text class="todo-text" truncated>
+      {{ todo.name }}
+    </el-text>
   </div>
 </template>
 
