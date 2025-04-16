@@ -56,7 +56,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/dashboard/index.vue"),
         name: "Dashboard",
         meta: {
-          title: "首页",
+          title: "工作台",
           svgIcon: "dashboard",
           affix: true
         }
@@ -64,119 +64,173 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/demo",
+    path: "/product",
     component: Layouts,
-    redirect: "/demo/unocss",
-    name: "Demo",
     meta: {
-      title: "示例集合",
-      elIcon: "DataBoard"
+      title: "商品管理",
+      elIcon: "Goods"
     },
     children: [
       {
-        path: "unocss",
-        component: () => import("@/pages/demo/unocss/index.vue"),
-        name: "UnoCSS",
+        path: "product",
+        component: () => import("@/pages/product/index.vue"),
+        name: "Product",
         meta: {
-          title: "UnoCSS"
+          title: "商品列表"
         }
       },
       {
-        path: "element-plus",
-        component: () => import("@/pages/demo/element-plus/index.vue"),
-        name: "ElementPlus",
+        path: "tags",
+        component: () => import("@/pages/tags/index.vue"),
+        name: "Tags",
         meta: {
-          title: "Element Plus",
-          keepAlive: true
+          title: "分类标签"
         }
-      },
-      {
-        path: "vxe-table",
-        component: () => import("@/pages/demo/vxe-table/index.vue"),
-        name: "VxeTable",
-        meta: {
-          title: "Vxe Table",
-          keepAlive: true
-        }
-      },
-      {
-        path: "level2",
-        component: () => import("@/pages/demo/level2/index.vue"),
-        redirect: "/demo/level2/level3",
-        name: "Level2",
-        meta: {
-          title: "二级路由",
-          alwaysShow: true
-        },
-        children: [
-          {
-            path: "level3",
-            component: () => import("@/pages/demo/level2/level3/index.vue"),
-            name: "Level3",
-            meta: {
-              title: "三级路由",
-              keepAlive: true
-            }
-          }
-        ]
-      },
-      {
-        path: "composable-demo",
-        redirect: "/demo/composable-demo/use-fetch-select",
-        name: "ComposableDemo",
-        meta: {
-          title: "组合式函数"
-        },
-        children: [
-          {
-            path: "use-fetch-select",
-            component: () => import("@/pages/demo/composable-demo/use-fetch-select.vue"),
-            name: "UseFetchSelect",
-            meta: {
-              title: "useFetchSelect"
-            }
-          },
-          {
-            path: "use-fullscreen-loading",
-            component: () => import("@/pages/demo/composable-demo/use-fullscreen-loading.vue"),
-            name: "UseFullscreenLoading",
-            meta: {
-              title: "useFullscreenLoading"
-            }
-          },
-          {
-            path: "use-watermark",
-            component: () => import("@/pages/demo/composable-demo/use-watermark.vue"),
-            name: "UseWatermark",
-            meta: {
-              title: "useWatermark"
-            }
-          }
-        ]
       }
     ]
   },
   {
-    path: "/link",
+    path: "/quotation",
+    component: Layouts,
     meta: {
-      title: "文档链接",
-      elIcon: "Link"
+      title: "报价中心",
+      elIcon: "DocumentAdd"
     },
     children: [
       {
-        path: "https://juejin.cn/post/7445151895121543209",
-        component: () => {},
-        name: "Link1",
+        path: "quotation",
+        component: () => import("@/pages/quotation/index.vue"),
+        name: "Quotation",
         meta: {
-          title: "中文文档"
+          title: "报价订单"
         }
       },
       {
-        path: "https://juejin.cn/column/7207659644487139387",
-        component: () => {},
-        name: "Link2",
+        path: "reverse",
+        component: () => import("@/pages/reverse/index.vue"),
+        name: "Reverse",
         meta: {
-          title: "新手教程"
+          title: "反向订单"
+        }
+      }
+    ]
+  },
+  {
+    path: "/promotion",
+    component: Layouts,
+    meta: {
+      title: "活动促销",
+      elIcon: "Discount"
+    },
+    children: [
+      {
+        path: "promotion",
+        component: () => import("@/pages/promotion/index.vue"),
+        name: "Promotion",
+        meta: {
+          title: "活动促销"
+        }
+      },
+      {
+        path: "coupon",
+        component: () => import("@/pages/coupon/index.vue"),
+        name: "Coupon",
+        meta: {
+          title: "优惠券"
+        }
+      },
+      {
+        path: "rules",
+        component: () => import("@/pages/rules/index.vue"),
+        name: "Rules",
+        meta: {
+          title: "定价规则"
+        }
+      }
+    ]
+  },
+  {
+    path: "/customer",
+    component: Layouts,
+    meta: {
+      title: "客户管理",
+      elIcon: "Phone"
+    },
+    children: [
+      {
+        path: "customer",
+        component: () => import("@/pages/customer/index.vue"),
+        name: "Customer",
+        meta: {
+          title: "客户列表"
+        }
+      },
+      {
+        path: "customer",
+        component: () => import("@/pages/customer/index.vue"),
+        name: "Customer",
+        meta: {
+          title: "客户列表"
+        }
+      }
+    ]
+  },
+  {
+    path: "/report",
+    component: Layouts,
+    meta: {
+      title: "报表中心",
+      elIcon: "PieChart"
+    },
+    children: [
+      {
+        path: "sales",
+        component: () => import("@/pages/report/sales/index.vue"),
+        name: "Sales",
+        meta: {
+          title: "平台销售报表"
+        }
+      },
+      {
+        path: "categroy",
+        component: () => import("@/pages/report/categroy/index.vue"),
+        name: "Categroy",
+        meta: {
+          title: "分类销售报表"
+        }
+      }
+    ]
+  },
+  {
+    path: "/",
+    component: Layouts,
+    meta: {
+      title: "系统管理",
+      elIcon: "Setting"
+    },
+    children: [
+      {
+        path: "staff",
+        component: () => import("@/pages/staff/index.vue"),
+        name: "Staff",
+        meta: {
+          title: "员工管理"
+        }
+      },
+      {
+        path: "permission",
+        component: () => import("@/pages/permission/index.vue"),
+        name: "Permission",
+        meta: {
+          title: "权限管理"
+        }
+      },
+      {
+        path: "settings",
+        component: () => import("@/pages/settings/index.vue"),
+        name: "Settings",
+        meta: {
+          title: "系统设置"
         }
       }
     ]
@@ -201,28 +255,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
       roles: ["admin", "editor"],
       alwaysShow: true
     },
-    children: [
-      {
-        path: "page-level",
-        component: () => import("@/pages/demo/permission/page-level.vue"),
-        name: "PermissionPageLevel",
-        meta: {
-          title: "页面级",
-          // 或者在子路由中设置角色
-          roles: ["admin"]
-        }
-      },
-      {
-        path: "button-level",
-        component: () => import("@/pages/demo/permission/button-level.vue"),
-        name: "PermissionButtonLevel",
-        meta: {
-          title: "按钮级",
-          // 如果未设置角色，则表示：该页面不需要权限，但会继承根路由的角色
-          roles: undefined
-        }
-      }
-    ]
+    children: []
   }
 ]
 
