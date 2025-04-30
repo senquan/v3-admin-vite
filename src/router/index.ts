@@ -98,11 +98,18 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: "quotation",
+        path: "",
         component: () => import("@/pages/quotation/index.vue"),
         name: "Quotation",
         meta: {
           title: "报价订单"
+        }
+      },
+      {
+        path: "new",
+        component: () => import("@/pages/quotation/new.vue"),
+        meta: {
+          hidden: true
         }
       },
       {
@@ -138,14 +145,6 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "优惠券"
         }
-      },
-      {
-        path: "rules",
-        component: () => import("@/pages/rules/index.vue"),
-        name: "Rules",
-        meta: {
-          title: "定价规则"
-        }
       }
     ]
   },
@@ -162,15 +161,8 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/customer/index.vue"),
         name: "Customer",
         meta: {
-          title: "客户列表"
-        }
-      },
-      {
-        path: "customer",
-        component: () => import("@/pages/customer/index.vue"),
-        name: "Customer",
-        meta: {
-          title: "客户列表"
+          title: "客户管理",
+          elIcon: "Phone"
         }
       }
     ]
@@ -179,7 +171,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     path: "/report",
     component: Layouts,
     meta: {
-      title: "报表中心",
+      title: "数据报表",
       elIcon: "PieChart"
     },
     children: [
@@ -188,7 +180,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/report/sales/index.vue"),
         name: "Sales",
         meta: {
-          title: "平台销售报表"
+          title: "销售情况"
         }
       },
       {
@@ -196,7 +188,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/report/categroy/index.vue"),
         name: "Categroy",
         meta: {
-          title: "分类销售报表"
+          title: "商品分析"
         }
       }
     ]
@@ -242,22 +234,7 @@ export const constantRoutes: RouteRecordRaw[] = [
  * @description 用来放置有权限 (Roles 属性) 的路由
  * @description 必须带有唯一的 Name 属性
  */
-export const dynamicRoutes: RouteRecordRaw[] = [
-  {
-    path: "/permission",
-    component: Layouts,
-    redirect: "/permission/page-level",
-    name: "Permission",
-    meta: {
-      title: "权限演示",
-      elIcon: "Lock",
-      // 可以在根路由中设置角色
-      roles: ["admin", "editor"],
-      alwaysShow: true
-    },
-    children: []
-  }
-]
+export const dynamicRoutes: RouteRecordRaw[] = []
 
 /** 路由实例 */
 export const router = createRouter({
