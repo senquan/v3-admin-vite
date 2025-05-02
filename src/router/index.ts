@@ -172,7 +172,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "数据报表",
-      elIcon: "PieChart"
+      svgIcon: "charts"
     },
     children: [
       {
@@ -198,7 +198,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "系统管理",
-      elIcon: "Setting"
+      svgIcon: "settings"
     },
     children: [
       {

@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
           rewrite: path => path
         }
       },
+      allowedHosts: ["www.aquavive.cloud"],
       // 是否允许跨域
       cors: true,
       // 预热常用文件，提高初始页面加载速度
