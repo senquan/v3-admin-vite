@@ -68,7 +68,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "商品管理",
-      elIcon: "Goods"
+      svgIcon: "goods"
     },
     children: [
       {
@@ -94,7 +94,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "报价中心",
-      elIcon: "DocumentAdd"
+      svgIcon: "orders"
     },
     children: [
       {
@@ -127,7 +127,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "活动促销",
-      elIcon: "Discount"
+      svgIcon: "promotion"
     },
     children: [
       {
@@ -152,8 +152,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     path: "/customer",
     component: Layouts,
     meta: {
-      title: "客户管理",
-      elIcon: "Phone"
+      title: "客户管理"
     },
     children: [
       {
@@ -162,7 +161,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "Customer",
         meta: {
           title: "客户管理",
-          elIcon: "Phone"
+          svgIcon: "call"
         }
       }
     ]
