@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { fetchList, fetchOrder } from "./apis"
+import { createReturnOrder, fetchList, fetchOrder } from "./apis"
 
 const router = useRouter()
 const loading = ref(false)
@@ -20,6 +20,15 @@ const selectedPlatform = ref("")
 const platformOptions = ref<any>([])
 const detailDrawer = ref(false)
 const orderDetail = ref<any>([])
+const activeTab = ref("materia")
+const returnForm = reactive({
+  orderId: 0,
+  returns: [] as any[],
+  total: 0,
+  amount: 0,
+  reason: "",
+  remark: ""
+})
 
 async function fetchOrders() {
   loading.value = true
@@ -84,7 +93,6 @@ function handleNew() {
 }
 
 function platformSelection() {
-  console.log(selectedPlatform.value)
   if (selectedPlatform.value) {
     newDialogVisibility.value = false
     router.push(`/quotation/new?platform=${selectedPlatform.value}`)
@@ -92,16 +100,57 @@ function platformSelection() {
     ElMessage.warning("请选择平台类型")
   }
 }
+function handleReturn(id: number) {
+  handleDetail(id)
+  activeTab.value = "service"
+}
 
 function handleDetail(id: number) {
-  detailDrawer.value = true
   loadDetail(id)
+  activeTab.value = "materia"
 }
 
 function loadDetail(id: number) {
+  detailDrawer.value = true
   fetchOrder(id).then((res: any) => {
     if (res.data) {
+      returnForm.orderId = id
+      if (res.data.items && Array.isArray(res.data.items)) {
+        res.data.items.forEach((item: any) => {
+          item.returnQuantity = 0
+          item.refund = 0
+        })
+      }
       orderDetail.value = res.data
+    }
+  })
+}
+
+function handleSubmitReturn() {
+  detailDrawer.value = false
+  let total = 0
+  let amount = 0
+  returnForm.returns = orderDetail.value.items.map((item: any) => {
+    total += item.returnQuantity
+    amount += item.refund
+    return {
+      orderItemId: item.id,
+      quantity: item.returnQuantity,
+      refund: item.refund
+    }
+  })
+  if (total === 0) {
+    ElMessage.warning("请选择退货数量")
+    return
+  }
+  returnForm.total = total
+  returnForm.amount = amount
+  createReturnOrder(returnForm).then((res: any) => {
+    if (res.code === 0) {
+      ElMessage.success("申请成功")
+      handleFilter()
+    } else {
+      ElMessage.error("申请失败")
     }
   })
 }
@@ -147,7 +196,18 @@ onMounted(() => {
         <vxe-column field="quantity" width="80" title="数量" />
         <vxe-column field="originPrice" width="100" title="日常总价" />
         <vxe-column field="payPrice" width="100" title="到手总价" />
-        <vxe-column field="payStatus" width="100" title="支付状态">
+        <vxe-column field="status" width="80" title="订单状态">
+          <template #default="{ row }">
+            <el-tag type="info" v-if="row.status === 0" effect="dark">待支付</el-tag>
+            <el-tag type="info" v-if="row.status === 1" effect="dark">已支付</el-tag>
+            <el-tag type="warning" v-if="row.status === 2" effect="dark">处理中</el-tag>
+            <el-tag type="primary" v-if="row.status === 3" effect="dark">已发货</el-tag>
+            <el-tag type="primary" v-if="row.status === 4" effect="dark">已签收</el-tag>
+            <el-tag type="danger" v-if="row.status === 5" effect="dark">售后中</el-tag>
+            <el-tag type="success" v-if="row.status === 6" effect="dark">已完成</el-tag>
+          </template>
+        </vxe-column>
+        <vxe-column field="payStatus" width="80" title="支付状态">
           <template #default="{ row }">
             <el-tag type="success" v-if="row.payStatus === 1">已支付</el-tag>
             <el-tag type="danger" v-if="row.payStatus === 0">未支付</el-tag>
@@ -155,7 +215,8 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
-            <el-button type="success" @click="handleDetail(data.row.id)">物料清单</el-button>
+            <el-button type="success" @click="handleDetail(data.row.id)">详情</el-button>
+            <el-button type="primary" @click="handleReturn(data.row.id)">售后</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -174,15 +235,60 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="detailDrawer" title="物料明细" size="35%" direction="rtl">
-      <vxe-table :data="orderDetail.items">
-        <vxe-column title="物料编号" min-width="200" align="left">
-          <template #default="data">
-            <el-text truncated>{{ data.row.product?.materialId }}</el-text>
-          </template>
-        </vxe-column>
-        <vxe-column field="quantity" title="数量" width="80" />
-      </vxe-table>
+    <el-drawer v-model="detailDrawer" title="订单详情" size="38%" direction="rtl">
+      <el-tabs v-model="activeTab" type="border-card">
+        <el-tab-pane label="物料详情" name="materia">
+          <el-table :data="orderDetail.items">
+            <el-table-column label="物料编号" min-width="200" align="left">
+              <template #default="scope">
+                <el-text truncated>{{ scope.row.product.materialId }}</el-text>
+              </template>
+            </el-table-column>
+            <el-table-column prop="quantity" width="80" label="数量" />
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="申请售后" name="service">
+          <div>
+            <el-alert v-if="orderDetail.status !== 4 && orderDetail.status !== 5" title="已签收状态下才可申请售后" type="success" effect="dark" :closable="false" />
+            <el-alert v-if="orderDetail.status === 5" title="本订单已申请退货" type="warning" effect="dark" :closable="false" />
+            <el-alert v-if="orderDetail.status === 4" title="不拆包装、不影响二次销售" type="error" effect="dark" :closable="false" />
+          </div>
+          <el-form v-if="orderDetail.status === 4">
+            <el-table :data="orderDetail.items">
+              <el-table-column label="条形码" width="130" align="center">
+                <template #default="scope">
+                  <el-text truncated>{{ scope.row.product.barCode }}</el-text>
+                </template>
+              </el-table-column>
+              <el-table-column label="名称" min-width="200">
+                <template #default="scope">
+                  <el-text truncated>{{ scope.row.product.name }}</el-text>
+                </template>
+              </el-table-column>
+              <el-table-column prop="unitPrice" label="到手单价" width="80" align="center" />
+              <el-table-column prop="quantity" width="100" label="退回数量">
+                <template #default="scope">
+                  <el-input-number
+                    v-model="scope.row.returnQuantity"
+                    controls-position="right"
+                    :min="0"
+                    :precision="0"
+                    :max="scope.row.quantity"
+                    style="width: 100%;"
+                    @change="scope.row.refund = scope.row.unitPrice * scope.row.returnQuantity"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column prop="refund" label="退款金额" width="80" align="center" />
+            </el-table>
+            <div class="footer-container">
+              <el-input v-model="returnForm.reason" placeholder="请输入退货原因" />
+              <el-input v-model="returnForm.remark" type="textarea" :rows="3" placeholder="请输入售后备注" style="margin-top: 10px;" />
+              <el-button type="primary" @click="handleSubmitReturn" style="margin-top: 10px;">提交退货申请</el-button>
+            </div>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
     </el-drawer>
 
     <el-dialog
@@ -210,11 +316,12 @@ onMounted(() => {
   vertical-align: middle;
   padding: 20px 5px;
 }
-.fr {
-  float: right;
-}
 .pagination-container {
   padding: 10px;
   background: #fff;
+}
+.footer-container {
+  margin-top: 20px;
+  text-align: center;
 }
 </style>

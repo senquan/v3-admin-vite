@@ -2,6 +2,11 @@
 import { ElMessage } from "element-plus"
 import { createRule, fetchRule, updateRule } from "./apis"
 
+// 更具体的类型定义
+interface ConditionItem {
+  [key: string]: any
+}
+
 const emit = defineEmits(["success", "close"])
 
 const formData = reactive({
@@ -13,10 +18,35 @@ const formData = reactive({
   condition: ""
 })
 
+const addRule = reactive({
+  attr: "",
+  condition: "",
+  value: ""
+})
+
 const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const typeOptions = ref<any>([])
+const attrOptions = ref<any>([
+  { label: "型号", value: "modelType" },
+  { label: "序列", value: "series" },
+  { label: "颜色", value: "color" },
+  { label: "名称", value: "name" },
+  { label: "日常价", value: "basePrice" },
+  { label: "工程价", value: "projectPrice" }
+])
+const conditionOptions = ref<any>([
+  { label: "等于", value: "equal" },
+  { label: "不等于", value: "notEqual" },
+  { label: "大于或等于", value: "greaterThanOrEqual" },
+  { label: "小于或等于", value: "lessThanOrEqual" },
+  { label: "小于", value: "lessThan" },
+  { label: "大于", value: "greaterThan" },
+  { label: "包含", value: "in" },
+  { label: "不包含", value: "notIn" },
+  { label: "匹配", value: "contains" }
+])
 
 const rules = {
   name: [{ required: true, message: "请输入规则名称", trigger: "blur" }]
@@ -63,7 +93,6 @@ function open(options = {
           if (key in formData) {
             if (key in data && key in formData) {
               if (key === "condition" && data[key]) {
-                // 将JSON对象转换为格式化的文本
                 formData[key] = JSON.stringify(data[key], null, 2)
               } else {
                 (formData[key as keyof typeof formData] as any) = data[key as keyof typeof data]
@@ -94,6 +123,62 @@ function open(options = {
 function close() {
   visible.value = false
   emit("close")
+}
+
+function handleAddRule() {
+  if (!addRule.attr || !addRule.condition || !addRule.value) {
+    ElMessage({
+      message: "请填写完整的条件信息",
+      type: "error",
+      offset: 0
+    })
+    return
+  }
+
+  // 处理多个值（用逗号分隔）
+  let valueToUse = null
+  if (["in", "notIn", "equal", "notEqual", "contains"].includes(addRule.condition)) {
+    // 对于数组类型的条件，将逗号分隔的值转换为数组
+    valueToUse = addRule.value.split(",").map((item: string) => item.trim())
+  } else {
+    // 对于数值类型的条件，将值转换为数字
+    if (!Number.isNaN(Number(addRule.value))) {
+      valueToUse = Number(addRule.value)
+    }
+  }
+
+  // 解析现有的条件
+  let currentCondition: ConditionItem = {}
+  if (formData.condition) {
+    try {
+      currentCondition = typeof formData.condition === "string" ? JSON.parse(formData.condition) : formData.condition
+    } catch (e) {
+      console.error("Error parsing condition:", e)
+      currentCondition = {}
+    }
+  }
+
+  // 更新条件
+  if (!currentCondition[addRule.attr]) {
+    currentCondition[addRule.attr] = {}
+  }
+
+  // 设置新的条件
+  currentCondition[addRule.attr][addRule.condition] = valueToUse
+
+  // 更新 formData.condition
+  formData.condition = JSON.stringify(currentCondition, null, 2)
+
+  // 清空添加条件的表单
+  addRule.attr = ""
+  addRule.condition = ""
+  addRule.value = ""
+
+  ElMessage({
+    message: "条件已添加",
+    type: "success",
+    offset: 0
+  })
 }
 
 function handleSubmit() {
@@ -160,7 +245,7 @@ defineExpose({
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑规则' : '新增规则'"
-    width="500px"
+    width="600px"
     :before-close="close"
   >
     <el-form
@@ -204,6 +289,31 @@ defineExpose({
           </el-form-item>
         </el-col>
       </el-row>
+
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="增加条件">
+            <el-select v-model="addRule.attr" placeholder="产品属性" class="form-item" style="width: 100px;">
+              <el-option
+                v-for="ao in attrOptions"
+                :key="ao.value"
+                :label="ao.label"
+                :value="ao.value"
+              />
+            </el-select>
+            <el-select v-model="addRule.condition" placeholder="条件" class="form-item" style="width: 100px;">
+              <el-option
+                v-for="co in conditionOptions"
+                :key="co.value"
+                :label="co.label"
+                :value="co.value"
+              />
+            </el-select>
+            <el-input v-model="addRule.value" placeholder="值(逗号分割多个值)" class="form-item" style="width: 150px;" />
+            <el-button type="primary" @click="handleAddRule">增加</el-button>
+          </el-form-item>
+        </el-col>
+      </el-row>
     </el-form>
 
     <template #footer>
@@ -219,5 +329,10 @@ defineExpose({
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+.form-item {
+  display: inline-block;
+  align-items: center;
+  margin-right: 5px;
 }
 </style>

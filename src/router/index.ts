@@ -98,7 +98,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: "",
+        path: "quotation",
         component: () => import("@/pages/quotation/index.vue"),
         name: "Quotation",
         meta: {
@@ -193,7 +193,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/",
+    path: "/settings",
     component: Layouts,
     meta: {
       title: "系统管理",

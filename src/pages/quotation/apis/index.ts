@@ -64,3 +64,11 @@ export function calculateOrderPrice(data: Order.OrderPriceRequestData) {
     data
   })
 }
+
+export function createReturnOrder(data: Order.ReturnOrderCreateData) {
+  return request<Order.OrderActionResponseData>({
+    url: `order/return`,
+    method: "post",
+    data
+  })
+}

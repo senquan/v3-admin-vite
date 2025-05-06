@@ -58,6 +58,7 @@ async function fetchPromotions() {
             startTime: item.startTime,
             endTime: item.endTime,
             status: item.status,
+            isStackable: item.isStackable,
             updatedAt: item.updatedAt,
             description: item.description
           }
@@ -250,6 +251,9 @@ onMounted(() => {
             <el-tag v-if="data.row.status === 3" type="danger">已结束</el-tag>
             <el-tag v-if="data.row.status === 4" type="warning">已暂停</el-tag>
           </template>
+        </vxe-column>
+        <vxe-column field="isStackable" title="可叠加" width="100">
+          <template #default="{ row }">{{ row.isStackable ? "是" : "否" }}</template>
         </vxe-column>
         <vxe-column field="updatedAt" title="最后更新" width="150">
           <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>

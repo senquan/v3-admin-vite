@@ -43,6 +43,15 @@ export interface OrderCreateData {
   }[]
 }
 
+export interface ReturnOrderCreateData {
+  orderId: number
+  returns: {
+    productId: number
+    quantity: number
+  }[]
+  remark: string
+}
+
 export interface SeriesListOptResponseData {
   code: number
   message: string

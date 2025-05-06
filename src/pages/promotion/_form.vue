@@ -13,6 +13,7 @@ const formData = reactive({
   startTime: "",
   endTime: "",
   status: 0,
+  isStackable: false,
   description: ""
 })
 
@@ -44,6 +45,7 @@ function resetForm() {
   formData.endTime = ""
   formData.status = 0
   formData.description = ""
+  formData.isStackable = false
   timeRange.value = []
 }
 
@@ -221,11 +223,19 @@ defineExpose({
       </el-row>
 
       <el-row v-if="isEdit">
-        <el-col :span="24">
+        <el-col :span="12">
           <el-form-item label="状态" prop="status">
             <el-switch
               :model-value="formData.status > 0"
               @update:model-value="(val) => formData.status = val ? 2 : 0"
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="可叠加" prop="isStackable">
+            <el-switch
+              :model-value="formData.isStackable"
+              @update:model-value="(val) => formData.isStackable = val ? true : false"
             />
           </el-form-item>
         </el-col>

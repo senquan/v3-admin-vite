@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { fetchList } from "./apis"
+import { fetchList, fetchReturnOrder, fetchReturnOrderStatusLog } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -13,9 +13,10 @@ const listQuery = reactive({
 })
 const totalOrders = ref(0)
 const tableData = ref<any>([])
-const orderFormRef = ref<any>([])
-const orderImportRef = ref<any>([])
-const formVisibility = ref(false)
+const detailDrawer = ref(false)
+const orderDetail = ref<any>([])
+const activeTab = ref("materia")
+const returnWorkflow = ref<any>([])
 
 async function fetchOrders() {
   loading.value = true
@@ -64,15 +65,29 @@ function handleFilter() {
   fetchOrders()
 }
 
-function handleEdit(id: number) {
-  openFrom(id)
+function handleDetail(id: number) {
+  loadDetail(id)
+  activeTab.value = "materia"
 }
 
-function openFrom(id: number) {
-  orderFormRef.value?.open({
-    id
+function loadDetail(id: number) {
+  detailDrawer.value = true
+  fetchReturnOrder(id).then((res: any) => {
+    orderDetail.value = res.data
   })
-  formVisibility.value = true
+}
+
+function handleTabClick(tab: any) {
+  if (tab.paneName === "workflow") {
+    fetchReturnOrderStatusLog(orderDetail.value.id).then((res: any) => {
+      returnWorkflow.value = res.data.map((item: any) => {
+        return {
+          timestamp: formatDateTime(item.createdAt),
+          content: `${item.operation} (by: ${item.operatorName})`
+        }
+      })
+    })
+  }
 }
 
 onMounted(() => {
@@ -109,8 +124,7 @@ onMounted(() => {
         <vxe-column field="refundStatus" width="100" title="退款状态" />
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
-            <el-button type="success" @click="handleEdit(data.row.id)">详情</el-button>
-            <el-button type="primary" @click="handleEdit(data.row.id)">备注</el-button>
+            <el-button type="success" @click="handleDetail(data.row.id)">详情</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -129,16 +143,31 @@ onMounted(() => {
       />
     </div>
 
-    <OrderForm
-      ref="orderFormRef"
-      @success="fetchOrders"
-      @close="formVisibility = false"
-    />
-
-    <OrderImport
-      ref="orderImportRef"
-      @success="fetchOrders"
-    />
+    <el-drawer v-model="detailDrawer" title="订单详情" size="38%" direction="rtl">
+      <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
+        <el-tab-pane label="物料详情" name="materia">
+          <el-table :data="orderDetail.items">
+            <el-table-column label="物料编号" min-width="200" align="left">
+              <template #default="scope">
+                <el-text truncated>{{ scope.row.product.materialId }}</el-text>
+              </template>
+            </el-table-column>
+            <el-table-column prop="quantity" width="80" label="数量" />
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="退货流程" name="workflow">
+          <el-timeline style="margin-top: 20px;">
+            <el-timeline-item
+              v-for="(activity, index) in returnWorkflow"
+              :key="index"
+              :timestamp="activity.timestamp"
+            >
+              {{ activity.content }}
+            </el-timeline-item>
+          </el-timeline>
+        </el-tab-pane>
+      </el-tabs>
+    </el-drawer>
   </div>
 </template>
 

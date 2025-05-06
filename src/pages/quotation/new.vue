@@ -48,7 +48,8 @@ const formData = ref({
   flashPrice: 0,
   dailyPrice: 0,
   promotionPrice: 0,
-  products: [] as any[]
+  products: [] as any[],
+  matchLogs: [] as any[]
 })
 
 // 添加表格引用
@@ -76,6 +77,9 @@ const flashPrice = computed(() => {
 const bonusLeft = computed(() => {
   return calculatedPrice.value?.flashPrice * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
 })
+
+const priceDetailVisible = ref(false)
+const priceDetailData = ref<any>([])
 
 const rules = {
   name: [{ required: true, message: "请输入订单名称", trigger: "blur" }]
@@ -167,6 +171,7 @@ function calculatePrice(row: any) {
     if (response.code === 0) {
       calculatedPrice.value = response.data
       const productsMap = response.data.products || []
+      formData.value.matchLogs = response.data.matchLogs || []
       tableData.value.forEach((row: TableRowData) => {
         if (row.id) {
           const matchedProduct = productsMap.find((p: any) => p.id === Number(row.id))
@@ -181,6 +186,33 @@ function calculatePrice(row: any) {
       ElMessage.error(`计算订单价格失败: ${response.message}`)
     }
   })
+}
+
+function priceDetail(id: number) {
+  priceDetailVisible.value = true
+  priceDetailData.value = []
+
+  const matchLogsObj = formData.value.matchLogs
+
+  // 定义类型名称映射
+  const typeNames: Record<string, string> = {
+    daily: "日常折扣",
+    promotion: "活动折扣",
+    flash: "限时折扣"
+  }
+
+  // 遍历每种类型的折扣规则
+  for (const [type, logs] of Object.entries(matchLogsObj)) {
+    // 过滤出当前产品的匹配记录
+    const productLogs = logs.filter((log: { productId: number }) => log.productId === id)
+    productLogs.forEach((log: any) => {
+      priceDetailData.value.push({
+        message: `${typeNames[type]}: ${log.name}`,
+        value: `${(Number(log.value) * 100).toFixed(4)}%`,
+        step: `${Number(log.stepPrice).toFixed(2)}`
+      })
+    })
+  }
 }
 
 interface SpanMethodProps {
@@ -377,7 +409,7 @@ onMounted(() => {
           <template #default="{ row }"><span class="highlight-price">{{ row.finalUnitPrice }}</span></template>
         </el-table-column>
         <el-table-column prop="payPrice" label="到手总价" width="100" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ row.payPrice }}</span></template>
+          <template #default="{ row }"><span class="highlight-price" style="cursor: pointer;" @click="priceDetail(row.id)">{{ row.payPrice }}</span></template>
         </el-table-column>
       </el-table>
 
@@ -435,7 +467,7 @@ onMounted(() => {
                 label="赠品剩余额度"
                 align="center"
               >
-                {{ bonusLeft }}
+                {{ bonusLeft.toFixed(2) }}
               </el-descriptions-item>
               <el-descriptions-item align="right">
                 <template #label>
@@ -472,6 +504,14 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="priceDetailVisible" title="计价详情" width="600">
+      <el-table :data="priceDetailData" empty-text="没有优惠">
+        <el-table-column property="message" label="规则" min-width="300" />
+        <el-table-column property="value" label="折扣值" width="100" />
+        <el-table-column property="step" label="折后价" width="100" />
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 

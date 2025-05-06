@@ -11,14 +11,14 @@ export function fetchList(params: ReturnOrder.ReturnOrderListRequestParams) {
 
 export function fetchReturnOrder(id: number) {
   return request<ReturnOrder.ReturnOrderDetailResponseData>({
-    url: `order/${id}`,
+    url: `order/return/${id}`,
     method: "get"
   })
 }
 
 export function createReturnOrder(data: ReturnOrder.ReturnOrderCreateData) {
   return request<ReturnOrder.ReturnOrderActionResponseData>({
-    url: "order/",
+    url: "order/return/",
     method: "post",
     data
   })
@@ -26,7 +26,7 @@ export function createReturnOrder(data: ReturnOrder.ReturnOrderCreateData) {
 
 export function updateReturnOrder(id: number, data: ReturnOrder.ReturnOrderCreateData) {
   return request<ReturnOrder.ReturnOrderActionResponseData>({
-    url: `order/${id}`,
+    url: `order/return/${id}`,
     method: "put",
     data
   })
@@ -34,7 +34,14 @@ export function updateReturnOrder(id: number, data: ReturnOrder.ReturnOrderCreat
 
 export function deleteReturnOrder(id: number) {
   return request<ReturnOrder.ReturnOrderActionResponseData>({
-    url: `order/${id}`,
+    url: `order/return/${id}`,
     method: "delete"
+  })
+}
+
+export function fetchReturnOrderStatusLog(id: number) {
+  return request<ReturnOrder.ReturnOrderStatusLogResponseData>({
+    url: `order/return/log/${id}`,
+    method: "get"
   })
 }

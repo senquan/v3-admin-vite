@@ -32,6 +32,16 @@ export interface ReturnOrderListData {
   updatedAt: number
 }
 
+export interface ReturnOrderStatusLogResponseData {
+  orderType: number
+  previousStatus: number
+  currentStatus: number
+  operatorName: string
+  operation: string
+  remark: string | null
+  createdAt: number
+}
+
 export interface ReturnOrderCreateData {
   materialId: string
   barCode: string
