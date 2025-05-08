@@ -33,7 +33,7 @@ function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRa
     if (permission.type === 1 && permission.status === 1) { // 只处理菜单类型且启用的权限
       const route: AppRouteRecordRaw = {
         path: permission.path || "",
-        component: permission.component ? () => import(`${permission.component}`) : () => import("@/layouts/index.vue"),
+        component: permission.component ? () => import(`../../${permission.component}`) : () => import("@/layouts/index.vue"),
         redirect: permission.redirect,
         meta: {
           title: permission.title,
@@ -83,6 +83,7 @@ export const usePermissionStore = defineStore("permission", () => {
         const accessRoutes = transformPermissionToRoute(res.data.permissions)
         remoteDynamicRoutes.value = accessRoutes as unknown as RouteRecordRaw[]
         routes.value = [...constantRoutes, ...(accessRoutes as unknown as RouteRecordRaw[])]
+        setAllRoutes()
         return accessRoutes
       }
       return []
@@ -94,7 +95,11 @@ export const usePermissionStore = defineStore("permission", () => {
 
   // 所有路由 = 所有常驻路由 + 所有动态路由
   const setAllRoutes = () => {
-    set(dynamicRoutes)
+    const allDynamicRoutes = [...dynamicRoutes]
+    if (remoteDynamicRoutes.value.length > 0) {
+      allDynamicRoutes.push(...remoteDynamicRoutes.value)
+    }
+    set(allDynamicRoutes)
   }
 
   // 统一设置
