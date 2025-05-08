@@ -2,6 +2,7 @@
 import { formatDateTime } from "@/common/utils/datetime"
 import RoleTagsForm from "./_auth.vue"
 import RoleForm from "./_form.vue"
+import RolePermissionForm from "./_permission.vue"
 import { deleteRole, fetchList } from "./apis"
 
 const loading = ref(false)
@@ -19,6 +20,8 @@ const roleFormRef = ref<any>([])
 const formVisibility = ref(false)
 const roleTagsFormRef = ref<any>([])
 const tagsFormVisibility = ref(false)
+const rolePermissionFormRef = ref<any>([])
+const permissionFormVisibility = ref(false)
 
 async function fetchRoles() {
   loading.value = true
@@ -83,6 +86,13 @@ function handleRoleTags(id: number) {
   tagsFormVisibility.value = true
 }
 
+function handleRolePermissions(id: number) {
+  rolePermissionFormRef.value?.open({
+    id
+  })
+  permissionFormVisibility.value = true
+}
+
 function handleDelete(id: number) {
   ElMessageBox.prompt("请输入\"确认删除角色\"以继续操作", "删除确认", {
     confirmButtonText: "确定",
@@ -145,8 +155,9 @@ onMounted(() => {
           </template>
         </vxe-column>
         <vxe-column field="updatedAt" title="最后更新" width="150" />
-        <vxe-column field="actions" title="操作" width="280">
+        <vxe-column field="actions" title="操作" width="360">
           <template #default="data">
+            <el-button type="success" @click="handleRolePermissions(data.row.id)">系统权限</el-button>
             <el-button type="success" @click="handleRoleTags(data.row.id)">资源权限</el-button>
             <el-button type="primary" @click="handleEdit(data.row)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
@@ -177,6 +188,11 @@ onMounted(() => {
     <RoleTagsForm
       ref="roleTagsFormRef"
       @close="tagsFormVisibility = false"
+    />
+
+    <RolePermissionForm
+      ref="rolePermissionFormRef"
+      @close="permissionFormVisibility = false"
     />
   </div>
 </template>

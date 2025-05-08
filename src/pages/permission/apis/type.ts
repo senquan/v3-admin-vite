@@ -12,6 +12,11 @@ export interface Tag {
   name: string
 }
 
+export interface Permission {
+  id: number
+  name: string
+}
+
 export interface RoleCreateData {
   id?: number
   name: string
@@ -22,6 +27,11 @@ export interface RoleCreateData {
 export interface RoleTagsData {
   id?: number
   tags: number[]
+}
+
+export interface RolePermissionsData {
+  id?: number
+  permissions: number[]
 }
 
 export interface RoleListRequestParams {
@@ -51,6 +61,15 @@ export interface RoleTagsResponseData {
     total: number
     page: number
     pageSize: number
+  }
+}
+
+export interface RolePermissionsResponseData {
+  code: number
+  message: string
+  data: {
+    tags: Permission[]
+    allPermissions: Permission[]
   }
 }
 

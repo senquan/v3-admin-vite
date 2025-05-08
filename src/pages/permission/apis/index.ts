@@ -53,3 +53,18 @@ export function updateRoleTags(id: number, data: Role.RoleTagsData) {
     data
   })
 }
+
+export function fetchRolePermissions(id: number) {
+  return request<Role.RolePermissionsResponseData>({
+    url: `roles/${id}/permissions`,
+    method: "get"
+  })
+}
+
+export function updateRolePermissions(id: number, data: Role.RolePermissionsData) {
+  return request<Role.RoleActionResponseData>({
+    url: `roles/${id}/permissions`,
+    method: "put",
+    data
+  })
+}

@@ -1,8 +1,10 @@
+import type { AppRouteRecordRaw, Permission } from "@/types/permission"
 import type { RouteRecordRaw } from "vue-router"
 import { pinia } from "@/pinia"
 import { constantRoutes, dynamicRoutes } from "@/router"
 import { routerConfig } from "@/router/config"
 import { flatMultiLevelRoutes } from "@/router/helper"
+import { getUserPermissions } from "@@/apis/users"
 
 function hasPermission(roles: string[], route: RouteRecordRaw) {
   const routeRoles = route.meta?.roles
@@ -23,6 +25,32 @@ function filterDynamicRoutes(routes: RouteRecordRaw[], roles: string[]) {
   return res
 }
 
+// 将权限数据转换为路由
+function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRaw[] {
+  const routes: AppRouteRecordRaw[] = []
+
+  permissions.forEach((permission) => {
+    if (permission.type === 1 && permission.status === 1) { // 只处理菜单类型且启用的权限
+      const route: AppRouteRecordRaw = {
+        path: permission.path || "",
+        component: permission.component ? () => import(`${permission.component}`) : () => import("@/layouts/index.vue"),
+        redirect: permission.redirect,
+        meta: {
+          title: permission.title,
+          svgIcon: permission.icon,
+          hidden: Boolean(permission.hidden)
+        }
+      }
+      // 处理子路由
+      if (permission.children && permission.children.length > 0) {
+        route.children = transformPermissionToRoute(permission.children)
+      }
+      routes.push(route)
+    }
+  })
+  return routes
+}
+
 export const usePermissionStore = defineStore("permission", () => {
   // 可访问的路由
   const routes = ref<RouteRecordRaw[]>([])
@@ -36,6 +64,34 @@ export const usePermissionStore = defineStore("permission", () => {
     set(accessedRoutes)
   }
 
+  // 远程动态路由
+  const remoteDynamicRoutes = ref<RouteRecordRaw[]>([])
+
+  // 权限列表
+  const permissions = ref<string[]>([])
+
+  const generateRoutes = async () => {
+    try {
+      // 获取用户权限
+      const res = await getUserPermissions()
+      if (res.code === 0 && res.data) {
+        // 提取权限编码
+        const permissionCodes = res.data.permissions.map(item => item.code)
+        permissions.value = permissionCodes
+
+        // 将权限转换为路由
+        const accessRoutes = transformPermissionToRoute(res.data.permissions)
+        remoteDynamicRoutes.value = accessRoutes as unknown as RouteRecordRaw[]
+        routes.value = [...constantRoutes, ...(accessRoutes as unknown as RouteRecordRaw[])]
+        return accessRoutes
+      }
+      return []
+    } catch (error) {
+      console.error("获取权限失败", error)
+      return []
+    }
+  }
+
   // 所有路由 = 所有常驻路由 + 所有动态路由
   const setAllRoutes = () => {
     set(dynamicRoutes)
@@ -47,7 +103,7 @@ export const usePermissionStore = defineStore("permission", () => {
     addRoutes.value = routerConfig.thirdLevelRouteCache ? flatMultiLevelRoutes(accessedRoutes) : accessedRoutes
   }
 
-  return { routes, addRoutes, setRoutes, setAllRoutes }
+  return { routes, addRoutes, setRoutes, generateRoutes, setAllRoutes }
 })
 
 /**
