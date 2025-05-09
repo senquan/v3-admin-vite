@@ -30,6 +30,7 @@ export interface OrderListData {
 }
 
 export interface OrderCreateData {
+  type: number
   platformId: number
   name: string
   originPrice: number

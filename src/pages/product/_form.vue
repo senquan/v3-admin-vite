@@ -1,6 +1,7 @@
 <script lang="ts" setup>
+import { request } from "@/http/axios"
 import { findCascaderPath } from "@/common/utils/helper"
-import { ElMessage } from "element-plus"
+import { ElMessage, UploadProps } from "element-plus"
 import { fetchTagsList } from "../tags/apis"
 import { createProduct, fetchModels, fetchProduct, updateProduct } from "./apis"
 
@@ -21,6 +22,7 @@ const formData = reactive({
   basePrice: 0,
   projectPrice: 0,
   factoryPrice: 0,
+  imageUrl: "",
   remark: "",
   tags: []
 })
@@ -38,6 +40,7 @@ const modelOptions = ref<any>([])
 const tagOptions = ref<any>([])
 const selectedTags = ref<any>([])
 const tagsLoading = ref(false)
+const imagePreview = ref<string>('')
 
 const rules = {
   name: [{ required: true, message: "请输入商品名称", trigger: "blur" }],
@@ -60,9 +63,11 @@ function resetForm() {
   formData.basePrice = 0
   formData.projectPrice = 0
   formData.factoryPrice = 0
+  formData.imageUrl = ""
   formData.remark = ""
   formData.tags = []
   modelOptions.value = []
+  imagePreview.value = ''
 }
 
 function open(options = {
@@ -111,6 +116,9 @@ function open(options = {
               selectedTags.value.push(tag.id)
             }
           })
+        }
+        if (data.imageUrl) {
+          imagePreview.value = `${data.imageUrl}`
         }
       } else {
         ElMessage({
@@ -214,6 +222,58 @@ function handleSubmit() {
       })
     })
   })
+}
+
+function beforeImageUpload(file: any) {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+function customUploadRequest(options: any) {
+  const { file, onSuccess, onError, onProgress } = options
+  const data = new FormData()
+  data.append('image', file)
+  return request({
+    url: 'upload/image',
+    method: 'POST',
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    onUploadProgress: (progressEvent: any) => {
+      if (progressEvent.total) {
+        const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+        console.log(`Upload progress: ${percent}%`)
+        onProgress({ percent })
+      }
+    }
+  })
+  .then((response: any) => {
+    onSuccess(response)
+    return response
+  })
+  .catch((error: any) => {
+    onError(error)
+    return Promise.reject(error)
+  })
+}
+
+const handleImageSuccess: UploadProps['onSuccess'] = (
+  response,
+  uploadFile
+) => {
+  console.log('处理上传成功回调:', response)
+  imagePreview.value = URL.createObjectURL(uploadFile.raw!)
+  formData.imageUrl = response.data.url
 }
 
 defineExpose({
@@ -321,6 +381,23 @@ defineExpose({
 
       <el-row>
         <el-col :span="24">
+          <el-form-item label="产品主图" prop="image">
+            <el-upload
+              class="image-uploader"
+              :show-file-list="false"
+              :on-success="handleImageSuccess"
+              :before-upload="beforeImageUpload"
+              :http-request="customUploadRequest"
+            >
+              <el-image v-if="formData.imageUrl" class="image-previews" :src="imagePreview" fit="contain" />
+              <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="24">
           <el-form-item label="备注" prop="remark">
             <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注信息" />
           </el-form-item>
@@ -366,5 +443,32 @@ defineExpose({
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+.image-uploader .image-previews{
+  width: 100px;
+  height: 100px;
+  display: block;
+}
+</style>
+<style>
+.image-uploader .el-upload {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: var(--el-transition-duration-fast);
+}
+
+.image-uploader .el-upload:hover {
+  border-color: var(--el-color-primary);
+}
+
+.el-icon.image-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  text-align: center;
 }
 </style>

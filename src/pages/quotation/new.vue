@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
-import { calculateOrderPrice, createOrder } from "./apis"
+import { calculateOrderPrice, createOrder, fetchOrder, updateOrder } from "./apis"
 
 // 定义表格行的接口
 interface TableRowData {
@@ -15,10 +15,12 @@ interface TableRowData {
   finalUnitPrice: number
   payPrice: number
   colorOptions: Array<{ value: any, label: string }>
+  backupProducts: Array<ProductListData>
 }
 
 const router = useRouter()
 const platformId = ref(0)
+const orderId = ref(0)
 const defaultRecord: TableRowData = {
   id: "",
   serie: "",
@@ -29,7 +31,8 @@ const defaultRecord: TableRowData = {
   originPrice: 0,
   finalUnitPrice: 0,
   payPrice: 0,
-  colorOptions: []
+  colorOptions: [],
+  backupProducts: []
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -39,9 +42,10 @@ const tableData = ref<TableRowData[]>([
 // 添加型号选项数据
 const idOptions = ref<any>([])
 const searchLoading = ref(false)
-const currentProducts = ref<any>([])
 const calculatedPrice = ref<any>([])
 const formData = ref({
+  id: 0,
+  type: 0,
   platformId: 0,
   name: "",
   originPrice: 0,
@@ -51,6 +55,7 @@ const formData = ref({
   products: [] as any[],
   matchLogs: [] as any[]
 })
+const defaultColor = ref("")
 
 // 添加表格引用
 const tableRef = ref()
@@ -107,7 +112,7 @@ function handelSearchId(query: any, _row: TableRowData | null = null) {
   })
 }
 
-async function handelSearchProduct(modelType: string, row: any) {
+async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
     fetchProducts({ model: modelType }).then((response: any) => {
       if (response.code === 0) {
@@ -118,9 +123,20 @@ async function handelSearchProduct(modelType: string, row: any) {
         if (row) {
           row.colorOptions = colorOpts
         }
-        currentProducts.value = response.data.products
-        if (currentProducts.value.length > 0) {
-          fillRow(currentProducts.value[0], row)
+        if (refresh) {
+          row.backupProducts = response.data.products
+          let selectedProduct = null
+          if (defaultColor.value) {
+            selectedProduct = row.backupProducts.find((product: any) =>
+              product.color?.value === defaultColor.value
+            )
+          }
+          if (!selectedProduct && row.backupProducts.length > 0) {
+            selectedProduct = row.backupProducts[0]
+          }
+          if (selectedProduct) {
+            fillRowAndPrice(selectedProduct, row)
+          }
         }
         searchLoading.value = false
       } else {
@@ -140,6 +156,22 @@ async function handleIdChange(value: any, row: any) {
   await handelSearchProduct(label, row)
 }
 
+async function handelReloadColors(visible: boolean, row: any) {
+  if (visible) {
+    if (row.colorOptions.length === 0 && row.modelType !== "") {
+      await handelSearchProduct(row.modelType, row, false)
+    }
+  }
+}
+
+function fillRowAndPrice(product: any, row: any) {
+  fillRow(product, row)
+  if (tableData.value.indexOf(row) === 0) {
+    defaultColor.value = row.color
+  }
+  calculatePrice(row)
+}
+
 function fillRow(product: any, row: any) {
   row.id = product.id
   row.serie = product.series?.name || ""
@@ -149,24 +181,40 @@ function fillRow(product: any, row: any) {
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
   row.payPrice = (Number.parseFloat(product.finalUnitPrice || "0") * Number.parseFloat(row.quantity)).toFixed(2)
-  calculatePrice(row)
 }
 
 function handleColorChange(color: number, row: any) {
-  const selectedProduct = currentProducts.value.find((product: any) => product.colorId === color)
+  if (!row.backupProducts) return
+  const selectedProduct = row.backupProducts.find((product: any) => product.colorId === color)
   if (selectedProduct) {
-    fillRow(selectedProduct, row)
+    fillRowAndPrice(selectedProduct, row)
+    if (tableData.value.indexOf(row) === 0) {
+      tableData.value.forEach((otherRow, index) => {
+        if (index !== 0 && index !== tableData.value.length - 1 && otherRow.backupProducts && otherRow.backupProducts.length > 0) {
+          const sameColorProduct = otherRow.backupProducts.find((product: any) =>
+            product.color?.value === defaultColor.value
+          )
+          if (sameColorProduct) {
+            fillRowAndPrice(sameColorProduct, otherRow)
+          }
+        }
+      })
+    }
   }
 }
 
 function calculatePrice(row: any) {
-  if (row.basePrice && row.quantity) {
+  if (row && row.basePrice && row.quantity) {
     row.originPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.quantity)).toFixed(2)
   }
-  const products = tableData.value.map((item: any) => ({
+  const products = tableData.value.filter((item: any) => item.quantity > 0).map((item: any) => ({
     id: item.id,
     quantity: item.quantity
   }))
+  if (products.length === 0) {
+    calculatedPrice.value = {}
+    return
+  }
   calculateOrderPrice({ platformId: platformId.value, products }).then((response: any) => {
     if (response.code === 0) {
       calculatedPrice.value = response.data
@@ -175,7 +223,6 @@ function calculatePrice(row: any) {
       tableData.value.forEach((row: TableRowData) => {
         if (row.id) {
           const matchedProduct = productsMap.find((p: any) => p.id === Number(row.id))
-          console.log(matchedProduct)
           if (matchedProduct) {
             row.finalUnitPrice = Number(matchedProduct.unitPrice)
             row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
@@ -275,7 +322,7 @@ function getSummaries(param: any) {
   return sums
 }
 
-function submitOrder() {
+function submitOrder(type: number) {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     const products = tableData.value.filter((item: any) => item.id !== "" && item.quantity > 0).map((item: any) => ({
@@ -287,13 +334,15 @@ function submitOrder() {
       ElMessage.warning("请添加商品")
       return
     }
+    formData.value.type = type
     formData.value.platformId = platformId.value
     formData.value.products = products
-    createOrder(formData.value).then((response: any) => {
+    const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
+    request.then((response: any) => {
       if (response.code === 0) {
         ElMessage.success("提交订单成功")
         router.push({
-          path: "/quotation"
+          path: "/quotation/quotation"
         })
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
@@ -302,13 +351,63 @@ function submitOrder() {
   })
 }
 
+function handleDelete(row: any) {
+  const index = tableData.value.indexOf(row)
+  if (index !== -1) {
+    tableData.value.splice(index, 1)
+  }
+  calculatePrice(null)
+}
+
 // 处理数量变化
 function handleQuantityChange(row: any) {
   calculatePrice(row)
 }
 
+function handleKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.code === "Enter") {
+    event.preventDefault()
+    addRow()
+  }
+}
+
 onMounted(() => {
   platformId.value = Number(router.currentRoute.value.query.platform)
+  orderId.value = Number(router.currentRoute.value.query.id)
+  if (orderId.value > 0) {
+    // 获取订单详情
+    fetchOrder(orderId.value).then((response: any) => {
+      if (response.code === 0) {
+        const order = response.data
+        formData.value.id = order.id
+        platformId.value = order.platformId
+        formData.value.name = order.name
+        tableData.value = order.items.map((item: any) => {
+          const originPrice = (Number.parseFloat(item.product.basePrice) * Number.parseFloat(item.quantity)).toFixed(2)
+          return {
+            id: item.product.id,
+            modelType: item.product.modelType?.name || "",
+            serie: item.product.series?.name || "",
+            color: item.product.color?.value || "",
+            name: item.product.name || "",
+            quantity: item.quantity || 1,
+            basePrice: item.product.basePrice || "0",
+            originPrice: originPrice || "0",
+            finalUnitPrice: item.product.finalUnitPrice || "0",
+            payPrice: item.product.payPrice || "0",
+            colorOptions: []
+          }
+        })
+        tableData.value.push(defaultRecord)
+        calculatePrice(null)
+      }
+    })
+  }
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -334,6 +433,7 @@ onMounted(() => {
         :summary-method="getSummaries"
         show-summary
         style="width: 100%"
+        resizable
       >
         <el-table-column prop="id" label="型号" width="150" align="center">
           <template #default="{ row, $index }">
@@ -372,6 +472,7 @@ onMounted(() => {
                 v-model="row.color"
                 placeholder="选择颜色"
                 @change="(val) => handleColorChange(val, row)"
+                @visible-change="(val) => handelReloadColors(val, row)"
                 style="width: 100%"
               >
                 <el-option
@@ -382,6 +483,29 @@ onMounted(() => {
                 />
               </el-select>
             </template>
+          </template>
+        </el-table-column>
+        <el-table-column prop="imageUrl" label="产品主图" width="100" align="center">
+          <template #default="{ row }">
+            <div class="product-image-container">
+              <el-image
+                style="width: 80px; height: 80px"
+                :src="row.imageUrl"
+                :zoom-rate="1.2"
+                :max-scale="7"
+                :min-scale="0.2"
+                :preview-src-list="row.imageUrls"
+                show-progress
+                :initial-index="4"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="image-slot">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="名称" min-width="200" align="center" />
@@ -410,6 +534,13 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="payPrice" label="到手总价" width="100" align="center">
           <template #default="{ row }"><span class="highlight-price" style="cursor: pointer;" @click="priceDetail(row.id)">{{ row.payPrice }}</span></template>
+        </el-table-column>
+        <el-table-column prop="action" label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-button @click="handleDelete(row)" link>
+              <el-icon :size="18" color="red"><CloseBold /></el-icon>
+            </el-button>
+          </template>
         </el-table-column>
       </el-table>
 
@@ -498,7 +629,8 @@ onMounted(() => {
               <el-input v-model="formData.name" placeholder="请输入订单名称" />
             </el-form-item>
             <el-form-item align="right">
-              <el-button type="primary" @click="submitOrder">提交订单</el-button>
+              <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
+              <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -626,5 +758,19 @@ onMounted(() => {
 
 :deep(.highlight-price) {
   color: red;
+}
+
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 20px;
+}
+.image-slot .el-icon {
+  font-size: 20px;
 }
 </style>

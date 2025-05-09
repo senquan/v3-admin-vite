@@ -41,6 +41,11 @@ export default defineConfig(({ mode }) => {
           target: "http://localhost:5002/",
           changeOrigin: true,
           rewrite: path => path
+        },
+        "/uploads": {
+          target: "http://localhost:5002/",
+          changeOrigin: true,
+          rewrite: path => path
         }
       },
       allowedHosts: ["www.aquavive.cloud"],

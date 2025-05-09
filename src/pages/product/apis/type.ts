@@ -40,6 +40,7 @@ export interface ProductListData {
   projectPrice: number
   factoryPrice: number
   status: number
+  imageUrl: string
   remark: string
   updatedAt: string
   tags: Tag[]

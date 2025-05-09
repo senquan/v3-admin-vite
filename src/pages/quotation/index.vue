@@ -110,6 +110,10 @@ function handleDetail(id: number) {
   activeTab.value = "materia"
 }
 
+function handleEdit(id: number) {
+  router.push(`/quotation/new?id=${id}`)
+}
+
 function loadDetail(id: number) {
   detailDrawer.value = true
   fetchOrder(id).then((res: any) => {
@@ -198,6 +202,7 @@ onMounted(() => {
         <vxe-column field="payPrice" width="100" title="到手总价" />
         <vxe-column field="status" width="80" title="订单状态">
           <template #default="{ row }">
+            <el-tag type="info" v-if="row.status === -1" effect="dark">草稿</el-tag>
             <el-tag type="info" v-if="row.status === 0" effect="dark">待支付</el-tag>
             <el-tag type="info" v-if="row.status === 1" effect="dark">已支付</el-tag>
             <el-tag type="warning" v-if="row.status === 2" effect="dark">处理中</el-tag>
@@ -215,8 +220,9 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
-            <el-button type="success" @click="handleDetail(data.row.id)">详情</el-button>
-            <el-button type="primary" @click="handleReturn(data.row.id)">售后</el-button>
+            <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id)">继续报价</el-button>
+            <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button>
+            <el-button type="primary" v-if="data.row.status > -1" @click="handleReturn(data.row.id)">售后</el-button>
           </template>
         </vxe-column>
       </vxe-table>
