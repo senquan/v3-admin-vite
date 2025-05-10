@@ -26,6 +26,20 @@ export function fetchOrder(id: number) {
   })
 }
 
+export function fetchOrderReport() {
+  return request<Order.OrderSalesReportResponseData>({
+    url: `order/sales`,
+    method: "get"
+  })
+}
+
+export function fetchCategoryReport() {
+  return request<Order.OrderCategoryReportResponseData>({
+    url: `order/category`,
+    method: "get"
+  })
+}
+
 export function createOrder(data: Order.OrderCreateData) {
   return request<Order.OrderActionResponseData>({
     url: "order/",

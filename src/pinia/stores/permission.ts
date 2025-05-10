@@ -33,7 +33,7 @@ function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRa
     if (permission.type === 1 && permission.status === 1) { // 只处理菜单类型且启用的权限
       const route: AppRouteRecordRaw = {
         path: permission.path || "",
-        component: permission.component ? () => import(`../../${permission.component}`) : () => import("@/layouts/index.vue"),
+        component: permission.component ? () => import(/* @vite-ignore */ `./../../${permission.component}`) : () => import("@/layouts/index.vue"),
         redirect: permission.redirect,
         meta: {
           title: permission.title,

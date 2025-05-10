@@ -125,3 +125,22 @@ export interface OrderImportResponseData {
     errorMessages: string[]
   }
 }
+
+export interface OrderSalesReportResponseData {
+  code: number
+  message: string
+  data: {
+    months: string[]
+    platforms: string[]
+    sales: number[][]
+  }
+}
+
+export interface OrderCategoryReportResponseData {
+  code: number
+  message: string
+  data: {
+    series: string[]
+    models: string[]
+  }
+}
