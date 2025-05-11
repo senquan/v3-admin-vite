@@ -50,7 +50,6 @@ export interface ProductCreateData {
   materialId: string
   barCode: string
   modelType: number | string
-  seriesId: number
   colorId: number | string
   name: string
   basePrice: number

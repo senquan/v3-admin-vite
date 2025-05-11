@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { request } from "@/http/axios"
+import type { UploadProps } from "element-plus"
 import { findCascaderPath } from "@/common/utils/helper"
-import { ElMessage, UploadProps } from "element-plus"
+import { request } from "@/http/axios"
+import { ElMessage } from "element-plus"
 import { fetchTagsList } from "../tags/apis"
 import { createProduct, fetchModels, fetchProduct, updateProduct } from "./apis"
 
@@ -17,7 +18,6 @@ const formData = reactive({
   materialId: "",
   barCode: "",
   modelType: 0,
-  seriesId: 0,
   colorId: "",
   basePrice: 0,
   projectPrice: 0,
@@ -32,15 +32,12 @@ const visible = ref(false)
 const isEdit = ref(false)
 const colors = ref<any>([])
 const series = ref<any>([])
-const cascaderOptions = ref({
-  serie: [] as number[]
-})
 const modelLoading = ref(false)
 const modelOptions = ref<any>([])
 const tagOptions = ref<any>([])
 const selectedTags = ref<any>([])
 const tagsLoading = ref(false)
-const imagePreview = ref<string>('')
+const imagePreview = ref<string>("")
 
 const rules = {
   name: [{ required: true, message: "请输入商品名称", trigger: "blur" }],
@@ -58,7 +55,6 @@ function resetForm() {
   formData.materialId = ""
   formData.barCode = ""
   formData.modelType = 0
-  formData.seriesId = 0
   formData.colorId = ""
   formData.basePrice = 0
   formData.projectPrice = 0
@@ -66,8 +62,9 @@ function resetForm() {
   formData.imageUrl = ""
   formData.remark = ""
   formData.tags = []
+  selectedTags.value = []
   modelOptions.value = []
-  imagePreview.value = ''
+  imagePreview.value = ""
 }
 
 function open(options = {
@@ -94,7 +91,6 @@ function open(options = {
             }
           }
         })
-        cascaderOptions.value.serie = findCascaderPath(series.value, data.series.id) || [data.series.id]
         if (data.modelType) {
           modelOptions.value = [{
             id: data.modelType.id,
@@ -147,14 +143,6 @@ function close() {
 }
 
 function resetOptions() {
-}
-
-function handleSeriesChange(value: CascaderValue) {
-  if (Array.isArray(value) && value.length > 0) {
-    formData.seriesId = value[value.length - 1] as number
-  } else {
-    formData.seriesId = 0
-  }
 }
 
 function handleSearchModel(query: string) {
@@ -225,14 +213,14 @@ function handleSubmit() {
 }
 
 function beforeImageUpload(file: any) {
-  const isImage = file.type.startsWith('image/')
+  const isImage = file.type.startsWith("image/")
   const isLt2M = file.size / 1024 / 1024 < 2
   if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+    ElMessage.error("只能上传图片文件!")
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+    ElMessage.error("图片大小不能超过 2MB!")
     return false
   }
   return true
@@ -241,13 +229,13 @@ function beforeImageUpload(file: any) {
 function customUploadRequest(options: any) {
   const { file, onSuccess, onError, onProgress } = options
   const data = new FormData()
-  data.append('image', file)
+  data.append("image", file)
   return request({
-    url: 'upload/image',
-    method: 'POST',
+    url: "upload/image",
+    method: "POST",
     data,
     headers: {
-      'Content-Type': 'multipart/form-data'
+      "Content-Type": "multipart/form-data"
     },
     onUploadProgress: (progressEvent: any) => {
       if (progressEvent.total) {
@@ -256,22 +244,20 @@ function customUploadRequest(options: any) {
         onProgress({ percent })
       }
     }
-  })
-  .then((response: any) => {
+  }).then((response: any) => {
     onSuccess(response)
     return response
-  })
-  .catch((error: any) => {
+  }).catch((error: any) => {
     onError(error)
     return Promise.reject(error)
   })
 }
 
-const handleImageSuccess: UploadProps['onSuccess'] = (
+const handleImageSuccess: UploadProps["onSuccess"] = (
   response,
   uploadFile
 ) => {
-  console.log('处理上传成功回调:', response)
+  console.log("处理上传成功回调:", response)
   imagePreview.value = URL.createObjectURL(uploadFile.raw!)
   formData.imageUrl = response.data.url
 }
@@ -340,14 +326,6 @@ defineExpose({
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="系列" prop="seriesId">
-            <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" :options="series" :props="{ expandTrigger: 'hover' }" filterable @change="handleSeriesChange" :debounce="500" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-row>
-        <el-col :span="12">
           <el-form-item label="颜色" prop="colorId">
             <el-select v-model="formData.colorId" placeholder="请选择颜色">
               <el-option
@@ -359,19 +337,22 @@ defineExpose({
             </el-select>
           </el-form-item>
         </el-col>
+      </el-row>
+
+      <el-row>
         <el-col :span="12">
           <el-form-item label="日常价" prop="basePrice">
             <el-input type="number" v-model="formData.basePrice" placeholder="请输入金额" />
           </el-form-item>
         </el-col>
-      </el-row>
-
-      <el-row>
         <el-col :span="12">
           <el-form-item label="工程价" prop="projectPrice">
             <el-input type="number" v-model="formData.projectPrice" placeholder="请输入金额" />
           </el-form-item>
         </el-col>
+      </el-row>
+
+      <el-row>
         <el-col :span="12">
           <el-form-item label="出厂价" prop="factoryPrice">
             <el-input type="number" v-model="formData.factoryPrice" placeholder="请输入金额" />
@@ -444,12 +425,13 @@ defineExpose({
   display: flex;
   justify-content: flex-end;
 }
-.image-uploader .image-previews{
+.image-uploader .image-previews {
   width: 100px;
   height: 100px;
   display: block;
 }
 </style>
+
 <style>
 .image-uploader .el-upload {
   border: 1px dashed var(--el-border-color);

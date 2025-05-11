@@ -56,6 +56,7 @@ const formData = ref({
   matchLogs: [] as any[]
 })
 const defaultColor = ref("")
+const bodyHeight = ref("calc(100vh - 450px)")
 
 // 添加表格引用
 const tableRef = ref()
@@ -274,7 +275,7 @@ function arraySpanMethod({ _row, _column, rowIndex, columnIndex }: SpanMethodPro
     if (columnIndex === 0) {
       return {
         rowspan: 1,
-        colspan: 9
+        colspan: 11
       }
     } else {
       return {
@@ -365,7 +366,7 @@ function handleQuantityChange(row: any) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
-  if (event.key === 'Enter' || event.code === "Enter") {
+  if (event.key === "Enter" || event.code === "Enter") {
     event.preventDefault()
     addRow()
   }
@@ -403,11 +404,11 @@ onMounted(() => {
       }
     })
   }
-  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener("keydown", handleKeyDown)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener("keydown", handleKeyDown)
 })
 </script>
 
@@ -422,13 +423,13 @@ onUnmounted(() => {
       <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
     </div>
 
-    <div class="grid-grouping">
+    <div class="grid-grouping" :style="{ height: bodyHeight }">
       <el-table
         ref="tableRef"
         :data="tableData"
         :span-method="arraySpanMethod"
         border
-        :height="580"
+        height="100%"
         v-loading="loading"
         :summary-method="getSummaries"
         show-summary
@@ -637,13 +638,15 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <el-dialog v-model="priceDetailVisible" title="计价详情" width="600">
-      <el-table :data="priceDetailData" empty-text="没有优惠">
-        <el-table-column property="message" label="规则" min-width="300" />
-        <el-table-column property="value" label="折扣值" width="100" />
-        <el-table-column property="step" label="折后价" width="100" />
-      </el-table>
-    </el-dialog>
+    <div class="footer-container">
+      <el-dialog v-model="priceDetailVisible" title="计价详情" width="600">
+        <el-table :data="priceDetailData" empty-text="没有优惠">
+          <el-table-column property="message" label="规则" min-width="300" />
+          <el-table-column property="value" label="折扣值" width="100" />
+          <el-table-column property="step" label="折后价" width="100" />
+        </el-table>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
