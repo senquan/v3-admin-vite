@@ -80,6 +80,13 @@ export function fetchSpecGroupList(params: Tags.CommonListRequestParams) {
   })
 }
 
+export function fetchSpecDetail(id: number) {
+  return request<Tags.SpecGroupListResponseData>({
+    url: `spec/${id}`,
+    method: "get"
+  })
+}
+
 export function createSpec(data: Tags.SpecCreateData) {
   return request<Tags.CommonActionResponseData>({
     url: "spec/",
@@ -102,33 +109,24 @@ export function deleteSpec(id: number) {
   })
 }
 
-export function fetchDictList(params: Tags.CommonListRequestParams) {
-  return request<Tags.DictListResponseData>({
-    url: "dict/list",
-    method: "get",
-    params
-  })
-}
-
-export function createDict(data: Tags.DictCreateData) {
+export function createSpecItem(data: Tags.SpecItemCreateData) {
   return request<Tags.CommonActionResponseData>({
-    url: "dict/",
+    url: "spec/item/",
     method: "post",
     data
   })
 }
-
-export function updateDict(id: number, data: Tags.DictCreateData) {
+export function updateSpecItem(id: number, data: Tags.SpecItemCreateData) {
   return request<Tags.CommonActionResponseData>({
-    url: `dict/${id}`,
+    url: `spec/item/${id}`,
     method: "put",
     data
   })
 }
 
-export function deleteDict(id: number) {
+export function deleteSpecItem(id: number) {
   return request<Tags.CommonActionResponseData>({
-    url: `dict/${id}`,
+    url: `spec/item/${id}`,
     method: "delete"
   })
 }

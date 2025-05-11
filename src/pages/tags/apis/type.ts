@@ -19,6 +19,14 @@ export interface SpecCreateData {
   name: string
 }
 
+export interface SpecItemCreateData {
+  id?: number
+  name?: string
+  value: string
+  groupId: number
+  sort: number
+}
+
 export interface CategoryListData {
   id: number
   parentId: number
@@ -35,24 +43,6 @@ export interface CategoryCreateData {
   remark: string
   icon: string
   sort: number
-}
-
-export interface DictListData {
-  id: number
-  name: string
-  remark: string
-  value: string
-  group: number
-  icon: string
-  updatedAt: string
-}
-
-export interface DictCreateData {
-  id?: number
-  name: string
-  remark: string
-  value: string
-  group: number
 }
 
 export interface SerieListData {
@@ -133,17 +123,6 @@ export interface CategoryListResponseData {
   message: string
   data: {
     categories: CategoryListData[]
-    total: number
-    page: number
-    pageSize: number
-  }
-}
-
-export interface DictListResponseData {
-  code: number
-  message: string
-  data: {
-    dicts: DictListData[]
     total: number
     page: number
     pageSize: number

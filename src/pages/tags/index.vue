@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import CategoryTab from "./components/CategoryTab.vue"
-import DictTab from "./components/DictTab.vue"
 import ModelTab from "./components/ModelTab.vue"
 import SerieTab from "./components/SerieTab.vue"
 import SpecTab from "./components/SpecTab.vue"
@@ -9,7 +8,6 @@ import TagsTab from "./components/TagsTab.vue"
 const tagsTabRef = ref<InstanceType<typeof TagsTab>>()
 const specTabRef = ref<InstanceType<typeof SpecTab>>()
 const categoryTabRef = ref<InstanceType<typeof CategoryTab>>()
-const dictTabRef = ref<InstanceType<typeof DictTab>>()
 const serieTabRef = ref<InstanceType<typeof SerieTab>>()
 const modelTabRef = ref<InstanceType<typeof SerieTab>>()
 
@@ -24,8 +22,6 @@ function handleTabClick(tab: any): void {
     specTabRef.value?.fetchList()
   } else if (tab.paneName === "4") {
     categoryTabRef.value?.fetchList()
-  } else if (tab.paneName === "5") {
-    dictTabRef.value?.fetchList()
   }
 }
 
@@ -50,9 +46,6 @@ onMounted(() => {
     </el-tab-pane>
     <el-tab-pane label="分类">
       <CategoryTab ref="categoryTabRef" />
-    </el-tab-pane>
-    <el-tab-pane label="字典">
-      <DictTab ref="dictTabRef" />
     </el-tab-pane>
   </el-tabs>
 </template>

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { findCascaderPath } from "@/common/utils/helper"
 import { ElMessage } from "element-plus"
-import { createCategory, createDict, createModel, createSerie, createSpec, createTags, fetchTagsList, updateCategory, updateDict, updateModel, updateSerie, updateSpec, updateTags } from "../apis"
+import { createCategory, createModel, createSerie, createSpec, createSpecItem, createTags, fetchTagsList, updateCategory, updateModel, updateSerie, updateSpec, updateSpecItem, updateTags } from "../apis"
 
 const emit = defineEmits(["success", "close"])
 
@@ -23,12 +23,12 @@ const formData = reactive({
     id: 0,
     name: ""
   },
-  dict: {
+  specItem: {
     id: 0,
     name: "",
-    group: 0,
     value: "",
-    remark: ""
+    groupId: 0,
+    sort: 0
   },
   serie: {
     id: 0,
@@ -74,8 +74,8 @@ const isTagsForm = computed(() => {
   return formType.value === "tags"
 })
 
-const isDictForm = computed(() => {
-  return formType.value === "dict"
+const isSpecItemForm = computed(() => {
+  return formType.value === "specItem"
 })
 
 const isSerieForm = computed(() => {
@@ -96,7 +96,7 @@ function categoryValidator(_: any, value: any, callback: any) {
 
 const rules = {
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
-  value: [{ required: Boolean(isDictForm), message: "请输入字典值", trigger: "blur" }],
+  value: [{ required: Boolean(isSpecItemForm), message: "请输入值", trigger: "blur" }],
   categoryId: [{ required: Boolean(isSerieForm), validator: categoryValidator, trigger: "change" }]
 }
 
@@ -146,12 +146,15 @@ function open(options = {
       const editData = options.editData as { serieId: number }
       cascaderOptions.serie = findCascaderPath(series.value, editData?.serieId ?? 0) || []
       tempSort.value = formData.model.sort
+    } else if (options.type === "specItem") {
+      tempSort.value = formData.specItem.sort
+      formData.specItem.name = formData.specItem.value
     }
   } else {
     isEdit.value = false
-    if (options.type === "dict") {
+    if (options.type === "specItem") {
       if (typeof options.extraData === "number") {
-        formData.dict.group = options.extraData
+        formData.specItem.groupId = options.extraData
       }
     } else if (options.type === "serie") {
       selectedTags.value = []
@@ -179,19 +182,19 @@ function resetForm(type: string) {
       sort: 0
     }
   } else if (type === "spec") {
-    formTypeName.value = "规格"
+    formTypeName.value = "规格组"
     formData.spec = {
       id: 0,
       name: ""
     }
-  } else if (type === "dict") {
-    formTypeName.value = "字典"
-    formData.dict = {
+  } else if (type === "specItem") {
+    formTypeName.value = "规格项"
+    formData.specItem = {
       id: 0,
       name: "",
-      group: 0,
+      groupId: 0,
       value: "",
-      remark: ""
+      sort: 0
     }
   } else if (type === "serie") {
     formTypeName.value = "系列"
@@ -233,6 +236,9 @@ function handleSubmit() {
     formData.serie.tags = selectedTags.value
   } else if (isModelForm.value) {
     formData.model.sort = Number(tempSort.value)
+  } else if (isSpecItemForm.value) {
+    formData.specItem.sort = Number(tempSort.value)
+    formData.specItem.value = formData.specItem.name.trim()
   }
 
   formRef.value.validate((valid: any) => {
@@ -287,11 +293,11 @@ function getRequest() {
     } else {
       return createSpec(formData.spec)
     }
-  } else if (formType.value === "dict") {
+  } else if (formType.value === "specItem") {
     if (isEdit.value) {
-      return updateDict(formData.dict.id, formData.dict)
+      return updateSpecItem(formData.specItem.id, formData.specItem)
     } else {
-      return createDict(formData.dict)
+      return createSpecItem(formData.specItem)
     }
   } else if (formType.value === "serie") {
     if (isEdit.value) {
@@ -398,16 +404,8 @@ defineExpose({
       </el-row>
 
       <el-row>
-        <el-col :span="24">
-          <el-form-item v-if="isDictForm" label="字典值" prop="value">
-            <el-input v-model="formData.dict.value" placeholder="请输入字典值" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-row>
         <el-col :span="12">
-          <el-form-item v-if="isSerieForm || isModelForm" label="排序值" prop="sort">
+          <el-form-item v-if="isSerieForm || isModelForm || isSpecItemForm" label="排序值" prop="sort">
             <el-input v-model="tempSort" placeholder="请输入排序值(数值越大越排前)" />
           </el-form-item>
         </el-col>

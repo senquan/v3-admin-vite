@@ -113,7 +113,7 @@ function handleEdit(id: number) {
   openFrom(id)
 }
 
-function handleNewwRule() {
+function handleNewRule() {
   openRuleFrom(0)
 }
 
@@ -300,7 +300,7 @@ onMounted(() => {
       >
         <template #extra>
           <el-button v-if="false" type="primary" @click="handleConvertRule">Excel规则转换</el-button>
-          <el-button type="primary" @click="handleNewwRule">增加规则</el-button>
+          <el-button type="primary" @click="handleNewRule">增加规则</el-button>
         </template>
         <el-descriptions-item width="60px" align="center">
           <template #label>
