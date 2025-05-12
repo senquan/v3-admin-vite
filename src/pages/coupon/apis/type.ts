@@ -1,3 +1,5 @@
+import { number } from "echarts/types/src/echarts.all.js"
+
 export interface CouponListData {
   id: number
   platform: string
@@ -19,16 +21,19 @@ export interface CouponListData {
 }
 
 export interface CouponCreateData {
-  materialId: string
-  barCode: string
-  modelType: string
-  seriesId: number
-  colorId: number | string
+  id?: number
+  platformId: number
   name: string
-  basePrice: number
-  projectPrice: number
-  factoryPrice: number
-  remark: string
+  type: number
+  amount: number
+  discount: number
+  minAmount: number
+  startTime: string
+  endTime: string
+  totalCount: number
+  perLimit: number
+  status: number
+  description: string
 }
 
 export interface CouponListRequestParams {

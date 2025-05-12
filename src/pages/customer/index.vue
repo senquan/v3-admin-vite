@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { fetchList } from "./apis"
+import CustomerForm from "./_form.vue"
+import { deleteCustomer, fetchList } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -13,8 +14,7 @@ const listQuery = reactive({
 })
 const totalCustomers = ref(0)
 const tableData = ref<any>([])
-const productFormRef = ref<any>([])
-const productImportRef = ref<any>([])
+const customerFormRef = ref<any>([])
 const formVisibility = ref(false)
 
 async function fetchCustomers() {
@@ -28,13 +28,25 @@ async function fetchCustomers() {
             id: item.id,
             name: item.name,
             type: item.type,
+            code: item.code,
+            email: item.email,
             phone: item.phone,
             city: item.city,
+            province: item.province,
+            postalCode: item.postalCode,
+            companyName: item.companyName,
+            taxNumber: item.taxNumber,
+            contactPerson: item.contactPerson,
+            contactPhone: item.contactPhone,
+            contactPosition: item.contactPosition,
+            country: item.country,
+            address: item.address,
             level: item.level,
             orderCount: item.orderCount,
             totalSpent: item.totalSpent,
             remark: item.remark,
-            createAt: item.createAt
+            createdAt: item.createdAt,
+            isActive: item.isActive
           }
         })
       } else {
@@ -62,29 +74,73 @@ function handleFilter() {
 }
 
 function handleNew() {
-  handleEdit(0)
+  handleEdit(null)
 }
 
-function handleEdit(id: number) {
-  openFrom(id)
+function handleEdit(data: any) {
+  openFrom(data)
 }
 
-function openFrom(id: number) {
-  productFormRef.value?.open({
-    id
+function openFrom(data: any) {
+  customerFormRef.value?.open({
+    id: 0,
+    editData: data ?? null
   })
   formVisibility.value = true
+}
+
+function handleDelete(id: number) {
+  ElMessageBox.prompt("请输入\"确认删除客户\"以继续操作", "删除确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    inputPattern: /^确认删除客户$/,
+    inputErrorMessage: "请输入\"确认删除客户\"",
+    type: "warning"
+  }).then(({ value }) => {
+    if (value === "确认删除客户") {
+      deleteCustomer(id).then(() => {
+        ElMessage.success("删除成功")
+        fetchCustomers()
+      }).catch(() => {
+        ElMessage({
+          type: "warning",
+          message: "删除失败"
+        })
+      })
+    }
+  }).catch(() => {
+    ElMessage({
+      type: "info",
+      message: "已取消删除"
+    })
+  })
 }
 
 onMounted(() => {
   fetchCustomers()
 })
+
+function getCustomerTypeText(type: number) {
+  switch (type) {
+    case 1: return "个人客户"
+    case 2: return "企业客户"
+    case 3: return "经销商"
+    case 4: return "合作伙伴"
+    default: return "未知"
+  }
+}
 </script>
 
 <template>
   <div class="main-container">
     <div class="filter-container">
       <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
+      <el-select v-model="listQuery.type" placeholder="客户类型" clearable class="filter-item" style="width: 150px;" @change="handleFilter">
+        <el-option label="个人客户" value="1" />
+        <el-option label="企业客户" value="2" />
+        <el-option label="经销商" value="3" />
+        <el-option label="合作伙伴" value="4" />
+      </el-select>
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增客户</el-button>
     </div>
@@ -97,23 +153,29 @@ onMounted(() => {
         @sort-change="handleSortChange"
       >
         <vxe-column field="id" width="80" title="编号" />
+        <vxe-column field="type" width="100" title="客户类型">
+          <template #default="{ row }">
+            {{ getCustomerTypeText(row.type) }}
+          </template>
+        </vxe-column>
         <vxe-column field="name" min-width="200" title="客户名" align="left" />
         <vxe-column field="remark" min-width="200" title="备注" align="left">
           <template #default="data">
             <el-text truncated style="margin-right: 8px;">{{ data.row.remark }}</el-text>
           </template>
         </vxe-column>
-        <vxe-column field="phone" width="80" title="联系电话" />
+        <vxe-column field="phone" width="120" title="联系电话" />
         <vxe-column field="city" width="80" title="城市" />
         <vxe-column field="level" width="80" title="等级" />
         <vxe-column field="orderCount" width="80" title="订单数" />
         <vxe-column field="totalSpent" width="80" title="消费金额" />
-        <vxe-column field="createAt" title="加入时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createAt) }}</template>
+        <vxe-column field="createAt" title="加入时间" width="150">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </vxe-column>
-        <vxe-column field="actions" title="操作" width="180">
+        <vxe-column field="actions" title="操作" width="160">
           <template #default="data">
-            <el-button type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
+            <el-button type="primary" @click="handleEdit(data.row)">编辑</el-button>
+            <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -133,14 +195,9 @@ onMounted(() => {
     </div>
 
     <CustomerForm
-      ref="productFormRef"
+      ref="customerFormRef"
       @success="fetchCustomers"
       @close="formVisibility = false"
-    />
-
-    <CustomerImport
-      ref="productImportRef"
-      @success="fetchCustomers"
     />
   </div>
 </template>

@@ -12,16 +12,26 @@ export interface CustomerListData {
 }
 
 export interface CustomerCreateData {
-  materialId: string
-  barCode: string
-  modelType: string
-  seriesId: number
-  colorId: number | string
+  id?: number
   name: string
-  basePrice: number
-  projectPrice: number
-  factoryPrice: number
+  type: number
+  code: string
+  phone: string
+  email: string
+  address: string
+  city: string
+  province: string
+  postalCode: string
+  country: string
+  contactPerson: string
+  contactPhone: string
+  contactPosition: string
+  level: number
+  companyName: string
+  taxNumber: string
   remark: string
+  salesRepId: number | null
+  isActive: number
 }
 
 export interface CustomerListRequestParams {

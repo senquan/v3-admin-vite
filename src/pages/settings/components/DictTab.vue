@@ -49,7 +49,6 @@ function openFrom(data: any) {
   nextTick(() => {
     dictFormRef.value?.open({
       id: 0,
-      type: "dict",
       editData: data ?? null,
       extraData: listQuery.group ? Number(listQuery.group) : 0
     })

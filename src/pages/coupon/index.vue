@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import CouponForm from "./_form.vue"
 import { fetchList } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
   type: "",
+  platformId: 0,
   keyword: "",
   color: "",
   sort: "+id",
@@ -13,9 +15,9 @@ const listQuery = reactive({
 })
 const totalCoupons = ref(0)
 const tableData = ref<any>([])
-const productFormRef = ref<any>([])
-const productImportRef = ref<any>([])
+const couponFormRef = ref<any>([])
 const formVisibility = ref(false)
+const platformOptions = ref<any>([])
 
 async function fetchCoupons() {
   loading.value = true
@@ -28,6 +30,8 @@ async function fetchCoupons() {
             id: item.id,
             name: item.name,
             type: item.type,
+            platformId: item.platformId,
+            platformName: res.data.platforms.find((platform: any) => Number(platform.value) === item.platformId)?.label || "全平台",
             amount: item.amount,
             discount: item.discount,
             minAmount: item.minAmount,
@@ -42,6 +46,16 @@ async function fetchCoupons() {
             createdAt: item.createdAt,
             description: item.description
           }
+        })
+        platformOptions.value = res.data.platforms.map((item: any) => {
+          return {
+            label: item.label,
+            value: item.value
+          }
+        })
+        platformOptions.value.unshift({
+          label: "全平台",
+          value: 0
         })
       } else {
         tableData.value = []
@@ -76,8 +90,9 @@ function handleEdit(id: number) {
 }
 
 function openFrom(id: number) {
-  productFormRef.value?.open({
-    id
+  couponFormRef.value?.open({
+    id,
+    platformOptions: platformOptions.value
   })
   formVisibility.value = true
 }
@@ -91,6 +106,9 @@ onMounted(() => {
   <div class="main-container">
     <div class="filter-container">
       <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
+      <el-select v-model="listQuery.platformId" placeholder="选择平台" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
+        <el-option v-for="item in platformOptions" :key="item.value" :label="item.label" :value="item.value" />
+      </el-select>
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增优惠券</el-button>
     </div>
@@ -103,12 +121,12 @@ onMounted(() => {
         @sort-change="handleSortChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="platform" width="80" title="平台" />
+        <vxe-column field="platformName" width="80" title="平台" />
         <vxe-column field="name" min-width="200" title="优惠券名称" align="left" />
-        <vxe-column field="createdAt" title="开始时间" width="150">
+        <vxe-column field="startTime" title="开始时间" width="150">
           <template #default="{ row }">{{ formatDateTime(row.startTime) }}</template>
         </vxe-column>
-        <vxe-column field="createdAt" title="结束时间" width="150">
+        <vxe-column field="endTime" title="结束时间" width="150">
           <template #default="{ row }">{{ formatDateTime(row.endTime) }}</template>
         </vxe-column>
         <vxe-column field="amount" width="80" title="面值" />
@@ -117,9 +135,13 @@ onMounted(() => {
         <vxe-column field="totalCount" width="80" title="发放总量" />
         <vxe-column field="receivedCount" width="80" title="已领取" />
         <vxe-column field="usedCount" width="80" title="已使用" />
-        <vxe-column field="status" width="80" title="状态" />
         <vxe-column field="perLimit" width="80" title="限领数" />
-        <vxe-column field="status" width="80" title="状态" />
+        <vxe-column field="status" width="80" title="状态">
+          <template #default="{ row }">
+            <el-tag v-if="row.status === 1" type="success">启用</el-tag>
+            <el-tag v-else type="info">禁用</el-tag>
+          </template>
+        </vxe-column>
         <vxe-column field="creator" width="80" title="创建人" />
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
@@ -143,14 +165,9 @@ onMounted(() => {
     </div>
 
     <CouponForm
-      ref="productFormRef"
+      ref="couponFormRef"
       @success="fetchCoupons"
       @close="formVisibility = false"
-    />
-
-    <CouponImport
-      ref="productImportRef"
-      @success="fetchCoupons"
     />
   </div>
 </template>

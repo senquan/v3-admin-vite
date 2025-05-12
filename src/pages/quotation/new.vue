@@ -94,6 +94,17 @@ const rules = {
 // 添加行函数
 function addRow() {
   tableData.value.splice(tableData.value.length - 1, 0, { ...defaultRecord })
+  // 焦点设置在新加行第一个输入框
+  nextTick(() => {
+    const newRowIndex = tableData.value.length - 2
+    const inputs = tableRef.value?.$el.querySelectorAll(".el-table__row")
+    if (inputs && inputs[newRowIndex]) {
+      const firstInput = inputs[newRowIndex].querySelector("input")
+      if (firstInput) {
+        firstInput.focus()
+      }
+    }
+  })
 }
 
 // 修改颜色选项的处理方式
@@ -155,6 +166,9 @@ async function handleIdChange(value: any, row: any) {
   const selectedOption = idOptions.value.find((option: { value: any, label: string }) => option.value === value)
   const label = selectedOption ? selectedOption.label : ""
   await handelSearchProduct(label, row)
+  if (tableData.value.indexOf(row) === tableData.value.length - 2) {
+    addRow()
+  }
 }
 
 async function handelReloadColors(visible: boolean, row: any) {
@@ -175,9 +189,10 @@ function fillRowAndPrice(product: any, row: any) {
 
 function fillRow(product: any, row: any) {
   row.id = product.id
-  row.serie = product.series?.name || ""
+  row.serie = product.modelType?.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
+  row.imageUrl = product.imageUrl || ""
   row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
@@ -449,6 +464,7 @@ onUnmounted(() => {
               <el-select
                 v-model="row.modelType"
                 filterable
+                default-first-option
                 remote
                 placeholder="请输入编号搜索"
                 :remote-method="handelSearchId"
