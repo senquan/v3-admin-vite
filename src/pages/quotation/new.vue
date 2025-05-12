@@ -192,7 +192,8 @@ function fillRow(product: any, row: any) {
   row.serie = product.modelType?.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
-  row.imageUrl = product.imageUrl || ""
+  row.imageUrls = product.imageUrls?.split(",") || []
+  row.imageUrl = row.imageUrls[0] || ""
   row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
@@ -513,8 +514,9 @@ onUnmounted(() => {
                 :min-scale="0.2"
                 :preview-src-list="row.imageUrls"
                 show-progress
-                :initial-index="4"
+                :initial-index="0"
                 fit="cover"
+                :preview-teleported="true"
               >
                 <template #error>
                   <div class="image-slot">

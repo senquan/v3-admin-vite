@@ -40,7 +40,7 @@ export interface ProductListData {
   projectPrice: number
   factoryPrice: number
   status: number
-  imageUrl: string
+  imageUrls: string
   remark: string
   updatedAt: string
   tags: Tag[]
@@ -55,6 +55,7 @@ export interface ProductCreateData {
   basePrice: number
   projectPrice: number
   factoryPrice: number
+  imageFiles: string[]
   remark: string
   tags: number[]
 }

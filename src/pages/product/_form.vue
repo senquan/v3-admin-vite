@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type { UploadProps } from "element-plus"
-import { findCascaderPath } from "@/common/utils/helper"
 import { request } from "@/http/axios"
 import { ElMessage } from "element-plus"
 import { fetchTagsList } from "../tags/apis"
@@ -22,7 +20,7 @@ const formData = reactive({
   basePrice: 0,
   projectPrice: 0,
   factoryPrice: 0,
-  imageUrl: "",
+  imageFiles: [] as string[],
   remark: "",
   tags: []
 })
@@ -37,7 +35,7 @@ const modelOptions = ref<any>([])
 const tagOptions = ref<any>([])
 const selectedTags = ref<any>([])
 const tagsLoading = ref(false)
-const imagePreview = ref<string>("")
+const imageList = ref<any[]>([])
 
 const rules = {
   name: [{ required: true, message: "请输入商品名称", trigger: "blur" }],
@@ -59,12 +57,12 @@ function resetForm() {
   formData.basePrice = 0
   formData.projectPrice = 0
   formData.factoryPrice = 0
-  formData.imageUrl = ""
+  formData.imageFiles = []
   formData.remark = ""
   formData.tags = []
   selectedTags.value = []
   modelOptions.value = []
-  imagePreview.value = ""
+  imageList.value = []
 }
 
 function open(options = {
@@ -113,8 +111,13 @@ function open(options = {
             }
           })
         }
-        if (data.imageUrl) {
-          imagePreview.value = `${data.imageUrl}`
+        if (data.imageUrls) {
+          imageList.value = data.imageUrls.split(",").map((item: string) => ({
+            url: item,
+            name: item.split("/").pop()
+          }))
+        } else {
+          imageList.value = []
         }
       } else {
         ElMessage({
@@ -178,6 +181,9 @@ function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     formData.tags = selectedTags.value
+    console.log(imageList.value)
+    formData.imageFiles = imageList.value.map((item: any) => item.response?.data?.url || item.url).filter((item: any) => item)
+    console.log(formData)
     btnSubmit.loading = true
     const request = isEdit.value
       ? updateProduct(formData.id, formData)
@@ -240,7 +246,6 @@ function customUploadRequest(options: any) {
     onUploadProgress: (progressEvent: any) => {
       if (progressEvent.total) {
         const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100)
-        console.log(`Upload progress: ${percent}%`)
         onProgress({ percent })
       }
     }
@@ -253,15 +258,6 @@ function customUploadRequest(options: any) {
   })
 }
 
-const handleImageSuccess: UploadProps["onSuccess"] = (
-  response,
-  uploadFile
-) => {
-  console.log("处理上传成功回调:", response)
-  imagePreview.value = URL.createObjectURL(uploadFile.raw!)
-  formData.imageUrl = response.data.url
-}
-
 defineExpose({
   open
 })
@@ -271,7 +267,7 @@ defineExpose({
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑商品' : '新增商品'"
-    width="500px"
+    width="600px"
     :before-close="close"
   >
     <el-form
@@ -364,14 +360,13 @@ defineExpose({
         <el-col :span="24">
           <el-form-item label="产品主图" prop="image">
             <el-upload
+              v-model:file-list="imageList"
               class="image-uploader"
-              :show-file-list="false"
-              :on-success="handleImageSuccess"
+              list-type="picture-card"
               :before-upload="beforeImageUpload"
               :http-request="customUploadRequest"
             >
-              <el-image v-if="formData.imageUrl" class="image-previews" :src="imagePreview" fit="contain" />
-              <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
+              <el-icon class="image-uploader-icon"><Plus /></el-icon>
             </el-upload>
           </el-form-item>
         </el-col>
@@ -426,9 +421,19 @@ defineExpose({
   justify-content: flex-end;
 }
 .image-uploader .image-previews {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   display: block;
+}
+:deep(.el-upload--picture-card) {
+  width: 80px;
+  height: 80px;
+}
+:deep(.el-upload-list--picture-card) {
+  --el-upload-list-picture-card-size: 80px;
+}
+:deep(.el-upload-list--picture-card .el-upload-list__item-thumbnail) {
+  object-fit: cover;
 }
 </style>
 
