@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import areaData from "china-area-data"
 import { ElMessage } from "element-plus"
 import { createCustomer, updateCustomer } from "./apis"
 
@@ -11,10 +12,11 @@ const formData = ref({
   phone: "",
   email: "",
   address: "",
-  city: "",
-  province: "",
+  cityId: 0,
+  provinceId: 0,
+  districtId: 0,
   postalCode: "",
-  country: "",
+  country: "中国",
   contactPerson: "",
   contactPhone: "",
   contactPosition: "",
@@ -26,6 +28,10 @@ const formData = ref({
   salesRepId: null,
   isActive: 1
 })
+
+// 地区选择相关
+const selectedArea = ref<any>([]) // 存储选中的省市区编码
+const areaOptions = ref<any>([]) // 省市区选项数据
 
 const formRef = ref()
 const visible = ref(false)
@@ -41,6 +47,48 @@ const btnSubmit = reactive({
   loading: false
 })
 
+// 初始化省市区数据
+function initAreaData() {
+  const provinces = areaData["86"]
+  areaOptions.value = Object.keys(provinces).map((provinceId) => {
+    const cities = areaData[provinceId]
+    return {
+      value: provinceId,
+      label: provinces[provinceId],
+      children: cities
+        ? Object.keys(cities).map((cityId) => {
+            const districts = areaData[cityId]
+            return {
+              value: cityId,
+              label: cities[cityId],
+              children: districts
+                ? Object.keys(districts).map((districtId) => {
+                    return {
+                      value: districtId,
+                      label: districts[districtId]
+                    }
+                  })
+                : []
+            }
+          })
+        : []
+    }
+  })
+}
+
+function handleAreaChange(value: any) {
+  if (value && value.length > 0) {
+    const numValue = value.map((item: any) => Number(item))
+    formData.value.provinceId = numValue[0] || ""
+    formData.value.cityId = numValue[1] || ""
+    formData.value.districtId = numValue[2] || ""
+  } else {
+    formData.value.provinceId = 0
+    formData.value.cityId = 0
+    formData.value.districtId = 0
+  }
+}
+
 function open(options = {
   id: 0,
   editData: null
@@ -54,7 +102,14 @@ function open(options = {
         (formData.value as any)[key] = (options.editData as any)[key]
       }
     })
-    console.log(options.editData)
+    // 如果有省市区编码，设置级联选择器的值
+    if (formData.value.provinceId) {
+      const areaValues = []
+      if (formData.value.provinceId) areaValues.push(`${formData.value.provinceId}`)
+      if (formData.value.cityId) areaValues.push(`${formData.value.cityId}`)
+      if (formData.value.districtId) areaValues.push(`${formData.value.districtId}`)
+      selectedArea.value = areaValues
+    }
   } else {
     isEdit.value = false
   }
@@ -68,10 +123,11 @@ function resetForm() {
     phone: "",
     email: "",
     address: "",
-    city: "",
-    province: "",
+    cityId: 0,
+    provinceId: 0,
+    districtId: 0,
     postalCode: "",
-    country: "",
+    country: "中国",
     contactPerson: "",
     contactPhone: "",
     contactPosition: "",
@@ -83,6 +139,7 @@ function resetForm() {
     salesRepId: null,
     isActive: 1
   }
+  selectedArea.value = []
 }
 
 function close() {
@@ -129,6 +186,10 @@ function handleSubmit() {
   })
 }
 
+onMounted(() => {
+  initAreaData()
+})
+
 defineExpose({
   open
 })
@@ -138,7 +199,7 @@ defineExpose({
   <el-dialog
     v-model="visible"
     :title="`${isEdit ? '编辑' : '创建'}客户`"
-    width="60%"
+    width="50%"
     :before-close="close"
   >
     <el-form
@@ -232,6 +293,31 @@ defineExpose({
       </el-row>
 
       <el-row>
+        <el-col :span="8">
+          <el-form-item label="所在地区" prop="area">
+            <el-cascader
+              v-model="selectedArea"
+              :options="areaOptions"
+              :props="{ expandTrigger: 'hover' }"
+              @change="handleAreaChange"
+              placeholder="请选择省/市/区"
+              style="width: 100%"
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="邮政编码" prop="postalCode">
+            <el-input v-model="formData.postalCode" placeholder="请输入邮政编码" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="国家" prop="country">
+            <el-input v-model="formData.country" placeholder="请输入国家" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
         <el-col :span="24">
           <el-form-item label="联系地址" prop="address">
             <el-input v-model="formData.address" placeholder="请输入联系地址" />
@@ -240,35 +326,12 @@ defineExpose({
       </el-row>
 
       <el-row>
-        <el-col :span="8">
-          <el-form-item label="城市" prop="city">
-            <el-input v-model="formData.city" placeholder="请输入城市" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item label="省份/州" prop="province">
-            <el-input v-model="formData.province" placeholder="请输入省份/州" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item label="邮政编码" prop="postalCode">
-            <el-input v-model="formData.postalCode" placeholder="请输入邮政编码" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-row>
-        <el-col :span="12">
-          <el-form-item label="国家" prop="country">
-            <el-input v-model="formData.country" placeholder="请输入国家" />
-          </el-form-item>
-        </el-col>
         <el-col :span="12" v-if="isEdit">
           <el-form-item label="状态" prop="isActive">
-            <el-select v-model="formData.isActive" placeholder="请选择状态">
-              <el-option label="启用" :value="1" />
-              <el-option label="禁用" :value="0" />
-            </el-select>
+            <el-radio-group v-model="formData.isActive">
+              <el-radio :value="1">启用</el-radio>
+              <el-radio :value="0">禁用</el-radio>
+            </el-radio-group>
           </el-form-item>
         </el-col>
       </el-row>

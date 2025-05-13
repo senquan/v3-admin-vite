@@ -19,8 +19,9 @@ export interface CustomerCreateData {
   phone: string
   email: string
   address: string
-  city: string
-  province: string
+  cityId: number
+  provinceId: number
+  districtId: number
   postalCode: string
   country: string
   contactPerson: string

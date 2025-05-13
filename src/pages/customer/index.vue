@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import areaData from "china-area-data"
 import CustomerForm from "./_form.vue"
 import { deleteCustomer, fetchList } from "./apis"
 
@@ -31,8 +32,9 @@ async function fetchCustomers() {
             code: item.code,
             email: item.email,
             phone: item.phone,
-            city: item.city,
-            province: item.province,
+            cityId: item.cityId,
+            provinceId: item.provinceId,
+            districtId: item.districtId,
             postalCode: item.postalCode,
             companyName: item.companyName,
             taxNumber: item.taxNumber,
@@ -129,6 +131,17 @@ function getCustomerTypeText(type: number) {
     default: return "未知"
   }
 }
+
+function getProvinceName(provinceId: number) {
+  if (!provinceId) return ""
+  return areaData["86"][provinceId] || ""
+}
+
+function getCityName(provinceId: number, cityId: number) {
+  if (!provinceId || !cityId) return ""
+  const cities = areaData[provinceId]
+  return cities ? cities[cityId] || "" : ""
+}
 </script>
 
 <template>
@@ -165,7 +178,11 @@ function getCustomerTypeText(type: number) {
           </template>
         </vxe-column>
         <vxe-column field="phone" width="120" title="联系电话" />
-        <vxe-column field="city" width="80" title="城市" />
+        <vxe-column field="city" title="城市" width="120">
+          <template #default="{ row }">
+            {{ getProvinceName(row.provinceId) }} - {{ getCityName(row.provinceId, row.cityId) }}
+          </template>
+        </vxe-column>
         <vxe-column field="level" width="80" title="等级" />
         <vxe-column field="orderCount" width="80" title="订单数" />
         <vxe-column field="totalSpent" width="80" title="消费金额" />
