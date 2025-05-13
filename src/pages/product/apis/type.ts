@@ -95,6 +95,7 @@ export interface SeriesListOptResponseData {
 
 export interface ModelListRequestParams {
   keyword?: string
+  type?: string
   sort?: string
   page?: number
   pageSize?: number

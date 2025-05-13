@@ -40,7 +40,7 @@ const tableData = ref<TableRowData[]>([
   { ...defaultRecord }
 ])
 // 添加型号选项数据
-const idOptions = ref<any>([])
+const modelOptions = ref<any>([])
 const searchLoading = ref(false)
 const calculatedPrice = ref<any>([])
 const formData = ref({
@@ -91,6 +91,11 @@ const rules = {
   name: [{ required: true, message: "请输入订单名称", trigger: "blur" }]
 }
 
+const modelCache = ref<Map<string, any>>(new Map())
+const cacheInitialized = ref(false)
+const cacheExpiry = 30 * 60 * 1000 // 30分钟缓存过期
+const lastCacheTime = ref(0)
+
 // 添加行函数
 function addRow() {
   tableData.value.splice(tableData.value.length - 1, 0, { ...defaultRecord })
@@ -110,18 +115,38 @@ function addRow() {
 // 修改颜色选项的处理方式
 function handelSearchId(query: any, _row: TableRowData | null = null) {
   if (query === "" || query.length < 2) return
+
+  if (!cacheInitialized.value || Date.now() - lastCacheTime.value > cacheExpiry) {
+    // 缓存未初始化或已过期，使用原有的远程搜索
+    searchLoading.value = true
+    fetchIds({ keyword: query }).then((response: any) => {
+      if (response.code === 0) {
+        modelOptions.value = response.data.models.map((model: any) => ({
+          value: model.id,
+          label: model.name
+        }))
+        searchLoading.value = false
+      } else {
+        ElMessage.error(`获取物料编号列表失败: ${response.message}`)
+      }
+    })
+    initModelCache()
+    return
+  }
+
   searchLoading.value = true
-  fetchIds({ keyword: query }).then((response: any) => {
-    if (response.code === 0) {
-      idOptions.value = response.data.models.map((model: any) => ({
-        value: model.id,
+  const results: any[] = []
+  modelCache.value.forEach((model, id) => {
+    if (model.name.toLowerCase().includes(query.toLowerCase())) {
+      results.push({
+        value: id,
         label: model.name
-      }))
-      searchLoading.value = false
-    } else {
-      ElMessage.error(`获取物料编号列表失败: ${response.message}`)
+      })
     }
   })
+
+  modelOptions.value = results
+  searchLoading.value = false
 }
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
@@ -163,7 +188,7 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
 }
 
 async function handleIdChange(value: any, row: any) {
-  const selectedOption = idOptions.value.find((option: { value: any, label: string }) => option.value === value)
+  const selectedOption = modelOptions.value.find((option: { value: any, label: string }) => option.value === value)
   const label = selectedOption ? selectedOption.label : ""
   await handelSearchProduct(label, row)
   if (tableData.value.indexOf(row) === tableData.value.length - 2) {
@@ -388,7 +413,34 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+async function initModelCache() {
+  if (cacheInitialized.value && Date.now() - lastCacheTime.value < cacheExpiry) {
+    return true
+  }
+  try {
+    const response = await fetchIds({ type: "all" })
+    if (response.code === 0 && response.data.models) {
+      modelCache.value.clear()
+      response.data.models.forEach((model: any) => {
+        modelCache.value.set(model.id, {
+          id: model.id,
+          name: model.name
+        })
+      })
+      cacheInitialized.value = true
+      lastCacheTime.value = Date.now()
+      console.log(`已缓存 ${modelCache.value.size} 个型号`)
+      return true
+    }
+    return false
+  } catch (error) {
+    console.error("初始化型号缓存失败:", error)
+    ElMessage.error("初始化型号数据失败，将使用实时搜索")
+    return false
+  }
+}
+
+onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   if (orderId.value > 0) {
@@ -420,6 +472,7 @@ onMounted(() => {
       }
     })
   }
+  await initModelCache()
   window.addEventListener("keydown", handleKeyDown)
 })
 
@@ -473,7 +526,7 @@ onUnmounted(() => {
                 @change="(val) => handleIdChange(val, row)"
               >
                 <el-option
-                  v-for="item in idOptions"
+                  v-for="item in modelOptions"
                   :key="item.value"
                   :value="item.value"
                   :label="item.label"
