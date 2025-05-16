@@ -181,9 +181,7 @@ function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     formData.tags = selectedTags.value
-    console.log(imageList.value)
     formData.imageFiles = imageList.value.map((item: any) => item.response?.data?.url || item.url).filter((item: any) => item)
-    console.log(formData)
     btnSubmit.loading = true
     const request = isEdit.value
       ? updateProduct(formData.id, formData)

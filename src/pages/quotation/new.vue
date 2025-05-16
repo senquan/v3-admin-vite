@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
+import PreviewForm from "./_preview.vue"
 import { calculateOrderPrice, createOrder, fetchOrder, updateOrder } from "./apis"
 
 // 定义表格行的接口
 interface TableRowData {
+  rowId: string
   id: string
   serie: string
   color: string
@@ -22,6 +24,7 @@ const router = useRouter()
 const platformId = ref(0)
 const orderId = ref(0)
 const defaultRecord: TableRowData = {
+  rowId: "",
   id: "",
   serie: "",
   color: "",
@@ -56,11 +59,14 @@ const formData = ref({
   matchLogs: [] as any[]
 })
 const defaultColor = ref("")
-const bodyHeight = ref("calc(100vh - 450px)")
+const bodyHeight = ref("calc(100vh - 310px)")
 
 // 添加表格引用
 const tableRef = ref()
 const formRef = ref()
+const previewFormRef = ref()
+const previewFormVisible = ref(false)
+const onFocusQuantity = ref("")
 
 const dialyDiscount = computed(() => {
   return calculatedPrice.value?.dailyDiscount || 0
@@ -98,7 +104,8 @@ const lastCacheTime = ref(0)
 
 // 添加行函数
 function addRow() {
-  tableData.value.splice(tableData.value.length - 1, 0, { ...defaultRecord })
+  const newRow = { ...defaultRecord, rowId: getRowIdentity() }
+  tableData.value.splice(tableData.value.length - 1, 0, newRow)
   // 焦点设置在新加行第一个输入框
   nextTick(() => {
     const newRowIndex = tableData.value.length - 2
@@ -406,11 +413,52 @@ function handleQuantityChange(row: any) {
   calculatePrice(row)
 }
 
+function handleBlurQuantity() {
+  onFocusQuantity.value = ""
+}
+
+function handleFocusQuantity(row: any) {
+  onFocusQuantity.value = row.rowId
+}
+
 function handleKeyDown(event: KeyboardEvent) {
   if (event.key === "Enter" || event.code === "Enter") {
     event.preventDefault()
-    addRow()
+
+    if (onFocusQuantity.value) {
+      const currentRowIndex = tableData.value.findIndex((row: any) => row.rowId === onFocusQuantity.value)
+      if (currentRowIndex !== -1 && currentRowIndex < tableData.value.length - 2) {
+        const nextRowIndex = currentRowIndex + 1
+        nextTick(() => {
+          const quantityInputs = tableRef.value.$el.querySelectorAll(".el-input-number input")
+          if (quantityInputs && quantityInputs[nextRowIndex]) {
+            quantityInputs[nextRowIndex].focus()
+            quantityInputs[nextRowIndex].select()
+          }
+        })
+      } else {
+        addRow()
+      }
+      onFocusQuantity.value = ""
+    } else {
+      addRow()
+    }
   }
+}
+
+function orderPreview() {
+  previewFormRef.value?.open({
+    data: tableData.value,
+    summary: {
+      dialyDiscount,
+      dailyPrice,
+      promotionDiscount,
+      promotionPrice,
+      flashDiscount,
+      flashPrice
+    }
+  })
+  previewFormVisible.value = true
 }
 
 async function initModelCache() {
@@ -454,9 +502,10 @@ onMounted(async () => {
         tableData.value = order.items.map((item: any) => {
           const originPrice = (Number.parseFloat(item.product.basePrice) * Number.parseFloat(item.quantity)).toFixed(2)
           return {
+            rowId: getRowIdentity(),
             id: item.product.id,
             modelType: item.product.modelType?.name || "",
-            serie: item.product.series?.name || "",
+            serie: item.product.modelType?.serie?.name || "",
             color: item.product.color?.value || "",
             name: item.product.name || "",
             quantity: item.quantity || 1,
@@ -467,14 +516,24 @@ onMounted(async () => {
             colorOptions: []
           }
         })
-        tableData.value.push(defaultRecord)
+        tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
         calculatePrice(null)
       }
     })
+  } else {
+    // 初始化两行数据，确保每行都有唯一的 rowId
+    tableData.value = [
+      { ...defaultRecord, rowId: getRowIdentity() },
+      { ...defaultRecord, rowId: getRowIdentity() }
+    ]
   }
   await initModelCache()
   window.addEventListener("keydown", handleKeyDown)
 })
+
+function getRowIdentity() {
+  return `row_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+}
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown)
@@ -483,15 +542,6 @@ onUnmounted(() => {
 
 <template>
   <div class="quotation-main-container">
-    <div class="header-container">
-      <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
-      <div class="title">
-        公牛官方报价单
-        <span>授权编码：2212077530202253</span>
-      </div>
-      <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
-    </div>
-
     <div class="grid-grouping" :style="{ height: bodyHeight }">
       <el-table
         ref="tableRef"
@@ -556,30 +606,6 @@ onUnmounted(() => {
             </template>
           </template>
         </el-table-column>
-        <el-table-column prop="imageUrl" label="产品主图" width="100" align="center">
-          <template #default="{ row }">
-            <div class="product-image-container">
-              <el-image
-                style="width: 80px; height: 80px"
-                :src="row.imageUrl"
-                :zoom-rate="1.2"
-                :max-scale="7"
-                :min-scale="0.2"
-                :preview-src-list="row.imageUrls"
-                show-progress
-                :initial-index="0"
-                fit="cover"
-                :preview-teleported="true"
-              >
-                <template #error>
-                  <div class="image-slot">
-                    <el-icon><Picture /></el-icon>
-                  </div>
-                </template>
-              </el-image>
-            </div>
-          </template>
-        </el-table-column>
         <el-table-column prop="name" label="名称" min-width="200" align="center" />
         <el-table-column prop="quantity" label="数量" width="120" align="center">
           <template #default="{ row, $index }">
@@ -590,6 +616,8 @@ onUnmounted(() => {
                 :min="1"
                 :precision="0"
                 @change="handleQuantityChange(row)"
+                @blur="handleBlurQuantity"
+                @focus="handleFocusQuantity(row)"
                 style="width: 100%;"
               />
             </template>
@@ -617,99 +645,97 @@ onUnmounted(() => {
       </el-table>
 
       <div class="footer-container">
-        <div class="footer-action">
-          <div class="price-summary-table">
-            <el-descriptions
-              class="margin-top"
-              :column="3"
-              border
-            >
-              <el-descriptions-item
-                :rowspan="2"
-                :width="250"
-                align="center"
-              />
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item">
-                    <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
-                    日常优惠券
-                  </div>
-                </template>
-                {{ dialyDiscount }}
-              </el-descriptions-item>
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item">
-                    <el-icon style="margin-right: 5px;"><Money /></el-icon>
-                    日常到手价
-                  </div>
-                </template>
-                {{ dailyPrice }}
-              </el-descriptions-item>
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item">
-                    <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
-                    活动优惠券
-                  </div>
-                </template>
-                {{ promotionDiscount }}
-              </el-descriptions-item>
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item">
-                    <el-icon style="margin-right: 5px;"><Money /></el-icon>
-                    活动到手价
-                  </div>
-                </template>
-                {{ promotionPrice }}
-              </el-descriptions-item>
-              <el-descriptions-item
-                :width="250"
-                label="赠品剩余额度"
-                align="center"
+        <el-row :gutter="10">
+          <el-col :span="18">
+            <div class="price-summary-table">
+              <el-descriptions
+                class="margin-top"
+                :column="2"
+                border
               >
-                {{ bonusLeft.toFixed(2) }}
-              </el-descriptions-item>
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item">
-                    <el-icon style="margin-right: 5px;"><Timer /></el-icon>
-                    限时活动
-                  </div>
-                </template>
-                {{ flashDiscount }}
-              </el-descriptions-item>
-              <el-descriptions-item align="right">
-                <template #label>
-                  <div class="cell-item" style="color: red; font-weight: bold;">
-                    <el-icon style="margin-right: 5px;"><Money /></el-icon>
-                    限时到手价
-                  </div>
-                </template>
-                <span style="color: red; font-weight: bold;">{{ flashPrice }}</span>
-              </el-descriptions-item>
-            </el-descriptions>
-          </div>
-          <el-form
-            ref="formRef"
-            :model="formData"
-            :rules="rules"
-          >
-            <el-form-item label="订单名称" prop="name">
-              <el-input v-model="formData.name" placeholder="请输入订单名称" />
-            </el-form-item>
-            <el-form-item align="right">
-              <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
-              <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
+                      日常优惠券
+                    </div>
+                  </template>
+                  {{ dialyDiscount }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
+                      日常到手价
+                    </div>
+                  </template>
+                  {{ dailyPrice }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
+                      活动优惠券
+                    </div>
+                  </template>
+                  {{ promotionDiscount }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
+                      活动到手价
+                    </div>
+                  </template>
+                  {{ promotionPrice }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      <el-icon style="margin-right: 5px;"><Timer /></el-icon>
+                      限时活动
+                    </div>
+                  </template>
+                  {{ flashDiscount }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item" style="color: red; font-weight: bold;">
+                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
+                      限时到手价
+                    </div>
+                  </template>
+                  <span style="color: red; font-weight: bold;">{{ flashPrice }}</span>
+                </el-descriptions-item>
+              </el-descriptions>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <el-form
+              ref="formRef"
+              :model="formData"
+              :rules="rules"
+            >
+              <el-form-item label="订单名称" prop="name">
+                <el-input v-model="formData.name" placeholder="VIP专属" />
+              </el-form-item>
+              <el-form-item>
+                <div class="button-container">
+                  <el-button type="success" @click="orderPreview()">报价预览</el-button>
+                  <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
+                  <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
+                </div>
+              </el-form-item>
+              <div class="bonus-item">
+                赠品剩余额度 {{ bonusLeft.toFixed(2) }}
+              </div>
+            </el-form>
+          </el-col>
+        </el-row>
       </div>
     </div>
 
-    <div class="footer-container">
+    <div>
       <el-dialog v-model="priceDetailVisible" title="计价详情" width="600">
         <el-table :data="priceDetailData" empty-text="没有优惠">
           <el-table-column property="message" label="规则" min-width="300" />
@@ -718,53 +744,18 @@ onUnmounted(() => {
         </el-table>
       </el-dialog>
     </div>
+
+    <PreviewForm
+      ref="previewFormRef"
+      @close="previewFormVisible = false"
+    />
   </div>
 </template>
 
 <style scoped>
 .quotation-main-container {
-  background-color: #4b8f88;
   padding: 20px;
 }
-.header-container {
-  height: 90px;
-  display: inline-flex;
-  margin-bottom: 10px;
-  .logo {
-    margin-left: 35px;
-    width: 200px;
-    text-align: center;
-    background: #fff;
-    padding: 8px;
-    border-bottom-right-radius: 20px;
-    border-bottom-left-radius: 20px;
-  }
-  .title {
-    font-weight: bold;
-    font-size: 38px;
-    color: #fff;
-    margin-left: 60px;
-    span {
-      display: block;
-      font-weight: normal;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-  }
-  .intro {
-    width: 600px;
-    font-weight: bold;
-    font-size: 35px;
-    color: #fff;
-    margin-left: 20px;
-    line-height: 80px;
-    text-align: center;
-    span {
-      font-size: 50px;
-    }
-  }
-}
-
 .last-row-action {
   display: flex;
   align-items: center;
@@ -780,21 +771,9 @@ onUnmounted(() => {
   border: 1px solid #ebeef5;
 }
 
-.footer-action {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-  padding: 10px;
-}
-
-.footer-action span {
-  font-size: 16px;
-  font-weight: bold;
-}
-
 .price-summary-table {
-  width: 80%;
+  margin: auto;
+  width: 50%;
 }
 
 .price-summary-table table {
@@ -832,6 +811,20 @@ onUnmounted(() => {
 
 :deep(.highlight-price) {
   color: red;
+}
+
+:deep(.el-descriptions__content) {
+  background-color: var(--el-descriptions-item-bordered-label-background);
+}
+
+.button-container {
+  width: 100%;
+  text-align: center;
+}
+
+.bonus-item {
+  text-align: center;
+  font-size: 14px;
 }
 
 .image-slot {

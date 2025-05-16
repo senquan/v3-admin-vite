@@ -16,3 +16,19 @@ export function getUserPermissions() {
     method: "get"
   })
 }
+
+export function updateUserProfile(data: Users.UserProfileRequestParams) {
+  return request<ApiResponseData<any>>({
+    url: "users/profile",
+    method: "put",
+    data
+  })
+}
+
+export function updateUserPassword(data: Users.UserPasswordRequestParams) {
+  return request<ApiResponseData<any>>({
+    url: "users/password",
+    method: "put",
+    data
+  })
+}
