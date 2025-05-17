@@ -41,7 +41,10 @@ export function deleteReturnOrder(id: number) {
 
 export function fetchReturnOrderStatusLog(id: number) {
   return request<ReturnOrder.ReturnOrderStatusLogResponseData>({
-    url: `order/return/log/${id}`,
-    method: "get"
+    url: `order/${id}/log`,
+    method: "get",
+    params: {
+      type: "return"
+    }
   })
 }

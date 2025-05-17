@@ -56,6 +56,14 @@ export function updateOrder(id: number, data: Order.OrderCreateData) {
   })
 }
 
+export function updateOrderStatus(id: number, data: Order.OrderUpdateStatusData) {
+  return request<Order.OrderActionResponseData>({
+    url: `order/${id}/status`,
+    method: "put",
+    data
+  })
+}
+
 export function deleteOrder(id: number) {
   return request<Order.OrderActionResponseData>({
     url: `order/${id}`,
@@ -84,5 +92,12 @@ export function createReturnOrder(data: Order.ReturnOrderCreateData) {
     url: `order/return`,
     method: "post",
     data
+  })
+}
+
+export function fetchOrderStatusLog(id: number) {
+  return request<Order.ReturnOrderStatusLogResponseData>({
+    url: `order/${id}/log`,
+    method: "get"
   })
 }

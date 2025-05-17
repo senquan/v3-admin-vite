@@ -44,6 +44,11 @@ export interface OrderCreateData {
   }[]
 }
 
+export interface OrderUpdateStatusData {
+  status: number
+  remark: string
+}
+
 export interface ReturnOrderCreateData {
   orderId: number
   returns: {
@@ -143,4 +148,14 @@ export interface OrderCategoryReportResponseData {
     series: string[]
     models: string[]
   }
+}
+
+export interface ReturnOrderStatusLogResponseData {
+  orderType: number
+  previousStatus: number
+  currentStatus: number
+  operatorName: string
+  operation: string
+  remark: string | null
+  createdAt: number
 }

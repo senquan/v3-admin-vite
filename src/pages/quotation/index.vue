@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { createReturnOrder, fetchList, fetchOrder } from "./apis"
+import { createReturnOrder, fetchList, fetchOrder, fetchOrderStatusLog, updateOrderStatus } from "./apis"
 
 const router = useRouter()
 const loading = ref(false)
@@ -29,6 +29,26 @@ const returnForm = reactive({
   reason: "",
   remark: ""
 })
+const statusForm = reactive({
+  orderId: 0,
+  status: 0,
+  remark: ""
+})
+const orderStatusLogs = ref<any>([])
+const statusOptions = ref<any>([
+  { label: "草稿", value: -1, color: "info" },
+  { label: "待支付", value: 0, color: "info" },
+  { label: "已支付", value: 1, color: "info" },
+  { label: "处理中", value: 2, color: "warning" },
+  { label: "已发货", value: 3, color: "primary" },
+  { label: "已签收", value: 4, color: "primary" },
+  { label: "售后中", value: 5, color: "danger" },
+  { label: "已完成", value: 6, color: "success" }
+])
+
+function getMatchedStatus(statusValue: number) {
+  return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
+}
 
 async function fetchOrders() {
   loading.value = true
@@ -130,6 +150,22 @@ function loadDetail(id: number) {
   })
 }
 
+function handleTabClick(tab: any) {
+  if (tab.paneName === "workflow") {
+    fetchOrderStatusLog(orderDetail.value.id).then((res: any) => {
+      orderStatusLogs.value = res.data.map((item: any) => {
+        return {
+          timestamp: `${formatDateTime(item.createdAt)} ${item.operatorName}`,
+          content: `${item.operation} (${getMatchedStatus(item.previousStatus)?.label} -> ${getMatchedStatus(item.currentStatus)?.label})`
+        }
+      })
+      statusForm.orderId = orderDetail.value.id
+      statusForm.status = orderDetail.value.status
+      statusForm.remark = ""
+    })
+  }
+}
+
 function handleSubmitReturn() {
   detailDrawer.value = false
   let total = 0
@@ -156,6 +192,26 @@ function handleSubmitReturn() {
     } else {
       ElMessage.error("申请失败")
     }
+  })
+}
+
+function handleUpdateStatus() {
+  const dialog = ElMessageBox.confirm("确认更新订单状态吗？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  })
+  dialog.then(() => {
+    updateOrderStatus(orderDetail.value.id, statusForm).then((res: any) => {
+      if (res.code === 0) {
+        ElMessage.success("更新状态成功")
+        orderDetail.value.status = statusForm.status
+        handleFilter()
+        handleTabClick({ paneName: "workflow" })
+      }
+    }).catch(() => {
+      ElMessage.error("更新状态失败")
+    })
   })
 }
 
@@ -202,14 +258,12 @@ onMounted(() => {
         <vxe-column field="payPrice" width="100" title="到手总价" />
         <vxe-column field="status" width="80" title="订单状态">
           <template #default="{ row }">
-            <el-tag type="info" v-if="row.status === -1" effect="dark">草稿</el-tag>
-            <el-tag type="info" v-if="row.status === 0" effect="dark">待支付</el-tag>
-            <el-tag type="info" v-if="row.status === 1" effect="dark">已支付</el-tag>
-            <el-tag type="warning" v-if="row.status === 2" effect="dark">处理中</el-tag>
-            <el-tag type="primary" v-if="row.status === 3" effect="dark">已发货</el-tag>
-            <el-tag type="primary" v-if="row.status === 4" effect="dark">已签收</el-tag>
-            <el-tag type="danger" v-if="row.status === 5" effect="dark">售后中</el-tag>
-            <el-tag type="success" v-if="row.status === 6" effect="dark">已完成</el-tag>
+            <el-tag
+              v-if="getMatchedStatus(row.status)"
+              :type="getMatchedStatus(row.status).color"
+            >
+              {{ getMatchedStatus(row.status).label }}
+            </el-tag>
           </template>
         </vxe-column>
         <vxe-column field="payStatus" width="80" title="支付状态">
@@ -242,7 +296,7 @@ onMounted(() => {
     </div>
 
     <el-drawer v-model="detailDrawer" title="订单详情" size="38%" direction="rtl">
-      <el-tabs v-model="activeTab" type="border-card">
+      <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
         <el-tab-pane label="物料详情" name="materia">
           <el-table :data="orderDetail.items">
             <el-table-column label="物料编号" min-width="200" align="left">
@@ -292,6 +346,30 @@ onMounted(() => {
               <el-input v-model="returnForm.remark" type="textarea" :rows="3" placeholder="请输入售后备注" style="margin-top: 10px;" />
               <el-button type="primary" @click="handleSubmitReturn" style="margin-top: 10px;">提交退货申请</el-button>
             </div>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="订单流程" name="workflow">
+          <el-timeline style="margin-top: 20px;">
+            <el-timeline-item
+              v-for="(activity, index) in orderStatusLogs"
+              :key="index"
+              :timestamp="activity.timestamp"
+            >
+              {{ activity.content }}
+            </el-timeline-item>
+          </el-timeline>
+          <el-form style="margin-top: 20px;">
+            <el-form-item label="订单状态" prop="status" label-width="100">
+              <el-select v-model="statusForm.status" placeholder="请选择订单状态" style="width: 200px">
+                <el-option v-for="(status, index) in statusOptions" :key="index" :label="status.label" :value="status.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="备注" prop="remark" label-width="100">
+              <el-input v-model="statusForm.remark" type="textarea" :rows="3" placeholder="请输入备注" />
+            </el-form-item>
+            <el-form-item label-width="100">
+              <el-button type="primary" @click="handleUpdateStatus">更新</el-button>
+            </el-form-item>
           </el-form>
         </el-tab-pane>
       </el-tabs>

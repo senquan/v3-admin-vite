@@ -8,6 +8,7 @@ import { calculateOrderPrice, createOrder, fetchOrder, updateOrder } from "./api
 interface TableRowData {
   rowId: string
   id: string
+  modelTypeId: string
   serie: string
   color: string
   name: string
@@ -18,6 +19,7 @@ interface TableRowData {
   payPrice: number
   colorOptions: Array<{ value: any, label: string }>
   backupProducts: Array<ProductListData>
+  colorEditable: false
 }
 
 const router = useRouter()
@@ -26,6 +28,7 @@ const orderId = ref(0)
 const defaultRecord: TableRowData = {
   rowId: "",
   id: "",
+  modelTypeId: "",
   serie: "",
   color: "",
   name: "",
@@ -35,7 +38,8 @@ const defaultRecord: TableRowData = {
   finalUnitPrice: 0,
   payPrice: 0,
   colorOptions: [],
-  backupProducts: []
+  backupProducts: [],
+  colorEditable: false
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -43,7 +47,7 @@ const tableData = ref<TableRowData[]>([
   { ...defaultRecord }
 ])
 // 添加型号选项数据
-const modelOptions = ref<any>([])
+const modelOptions = ref<any>([{ value: "", label: "" }])
 const searchLoading = ref(false)
 const calculatedPrice = ref<any>([])
 const formData = ref({
@@ -67,6 +71,12 @@ const formRef = ref()
 const previewFormRef = ref()
 const previewFormVisible = ref(false)
 const onFocusQuantity = ref("")
+const currentRow = ref<any>(null)
+
+// 列选中功能
+const selectedCells = ref<Array<{ rowIndex: number, columnIndex: number }>>([])
+const hoveredCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
+const lastSelectedCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
 
 const dialyDiscount = computed(() => {
   return calculatedPrice.value?.dailyDiscount || 0
@@ -85,6 +95,9 @@ const flashDiscount = computed(() => {
 })
 const flashPrice = computed(() => {
   return calculatedPrice.value?.flashPrice || 0
+})
+const bonusUsed = computed(() => {
+  return calculatedPrice.value?.usedBonusPoint || 0
 })
 const bonusLeft = computed(() => {
   return calculatedPrice.value?.flashPrice * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
@@ -154,6 +167,9 @@ function handelSearchId(query: any, _row: TableRowData | null = null) {
 
   modelOptions.value = results
   searchLoading.value = false
+  if (modelOptions.value.length === 0) {
+    modelOptions.value = [{ value: "", label: "无匹配结果" }]
+  }
 }
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
@@ -221,6 +237,7 @@ function fillRowAndPrice(product: any, row: any) {
 
 function fillRow(product: any, row: any) {
   row.id = product.id
+  row.modelType = product.modelType?.name || ""
   row.serie = product.modelType?.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
@@ -233,6 +250,7 @@ function fillRow(product: any, row: any) {
 }
 
 function handleColorChange(color: number, row: any) {
+  row.colorEditable = false
   if (!row.backupProducts) return
   const selectedProduct = row.backupProducts.find((product: any) => product.colorId === color)
   if (selectedProduct) {
@@ -358,7 +376,7 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(2)
+        }, 0)}`).toFixed(index === 4 ? 0 : 2)
       }
       if (index === 6) {
         formData.value.originPrice = Number(sums[index])
@@ -444,18 +462,200 @@ function handleKeyDown(event: KeyboardEvent) {
       addRow()
     }
   }
+
+  // 如果没有选中单元格，不处理方向键
+  if (selectedCells.value.length === 0 || !lastSelectedCell.value) return
+
+  // 方向键导航
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+    event.preventDefault()
+
+    let { rowIndex, columnIndex } = lastSelectedCell.value
+
+    switch (event.key) {
+      case "ArrowUp":
+        rowIndex = Math.max(0, rowIndex - 1)
+        break
+      case "ArrowDown":
+        rowIndex = Math.min(tableData.value.length - 2, rowIndex + 1)
+        break
+      case "ArrowLeft":
+        columnIndex = Math.max(0, columnIndex - 1)
+        break
+      case "ArrowRight":
+        columnIndex = Math.min(9, columnIndex + 1) // 假设有10列，根据实际情况调整
+        break
+    }
+
+    // 如果按住Shift键，则扩展选择范围
+    if (event.shiftKey) {
+      // 清除之前的选择
+      selectedCells.value = []
+
+      // 计算选择范围
+      const startRow = Math.min(lastSelectedCell.value.rowIndex, rowIndex)
+      const endRow = Math.max(lastSelectedCell.value.rowIndex, rowIndex)
+      const startCol = Math.min(lastSelectedCell.value.columnIndex, columnIndex)
+      const endCol = Math.max(lastSelectedCell.value.columnIndex, columnIndex)
+
+      // 选择范围内的所有单元格
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          if (r < tableData.value.length - 1) { // 排除最后一行
+            selectedCells.value.push({ rowIndex: r, columnIndex: c })
+          }
+        }
+      }
+    } else {
+      // 否则只选中当前单元格
+      const newCell = { rowIndex, columnIndex }
+      selectedCells.value = [newCell]
+      lastSelectedCell.value = newCell
+    }
+  }
+}
+
+// function copySelectedCells() {
+//   if (selectedCells.value.length === 0) return
+
+//   // 获取选中单元格的数据
+//   const data = selectedCells.value.map((cell) => {
+//     const row = tableData.value[cell.rowIndex]
+//     // 根据列索引获取对应的属性
+//     const columnProps = ["id", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
+//     const prop = columnProps[cell.columnIndex]
+//     return prop in row ? row[prop as keyof TableRowData] : ""
+//   })
+
+//   // 将数据复制到剪贴板
+//   navigator.clipboard.writeText(data.join("\t"))
+//   ElMessage.success("已复制选中单元格")
+// }
+
+// 可以添加右键菜单
+// function showContextMenu(event: MouseEvent) {
+//   event.preventDefault()
+//   if (selectedCells.value.length > 0) {
+//     // 显示上下文菜单，提供复制等操作
+//     // ...
+//   }
+// }
+
+function handleCellClick(row: any, column: any, _cell: any, event: any) {
+  if (currentRow.value && (row.rowId !== currentRow.value.rowId || column.property !== "color")) {
+    currentRow.value.colorEditable = false
+    currentRow.value = null
+  }
+
+  // 只处理颜色一列
+  if (column.property !== "color") return
+
+  // 最后一行不参与选中
+  if (tableData.value.indexOf(row) === tableData.value.length - 1) {
+    return
+  }
+
+  const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+  const columnIndex = event.target.parentElement.cellIndex
+  const cellInfo = { rowIndex, columnIndex }
+
+  // Ctrl/Command键多选不连续单元格
+  if (event.ctrlKey || event.metaKey) {
+    const existingIndex = selectedCells.value.findIndex(
+      cell => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
+    )
+
+    if (existingIndex >= 0) {
+      // 如果已选中，则取消选中
+      selectedCells.value.splice(existingIndex, 1)
+    } else {
+      // 否则添加到选中数组
+      selectedCells.value.push(cellInfo)
+      lastSelectedCell.value = cellInfo
+    }
+  } else if (event.shiftKey && lastSelectedCell.value) {
+    // 清除之前的选择
+    selectedCells.value = []
+
+    // 计算选择范围
+    const startRow = Math.min(lastSelectedCell.value.rowIndex, rowIndex)
+    const endRow = Math.max(lastSelectedCell.value.rowIndex, rowIndex)
+    const startCol = Math.min(lastSelectedCell.value.columnIndex, columnIndex)
+    const endCol = Math.max(lastSelectedCell.value.columnIndex, columnIndex)
+
+    // 选择范围内的所有单元格
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        if (r < tableData.value.length - 1) { // 排除最后一行
+          selectedCells.value.push({ rowIndex: r, columnIndex: c })
+        }
+      }
+    }
+  } else {
+    selectedCells.value = [cellInfo]
+    lastSelectedCell.value = cellInfo
+  }
+}
+
+function handleCellDoubleClick(row: any, column: any, _cell: any, _event: any) {
+  if (column.property === "color") {
+    currentRow.value = row
+    row.colorEditable = true
+  }
+}
+
+function handleCellMouseEnter(row: any, column: any, cell: any, event: any) {
+  const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+  const columnIndex = event.target.parentElement.cellIndex
+
+  hoveredCell.value = { rowIndex, columnIndex }
+}
+
+function handleCellMouseLeave() {
+  hoveredCell.value = null
+}
+
+function isCellSelected(rowIndex: number, columnIndex: number): boolean {
+  return selectedCells.value.some(
+    cell => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
+  )
+}
+
+function isCellHovered(rowIndex: number, columnIndex: number): boolean {
+  return hoveredCell.value !== null
+    && hoveredCell.value.rowIndex === rowIndex
+    && hoveredCell.value.columnIndex === columnIndex
+}
+
+function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
+  // 最后一行不参与选中
+  if (rowIndex === tableData.value.length - 1) {
+    return ""
+  }
+
+  // 获取实际的行索引（考虑到可能有删除行的情况）
+  const actualRowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+
+  if (isCellSelected(actualRowIndex, columnIndex)) {
+    return "selected-cell"
+  } else if (isCellHovered(actualRowIndex, columnIndex)) {
+    return "hovered-cell"
+  }
+  return ""
 }
 
 function orderPreview() {
   previewFormRef.value?.open({
     data: tableData.value,
+    title: formData.value?.name || "",
     summary: {
       dialyDiscount,
       dailyPrice,
       promotionDiscount,
       promotionPrice,
       flashDiscount,
-      flashPrice
+      flashPrice,
+      bonusUsed
     }
   })
   previewFormVisible.value = true
@@ -554,6 +754,11 @@ onUnmounted(() => {
         show-summary
         style="width: 100%"
         resizable
+        @cell-click="handleCellClick"
+        @cell-dblclick="handleCellDoubleClick"
+        @cell-mouse-enter="handleCellMouseEnter"
+        @cell-mouse-leave="handleCellMouseLeave"
+        :cell-class-name="cellClassName"
       >
         <el-table-column prop="id" label="型号" width="150" align="center">
           <template #default="{ row, $index }">
@@ -566,11 +771,11 @@ onUnmounted(() => {
             </template>
             <template v-else>
               <el-select
-                v-model="row.modelType"
+                v-model="row.modelTypeId"
                 filterable
                 default-first-option
                 remote
-                placeholder="请输入编号搜索"
+                :placeholder="row.modelType || '请选择型号'"
                 :remote-method="handelSearchId"
                 :loading="searchLoading"
                 @change="(val) => handleIdChange(val, row)"
@@ -589,7 +794,9 @@ onUnmounted(() => {
         <el-table-column prop="color" label="颜色" width="120" align="center">
           <template #default="{ row, $index }">
             <template v-if="$index !== tableData.length - 1">
+              {{ row.colorEditable ? "" : row.colorOptions.find((item: any) => item.value === row.color)?.label || row.color }}
               <el-select
+                v-if="row.colorEditable"
                 v-model="row.color"
                 placeholder="选择颜色"
                 @change="(val) => handleColorChange(val, row)"
@@ -716,8 +923,8 @@ onUnmounted(() => {
               :model="formData"
               :rules="rules"
             >
-              <el-form-item label="订单名称" prop="name">
-                <el-input v-model="formData.name" placeholder="VIP专属" />
+              <el-form-item label="VIP专属:" prop="name">
+                <el-input v-model="formData.name" placeholder="请输入订单名称" />
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
@@ -839,5 +1046,21 @@ onUnmounted(() => {
 }
 .image-slot .el-icon {
   font-size: 20px;
+}
+</style>
+
+<style>
+.el-table .selected-cell {
+  border: 2px solid #409eff !important;
+  background-color: rgba(64, 158, 255, 0.1) !important;
+  box-sizing: border-box;
+}
+.el-table .hovered-cell {
+  border: 1px dashed #409eff !important;
+  box-sizing: border-box;
+}
+.el-table td.selected-cell,
+.el-table td.hovered-cell {
+  padding: 10px !important;
 }
 </style>

@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { getCascaderOptions } from "@/common/utils/helper"
+// import { useUserStore } from "@/pinia/stores/user"
 import ProductForm from "./_form.vue"
 import ProductImport from "./_import.vue"
 import { deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
+
+// const userStore = useUserStore()
+// const isAdmin = userStore.roles.includes("ADMIN")
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -41,7 +45,7 @@ async function fetchProducts() {
             materialId: item.materialId,
             barCode: item.barCode,
             model: item.modelType?.name || "",
-            serie: item.series?.name || "",
+            serie: item.modelType?.serie?.name || "",
             color: item.color?.value || "",
             name: item.name,
             basePrice: item.basePrice,

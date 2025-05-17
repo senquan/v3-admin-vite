@@ -1,12 +1,13 @@
 <script lang="ts" setup>
+import { formatDateTime } from "@/common/utils/datetime"
 import html2canvas from "html2canvas"
 
 const emit = defineEmits(["success", "close"])
 
 const visible = ref(false)
 const orderData = ref<any>([])
-const bodyHeight = ref("calc(100vh - 350px)")
 const summaryData = reactive<any>({})
+const title = ref("")
 
 const btnSubmit = reactive({
   loading: false
@@ -14,6 +15,7 @@ const btnSubmit = reactive({
 
 function open(options = {
   data: Array<any>,
+  title: "",
   summary: {
     dialyDiscount: 0,
     dailyPrice: 0,
@@ -25,6 +27,7 @@ function open(options = {
 }) {
   orderData.value = Array.isArray(options.data) ? options.data.filter(item => item.modelType && item.quantity > 0) : []
   Object.assign(summaryData, options.summary)
+  title.value = options.title
   visible.value = true
 }
 
@@ -86,6 +89,36 @@ function copyToClipboard() {
 function printContent() {
   window.print()
 }
+
+function getSummaries(param: any) {
+  const { columns, data } = param
+  const sums: (string | VNode)[] = []
+  columns.forEach((column: { property: string }, index: number) => {
+    if (index === 0) {
+      sums[index] = h("div", { style: { textDecoration: "underline" } }, [
+        "总计"
+      ])
+      return
+    }
+    const values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    if (index === 5 || index === 7 || index === 9) {
+      if (!values.every((value: number) => Number.isNaN(value))) {
+        sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
+          const value = Number(curr)
+          if (!Number.isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)}`).toFixed(index === 5 ? 0 : 2)
+      }
+    } else {
+      sums[index] = ""
+    }
+  })
+
+  return sums
+}
 </script>
 
 <template>
@@ -105,7 +138,12 @@ function printContent() {
         <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
       </div>
 
-      <el-table :data="orderData" border :style="{ height: bodyHeight }">
+      <el-table
+        :data="orderData"
+        :summary-method="getSummaries"
+        show-summary
+        border
+      >
         <el-table-column prop="imageUrl" label="产品主图" width="100" align="center">
           <template #default="{ row }">
             <div class="product-image-container">
@@ -207,6 +245,21 @@ function printContent() {
                 </el-descriptions-item>
               </el-descriptions>
             </div>
+          </el-col>
+        </el-row>
+        <el-row :gutter="0" class="footer-info">
+          <el-col :span="8">
+            VIP专属：
+            <span>{{ title }}</span>
+          </el-col>
+          <el-col :span="8">
+            报价时间：
+            <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
+          </el-col>
+          <el-col :span="8">
+            <span class="bonus">{{ (summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+            <span class="bonus">{{ (summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+            <span class="bonus">{{ (summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
           </el-col>
         </el-row>
       </div>
@@ -314,13 +367,23 @@ function printContent() {
 .image-slot .el-icon {
   font-size: 20px;
 }
+.footer-info {
+  text-align: center;
+  background-color: #4b8f88;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 12px;
+}
 .footer-buttons {
   margin: auto;
   display: flex;
   justify-content: center;
   gap: 10px;
 }
-
+.bonus {
+  margin-right: 20px;
+}
 /* 打印样式 */
 @media print {
   .el-dialog__footer,
