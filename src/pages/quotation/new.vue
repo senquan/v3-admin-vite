@@ -8,6 +8,7 @@ import { calculateOrderPrice, createOrder, fetchOrder, updateOrder } from "./api
 interface TableRowData {
   rowId: string
   id: string
+  modelType: string
   modelTypeId: string
   serie: string
   color: string
@@ -28,6 +29,7 @@ const orderId = ref(0)
 const defaultRecord: TableRowData = {
   rowId: "",
   id: "",
+  modelType: "",
   modelTypeId: "",
   serie: "",
   color: "",
@@ -77,6 +79,7 @@ const currentRow = ref<any>(null)
 const selectedCells = ref<Array<{ rowIndex: number, columnIndex: number }>>([])
 const hoveredCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
 const lastSelectedCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
+const copiedValue = ref("")
 
 const dialyDiscount = computed(() => {
   return calculatedPrice.value?.dailyDiscount || 0
@@ -132,7 +135,6 @@ function addRow() {
   })
 }
 
-// 修改颜色选项的处理方式
 function handelSearchId(query: any, _row: TableRowData | null = null) {
   if (query === "" || query.length < 2) return
 
@@ -184,7 +186,11 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
           row.colorOptions = colorOpts
         }
         if (refresh) {
-          row.backupProducts = response.data.products
+          row.backupProducts = response.data.products.sort((a: any, b: any) => {
+            if (a.color === null) return -1
+            if (b.color === null) return 1
+            return 0
+          })
           let selectedProduct = null
           if (defaultColor.value) {
             selectedProduct = row.backupProducts.find((product: any) =>
@@ -440,6 +446,23 @@ function handleFocusQuantity(row: any) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.code === "KeyC")) {
+    if (selectedCells.value.length === 1) {
+      event.preventDefault()
+      copySelectedCells()
+    }
+    return
+  }
+  console.log("键盘按下", event.key, event.code)
+  if ((event.ctrlKey || event.metaKey) && (event.key === "v" || event.code === "KeyV")) {
+    console.log("粘贴", selectedCells.value)
+    if (selectedCells.value.length > 0) {
+      event.preventDefault()
+      pasteSelectedCells()
+    }
+    return
+  }
+
   if (event.key === "Enter" || event.code === "Enter") {
     event.preventDefault()
 
@@ -515,24 +538,59 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
-// function copySelectedCells() {
-//   if (selectedCells.value.length === 0) return
+function copySelectedCells() {
+  // 获取选中单元格的数据
+  const cell = selectedCells.value[0]
+  const row = tableData.value[cell.rowIndex]
 
-//   // 获取选中单元格的数据
-//   const data = selectedCells.value.map((cell) => {
-//     const row = tableData.value[cell.rowIndex]
-//     // 根据列索引获取对应的属性
-//     const columnProps = ["id", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
-//     const prop = columnProps[cell.columnIndex]
-//     return prop in row ? row[prop as keyof TableRowData] : ""
-//   })
+  // 根据列索引获取对应的属性
+  const columnProps = ["modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
+  const prop = columnProps[cell.columnIndex]
 
-//   // 将数据复制到剪贴板
-//   navigator.clipboard.writeText(data.join("\t"))
-//   ElMessage.success("已复制选中单元格")
-// }
+  if (prop === "color") {
+    if (typeof row.color === "number" && row.colorOptions.length > 0) {
+      const selectedColor = row.colorOptions.find((color: any) => color.value === row.color)
+      if (selectedColor) {
+        copiedValue.value = selectedColor.label
+      }
+    } else {
+      copiedValue.value = row.color
+    }
+    ElMessage.success("已复制单元格内容")
+  }
+}
 
-// 可以添加右键菜单
+async function pasteSelectedCells() {
+  // 创建一个 Promise 数组来跟踪所有异步操作
+  const promises = selectedCells.value.map(async (cell) => {
+    const row = tableData.value[cell.rowIndex]
+
+    const columnProps = ["modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
+    const prop = columnProps[cell.columnIndex]
+
+    if (prop === "color" && copiedValue.value) {
+      if (row.colorOptions.length === 0 && row.modelType) {
+        await handelReloadColors(true, row)
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      const matchedColor = row.colorOptions.find((option: any) =>
+        option.label.toLowerCase() === copiedValue.value.toLowerCase()
+      )
+      if (matchedColor) {
+        row.color = matchedColor.value
+        handleColorChange(matchedColor.value, row)
+      } else {
+        ElMessage.warning(`未找到匹配的颜色: ${copiedValue.value}`)
+      }
+    }
+  })
+
+  // 等待所有操作完成
+  await Promise.all(promises)
+  calculatePrice(null)
+}
+
+// //可以添加右键菜单
 // function showContextMenu(event: MouseEvent) {
 //   event.preventDefault()
 //   if (selectedCells.value.length > 0) {
