@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { getCascaderOptions } from "@/common/utils/helper"
 // import { useUserStore } from "@/pinia/stores/user"
+import FileSaver from "file-saver"
+import * as XLSX from "xlsx"
 import ProductForm from "./_form.vue"
 import ProductImport from "./_import.vue"
 import { deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
@@ -134,6 +136,75 @@ function handleImport() {
   productImportRef.value?.open()
 }
 
+async function handleExport() {
+  // 显示加载中
+  loading.value = true
+
+  try {
+    // 获取所有数据（不分页）
+    const exportQuery = { ...listQuery, page: 1, pageSize: 1000 }
+    const res = await fetchList(exportQuery)
+
+    if (res.data && res.data.products && res.data.products.length > 0) {
+      // 准备导出数据
+      const exportData = res.data.products.map((item: any) => {
+        return {
+          物料编号: item.materialId || "",
+          条形码: item.barCode || "",
+          型号: item.modelType?.name || "",
+          系列: item.modelType?.serie?.name || "",
+          颜色: item.color?.value || "",
+          名称: item.name || "",
+          标签: item.tags ? item.tags.map((tag: any) => tag.name).join(",") : "",
+          日常价: item.basePrice || "",
+          工程价: item.projectPrice || "",
+          出厂价: item.factoryPrice || "",
+          备注: item.remark || ""
+        }
+      })
+
+      // 创建工作簿和工作表
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "商品列表")
+
+      // 设置列宽
+      const colWidth = [
+        { wch: 15 }, // 物料编号
+        { wch: 15 }, // 条形码
+        { wch: 15 }, // 型号
+        { wch: 15 }, // 系列
+        { wch: 10 }, // 颜色
+        { wch: 30 }, // 名称
+        { wch: 20 }, // 标签
+        { wch: 10 }, // 日常价
+        { wch: 10 }, // 工程价
+        { wch: 10 }, // 出厂价
+        { wch: 20 } // 备注
+      ]
+      worksheet["!cols"] = colWidth
+
+      // 生成Excel文件并下载
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+
+      // 生成文件名（包含当前日期）
+      const now = new Date()
+      const fileName = `商品列表_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}.xlsx`
+
+      FileSaver.saveAs(blob, fileName)
+      ElMessage.success("导出成功")
+    } else {
+      ElMessage.warning("没有数据可导出")
+    }
+  } catch (error) {
+    console.error("导出失败:", error)
+    ElMessage.error("导出失败，请稍后重试")
+  } finally {
+    loading.value = false
+  }
+}
+
 function openFrom(id: number) {
   productFormRef.value?.open({
     colors: searchOptions.colors,
@@ -158,6 +229,7 @@ onMounted(() => {
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增商品</el-button>
       <el-button type="primary" @click="handleImport">批量导入商品</el-button>
+      <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
     <div class="grid-grouping">
