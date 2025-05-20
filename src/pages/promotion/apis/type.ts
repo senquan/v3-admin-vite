@@ -15,6 +15,7 @@ export interface PromotionListData {
   discountRate: number
   limitQuantity: number
   updatedAt: number
+  rules: RulesWithPromotionType[]
 }
 
 export interface RuleListData {
@@ -25,6 +26,10 @@ export interface RuleListData {
   condition: string
   discountValue: number
   updatedAt: number
+}
+
+export interface RulesWithPromotionType extends RuleListData {
+  promotionType: number
 }
 
 export interface TypeListData {
@@ -74,6 +79,18 @@ export interface PromotionListResponseData {
     total: number
     page: number
     pageSize: number
+  }
+}
+
+export interface PromotionRulesListRequestParams {
+  platformId: number
+}
+
+export interface PromotionRulesListResponseData {
+  code: number
+  message: string
+  data: {
+    promotions: PromotionListData[]
   }
 }
 

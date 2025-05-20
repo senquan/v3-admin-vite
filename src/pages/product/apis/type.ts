@@ -11,6 +11,7 @@ export interface Color {
 export interface Models {
   id: number
   name: string
+  serie: Series
 }
 
 export interface Tag {
@@ -32,8 +33,8 @@ export interface ProductListData {
   sku: string
   materialId: string
   barCode: string
+  modelTypeId: number
   modelType: Models
-  series: Series
   color: Color
   name: string
   basePrice: number

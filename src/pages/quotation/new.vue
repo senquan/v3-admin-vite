@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
+import type { PromotionListData, RulesWithPromotionType } from "../promotion/apis/type"
+import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import { initPromotionRules, calculateOrderPrice as localCalculatePrice } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
+import { fetchPromotionRules } from "../promotion/apis"
 import PreviewForm from "./_preview.vue"
-import { calculateOrderPrice, createOrder, fetchOrder, updateOrder } from "./apis"
+import { createOrder, fetchOrder, updateOrder } from "./apis"
 
 // 定义表格行的接口
 interface TableRowData {
@@ -21,7 +25,13 @@ interface TableRowData {
   colorOptions: Array<{ value: any, label: string }>
   backupProducts: Array<ProductListData>
   colorEditable: false
+  popoverVisible: boolean
 }
+
+const EMPTY_COLOR_NAME = "[默认色]"
+const PROMOTION_TYPE_DAILY = 1
+const PROMOTION_TYPE_PROMOTION = 2
+const PROMOTION_TYPE_FLASH = 3
 
 const router = useRouter()
 const platformId = ref(0)
@@ -41,7 +51,8 @@ const defaultRecord: TableRowData = {
   payPrice: 0,
   colorOptions: [],
   backupProducts: [],
-  colorEditable: false
+  colorEditable: false,
+  popoverVisible: false
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -51,7 +62,9 @@ const tableData = ref<TableRowData[]>([
 // 添加型号选项数据
 const modelOptions = ref<any>([{ value: "", label: "" }])
 const searchLoading = ref(false)
-const calculatedPrice = ref<any>([])
+const calculatedPrice = ref<any>({})
+const rulesInitialized = ref(false)
+const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
   type: 0,
@@ -82,28 +95,28 @@ const lastSelectedCell = ref<{ rowIndex: number, columnIndex: number } | null>(n
 const copiedValue = ref("")
 
 const dialyDiscount = computed(() => {
-  return calculatedPrice.value?.dailyDiscount || 0
+  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_DAILY)?.discount || 0
 })
 const dailyPrice = computed(() => {
-  return calculatedPrice.value?.dailyPrice || 0
+  return Number((calculatedPrice.value?.totalBasePrice - dialyDiscount.value).toFixed(2))
 })
 const promotionDiscount = computed(() => {
-  return calculatedPrice.value?.promotionDiscount || 0
+  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_PROMOTION)?.discount || 0
 })
 const promotionPrice = computed(() => {
-  return calculatedPrice.value?.promotionPrice || 0
+  return Number((calculatedPrice.value?.totalBasePrice - promotionDiscount.value).toFixed(2))
 })
 const flashDiscount = computed(() => {
-  return calculatedPrice.value?.flashDiscount || 0
+  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_FLASH)?.discount || 0
 })
 const flashPrice = computed(() => {
-  return calculatedPrice.value?.flashPrice || 0
+  return Number((Math.min(dailyPrice.value, promotionPrice.value) - flashDiscount.value).toFixed(2))
 })
 const bonusUsed = computed(() => {
   return calculatedPrice.value?.usedBonusPoint || 0
 })
 const bonusLeft = computed(() => {
-  return calculatedPrice.value?.flashPrice * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
+  return flashPrice.value * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
 })
 
 const priceDetailVisible = ref(false)
@@ -117,6 +130,7 @@ const modelCache = ref<Map<string, any>>(new Map())
 const cacheInitialized = ref(false)
 const cacheExpiry = 30 * 60 * 1000 // 30分钟缓存过期
 const lastCacheTime = ref(0)
+const productCache = ref<Map<number, ProductListData>>(new Map())
 
 // 添加行函数
 function addRow() {
@@ -135,9 +149,9 @@ function addRow() {
   })
 }
 
-function handelSearchId(query: any, _row: TableRowData | null = null) {
+function handelSearchId(query: any, row: TableRowData | null = null) {
   if (query === "" || query.length < 2) return
-
+  if (row != null) row.popoverVisible = true
   if (!cacheInitialized.value || Date.now() - lastCacheTime.value > cacheExpiry) {
     // 缓存未初始化或已过期，使用原有的远程搜索
     searchLoading.value = true
@@ -180,11 +194,14 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
       if (response.code === 0) {
         const colorOpts = response.data.colors.map((color: any) => ({
           value: color.id,
-          label: color.value
+          label: color.value || EMPTY_COLOR_NAME
         }))
         if (row) {
           row.colorOptions = colorOpts
         }
+        response.data.products.forEach((product: ProductListData) => {
+          productCache.value.set(product.id, product)
+        })
         if (refresh) {
           row.backupProducts = response.data.products.sort((a: any, b: any) => {
             if (a.color === null) return -1
@@ -210,8 +227,7 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
       }
     })
   } catch (error) {
-    console.error("获取产品信息失败:", error)
-    ElMessage.error("获取产品信息失败，请重试")
+    ElMessage.error(`获取产品信息失败，请重试：${error}`)
     searchLoading.value = false
   }
 }
@@ -280,32 +296,39 @@ function calculatePrice(row: any) {
   if (row && row.basePrice && row.quantity) {
     row.originPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.quantity)).toFixed(2)
   }
-  const products = tableData.value.filter((item: any) => item.quantity > 0).map((item: any) => ({
-    id: item.id,
-    quantity: item.quantity
-  }))
+
+  if (!rulesInitialized.value) {
+    calculateQuested.value = true
+    return
+  }
+
+  const products = tableData.value.filter((item: any) => item && item.quantity > 0).map((item: any) => {
+    const product = productCache.value.get(Number(item.id))
+    if (!product) return null
+    return {
+      ...product,
+      quantity: item.quantity
+    }
+  }).filter(product => product !== null)
+
   if (products.length === 0) {
     calculatedPrice.value = {}
     return
   }
-  calculateOrderPrice({ platformId: platformId.value, products }).then((response: any) => {
-    if (response.code === 0) {
-      calculatedPrice.value = response.data
-      const productsMap = response.data.products || []
-      formData.value.matchLogs = response.data.matchLogs || []
-      tableData.value.forEach((row: TableRowData) => {
-        if (row.id) {
-          const matchedProduct = productsMap.find((p: any) => p.id === Number(row.id))
-          if (matchedProduct) {
-            row.finalUnitPrice = Number(matchedProduct.unitPrice)
-            row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
-          }
+
+  calculatedPrice.value = localCalculatePrice({ products })
+  if (calculatedPrice.value && calculatedPrice.value.resultMap) {
+    tableData.value.forEach((row: TableRowData) => {
+      if (row.id) {
+        const matchedProduct = calculatedPrice.value?.products.find((p: any) => p.id === Number(row.id))
+        if (matchedProduct) {
+          row.finalUnitPrice = Number(matchedProduct.unitPrice)
+          row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
         }
-      })
-    } else {
-      ElMessage.error(`计算订单价格失败: ${response.message}`)
-    }
-  })
+      }
+    })
+    formData.value.matchLogs = calculatedPrice.value.resultMap
+  }
 }
 
 function priceDetail(id: number) {
@@ -313,23 +336,23 @@ function priceDetail(id: number) {
   priceDetailData.value = []
 
   const matchLogsObj = formData.value.matchLogs
-
-  // 定义类型名称映射
-  const typeNames: Record<string, string> = {
-    daily: "日常折扣",
-    promotion: "活动折扣",
-    flash: "限时折扣"
+  const typeNames: Record<number, string> = {
+    [PROMOTION_TYPE_DAILY]: "日常折扣",
+    [PROMOTION_TYPE_PROMOTION]: "活动折扣",
+    [PROMOTION_TYPE_FLASH]: "限时折扣"
   }
 
-  // 遍历每种类型的折扣规则
-  for (const [type, logs] of Object.entries(matchLogsObj)) {
-    // 过滤出当前产品的匹配记录
-    const productLogs = logs.filter((log: { productId: number }) => log.productId === id)
-    productLogs.forEach((log: any) => {
-      priceDetailData.value.push({
-        message: `${typeNames[type]}: ${log.name}`,
-        value: `${(Number(log.value) * 100).toFixed(4)}%`,
-        step: `${Number(log.stepPrice).toFixed(2)}`
+  // 检查 matchLogsObj 是否为 Map
+  if (matchLogsObj instanceof Map) {
+    // 使用 Map 的 forEach 方法遍历
+    matchLogsObj.forEach((value, type) => {
+      const productLogs = value.matchLogs.filter((log: { productId: number }) => log.productId === Number(id))
+      productLogs.forEach((log: any) => {
+        priceDetailData.value.push({
+          message: `${typeNames[type]}: ${log.name}`,
+          value: `${(Number(log.value) * 100).toFixed(4)}%`,
+          step: `${Number(log.stepPrice).toFixed(2)}`
+        })
       })
     })
   }
@@ -453,9 +476,7 @@ function handleKeyDown(event: KeyboardEvent) {
     }
     return
   }
-  console.log("键盘按下", event.key, event.code)
   if ((event.ctrlKey || event.metaKey) && (event.key === "v" || event.code === "KeyV")) {
-    console.log("粘贴", selectedCells.value)
     if (selectedCells.value.length > 0) {
       event.preventDefault()
       pasteSelectedCells()
@@ -465,7 +486,6 @@ function handleKeyDown(event: KeyboardEvent) {
 
   if (event.key === "Enter" || event.code === "Enter") {
     event.preventDefault()
-
     if (onFocusQuantity.value) {
       const currentRowIndex = tableData.value.findIndex((row: any) => row.rowId === onFocusQuantity.value)
       if (currentRowIndex !== -1 && currentRowIndex < tableData.value.length - 2) {
@@ -550,13 +570,17 @@ function copySelectedCells() {
   if (prop === "color") {
     if (typeof row.color === "number" && row.colorOptions.length > 0) {
       const selectedColor = row.colorOptions.find((color: any) => color.value === row.color)
-      if (selectedColor) {
+      if (selectedColor !== undefined) {
         copiedValue.value = selectedColor.label
       }
     } else {
-      copiedValue.value = row.color
+      if (row.color === "") {
+        copiedValue.value = EMPTY_COLOR_NAME
+      } else {
+        copiedValue.value = row.color
+      }
     }
-    ElMessage.success("已复制单元格内容")
+    ElMessage.success(`已复制单元格内容: ${copiedValue.value}`)
   }
 }
 
@@ -590,15 +614,6 @@ async function pasteSelectedCells() {
   calculatePrice(null)
 }
 
-// //可以添加右键菜单
-// function showContextMenu(event: MouseEvent) {
-//   event.preventDefault()
-//   if (selectedCells.value.length > 0) {
-//     // 显示上下文菜单，提供复制等操作
-//     // ...
-//   }
-// }
-
 function handleCellClick(row: any, column: any, _cell: any, event: any) {
   if (currentRow.value && (row.rowId !== currentRow.value.rowId || column.property !== "color")) {
     currentRow.value.colorEditable = false
@@ -614,9 +629,8 @@ function handleCellClick(row: any, column: any, _cell: any, event: any) {
   }
 
   const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
-  const columnIndex = event.target.parentElement.cellIndex
+  const columnIndex = event.target.parentElement.cellIndex || 2
   const cellInfo = { rowIndex, columnIndex }
-
   // Ctrl/Command键多选不连续单元格
   if (event.ctrlKey || event.metaKey) {
     const existingIndex = selectedCells.value.findIndex(
@@ -751,27 +765,33 @@ onMounted(async () => {
   orderId.value = Number(router.currentRoute.value.query.id)
   if (orderId.value > 0) {
     // 获取订单详情
-    fetchOrder(orderId.value).then((response: any) => {
+    fetchOrder(orderId.value).then((response: OrderDetailResponseData) => {
       if (response.code === 0) {
         const order = response.data
         formData.value.id = order.id
         platformId.value = order.platformId
         formData.value.name = order.name
-        tableData.value = order.items.map((item: any) => {
-          const originPrice = (Number.parseFloat(item.product.basePrice) * Number.parseFloat(item.quantity)).toFixed(2)
+        tableData.value = order.items.map((item: OrderItemsData) => {
+          const product = item.product
+          const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
+          productCache.value.set(product.id, product)
           return {
             rowId: getRowIdentity(),
-            id: item.product.id,
-            modelType: item.product.modelType?.name || "",
-            serie: item.product.modelType?.serie?.name || "",
-            color: item.product.color?.value || "",
-            name: item.product.name || "",
+            id: String(product.id),
+            modelType: product.modelType?.name || "",
+            modelTypeId: product.modelType?.name || "",
+            serie: product.modelType?.serie?.name || "",
+            color: product.color?.value || "",
+            name: product.name || "",
             quantity: item.quantity || 1,
-            basePrice: item.product.basePrice || "0",
-            originPrice: originPrice || "0",
-            finalUnitPrice: item.product.finalUnitPrice || "0",
-            payPrice: item.product.payPrice || "0",
-            colorOptions: []
+            basePrice: product.basePrice || 0,
+            originPrice: originPrice || 0,
+            finalUnitPrice: 0,
+            payPrice: 0,
+            colorOptions: [],
+            backupProducts: [],
+            colorEditable: false,
+            popoverVisible: false
           }
         })
         tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
@@ -786,6 +806,27 @@ onMounted(async () => {
     ]
   }
   await initModelCache()
+
+  try {
+    fetchPromotionRules({ platformId: platformId.value }).then((response: any) => {
+      if (response.code === 0) {
+        const roles = response.data.promotions.flatMap((promotion: PromotionListData) => {
+          return promotion.rules.map((rule: RulesWithPromotionType) => ({
+            ...rule,
+            promotionType: promotion.type
+          }))
+        })
+        initPromotionRules(roles)
+        rulesInitialized.value = true
+        if (calculateQuested.value) {
+          calculatePrice(null)
+        }
+      }
+    })
+  } catch (error) {
+    console.error("获取促销规则失败:", error)
+  }
+
   window.addEventListener("keydown", handleKeyDown)
 })
 
@@ -796,6 +837,23 @@ function getRowIdentity() {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown)
 })
+
+function handleModelSelect(option: any, row: any) {
+  row.modelTypeId = option.value
+  row.modelType = option.label
+  setTimeout(() => {
+    row.popoverVisible = false
+  }, 100)
+  handleIdChange(option.value, row)
+}
+
+function handleModelEnter(event: Event | KeyboardEvent, row: any) {
+  event.stopPropagation()
+  event.preventDefault()
+  if (modelOptions.value.length > 0) {
+    handleModelSelect(modelOptions.value[0], row)
+  }
+}
 </script>
 
 <template>
@@ -828,23 +886,39 @@ onUnmounted(() => {
               </div>
             </template>
             <template v-else>
-              <el-select
-                v-model="row.modelTypeId"
-                filterable
-                default-first-option
-                remote
-                :placeholder="row.modelType || '请选择型号'"
-                :remote-method="handelSearchId"
-                :loading="searchLoading"
-                @change="(val) => handleIdChange(val, row)"
+              <el-popover
+                placement="bottom"
+                :width="150"
+                trigger="click"
+                v-model:visible="row.popoverVisible"
+                popper-class="model-search-popover"
               >
-                <el-option
-                  v-for="item in modelOptions"
-                  :key="item.value"
-                  :value="item.value"
-                  :label="item.label"
-                />
-              </el-select>
+                <template #reference>
+                  <el-input
+                    v-model="row.modelType"
+                    placeholder="请输入型号搜索"
+                    @input="(val) => handelSearchId(val, row)"
+                    @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
+                  />
+                </template>
+                <div class="model-options">
+                  <div
+                    v-for="item in modelOptions"
+                    :key="item.value"
+                    class="model-option"
+                    @click="handleModelSelect(item, row)"
+                    @mousedown.prevent
+                  >
+                    {{ item.label }}
+                  </div>
+                  <div v-if="searchLoading" class="model-option loading">
+                    <el-icon class="is-loading"><loading /></el-icon> 搜索中...
+                  </div>
+                  <div v-if="modelOptions.length === 0 && !searchLoading" class="model-option empty">
+                    无匹配结果
+                  </div>
+                </div>
+              </el-popover>
             </template>
           </template>
         </el-table-column>
@@ -1120,5 +1194,38 @@ onUnmounted(() => {
 .el-table td.selected-cell,
 .el-table td.hovered-cell {
   padding: 10px !important;
+}
+.model-options {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.model-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.model-option:hover {
+  background-color: #f5f7fa;
+}
+
+.model-option.loading,
+.model-option.empty {
+  text-align: center;
+  color: #909399;
+  cursor: default;
+}
+
+.model-option.loading:hover,
+.model-option.empty:hover {
+  background-color: transparent;
+}
+
+.model-search-popover .el-popover__title {
+  margin: 0;
+  padding: 5px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #ebeef5;
 }
 </style>

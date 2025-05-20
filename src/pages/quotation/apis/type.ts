@@ -1,3 +1,5 @@
+import type { ProductListData } from "../../product/apis/type"
+
 export interface FilterOptionsData {
   name: string
   material: string
@@ -9,24 +11,31 @@ export interface FilterOptionsData {
 export interface OrderListData {
   id: number
   name: string
-  platform: string
+  platformId: number
   authCode: string
-  customer: string
-  reviewer: string
+  customerId: number
+  reviewerId: number | null
+  userId: number
   quantity: number
   originPrice: string
   payPrice: string
   payStatus: number
-  createdAt: number
-  updatedAt: number
+  createdAt: string
+  updatedAt: string
+  payAt: string | null
   status: number
-  remark: string
-  orderItems: {
-    id: number
-    name: string
-    material: string
-    quantity: number
-  }
+  remark: string | null
+  items: OrderItemsData[]
+}
+
+export interface OrderItemsData {
+  id: number
+  orderId: number
+  productId: number
+  product: ProductListData
+  quantity: number
+  totalPrice: string
+  unitPrice: string
 }
 
 export interface OrderCreateData {

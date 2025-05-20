@@ -9,6 +9,14 @@ export function fetchList(params: Promotion.PromotionListRequestParams) {
   })
 }
 
+export function fetchPromotionRules(params: Promotion.PromotionRulesListRequestParams) {
+  return request<Promotion.PromotionRulesListResponseData>({
+    url: "promotion/list/price",
+    method: "get",
+    params
+  })
+}
+
 export function fetchPromotion(id: number) {
   return request<Promotion.PromotionDetailResponseData>({
     url: `promotion/${id}`,
