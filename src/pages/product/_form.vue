@@ -29,7 +29,6 @@ const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const colors = ref<any>([])
-const series = ref<any>([])
 const modelLoading = ref(false)
 const modelOptions = ref<any>([])
 const tagOptions = ref<any>([])
@@ -67,7 +66,6 @@ function resetForm() {
 
 function open(options = {
   colors: Array<{ label: string, value: number }>,
-  series: Array<{ label: string, value: number }>,
   id: 0
 }) {
   visible.value = true
@@ -75,7 +73,6 @@ function open(options = {
 
   // 先加载选项数据
   if (options.colors) colors.value = options.colors
-  if (options.series) series.value = options.series
 
   if (isEdit.value) {
     isEdit.value = true

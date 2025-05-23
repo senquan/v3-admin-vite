@@ -5,7 +5,8 @@ import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
 import ProductForm from "./_form.vue"
 import ProductImport from "./_import.vue"
-import { deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
+import ProductPrice from "./_price.vue"
+import { batchDeleteProduct, deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
 
 // const userStore = useUserStore()
 // const isAdmin = userStore.roles.includes("ADMIN")
@@ -15,6 +16,7 @@ const listQuery = reactive({
   type: "",
   keyword: "",
   color: "",
+  serie: "",
   sort: "+id",
   page: 1,
   pageSize: 20
@@ -26,8 +28,15 @@ const totalProducts = ref(0)
 const tableData = ref<any>([])
 const productFormRef = ref<any>([])
 const productImportRef = ref<any>([])
+const priceRef = ref<any>([])
 const formVisibility = ref(false)
+const priceFormVisibility = ref(false)
 const series = ref<any>([])
+const cascaderOptions = ref({
+  serie: [] as number[]
+})
+const totalPages = computed(() => Math.ceil(totalProducts.value / listQuery.pageSize))
+const selectedRows = ref<any>([])
 
 async function fetchProducts() {
   loading.value = true
@@ -86,23 +95,7 @@ function handleNew() {
 }
 
 function handleEdit(id: number) {
-  if (series.value.length === 0) {
-    fetchSeriesOpt().then((res: any) => {
-      const seriesOptData: Array<any> = []
-      if (res.data) {
-        for (const item of res.data) {
-          if (seriesOptData[item.parentId] === undefined) {
-            seriesOptData[item.parentId] = []
-          }
-          seriesOptData[item.parentId].push(item)
-        }
-      };
-      series.value = getCascaderOptions(seriesOptData, 0)
-      openFrom(id)
-    })
-  } else {
-    openFrom(id)
-  }
+  openFrom(id)
 }
 
 function handleDelete(id: number) {
@@ -132,8 +125,61 @@ function handleDelete(id: number) {
   })
 }
 
+function loadSeries() {
+  if (series.value.length === 0) {
+    fetchSeriesOpt().then((res: any) => {
+      const seriesOptData: Array<any> = []
+      if (res.data) {
+        for (const item of res.data) {
+          if (seriesOptData[item.parentId] === undefined) {
+            seriesOptData[item.parentId] = []
+          }
+          seriesOptData[item.parentId].push(item)
+        }
+      };
+      series.value = getCascaderOptions(seriesOptData, 0)
+    })
+  }
+}
+
 function handleImport() {
   productImportRef.value?.open()
+}
+
+function handleBatchPrice() {
+  priceFormVisibility.value = true
+}
+
+function handleBatchDelete() {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning("请选择要删除的商品")
+    return
+  }
+  ElMessageBox.prompt("请输入\"确认删除商品\"以继续操作", "删除确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    inputPattern: /^确认删除商品$/,
+    inputErrorMessage: "请输入\"确认删除商品\"",
+    type: "warning"
+  }).then(({ value }) => {
+    if (value === "确认删除商品") {
+      const ids = selectedRows.value.map((row: any) => row.id)
+      batchDeleteProduct({ ids }).then(() => {
+        ElMessage.success("删除成功")
+        fetchProducts()
+      }).catch(() => {
+        ElMessage({
+          type: "warning",
+          message: "删除失败"
+        })
+      })
+    }
+  }).catch(() => {
+    ElMessage({
+      type: "info",
+      message: "已取消删除"
+    })
+  })
 }
 
 async function handleExport() {
@@ -214,8 +260,25 @@ function openFrom(id: number) {
   formVisibility.value = true
 }
 
+function handleSeriesChange(value: any) {
+  if (Array.isArray(value) && value.length > 0) {
+    listQuery.serie = value[value.length - 1]
+  }
+  handleFilter()
+}
+
+function handleSeriesClear() {
+  listQuery.serie = ""
+  cascaderOptions.value.serie = []
+}
+
+function handleSelectionChange(selection: any) {
+  selectedRows.value = selection.records
+}
+
 onMounted(() => {
-  fetchProducts()
+  handleFilter()
+  loadSeries()
 })
 </script>
 
@@ -226,6 +289,7 @@ onMounted(() => {
       <el-select v-model="listQuery.color" placeholder="选择颜色" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
         <el-option v-for="item in searchOptions.colors" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
+      <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" class="filter-item" :options="series" :props="{ expandTrigger: 'hover' }" filterable clearable @clear="handleSeriesClear()" @change="handleSeriesChange" :debounce="500" />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增商品</el-button>
       <el-button type="primary" @click="handleImport">批量导入商品</el-button>
@@ -238,7 +302,10 @@ onMounted(() => {
         :loading
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
+        @checkbox-all="handleSelectionChange"
+        @checkbox-change="handleSelectionChange"
       >
+        <vxe-column type="checkbox" width="50" />
         <vxe-column field="materialId" width="100" title="物料编号" />
         <vxe-column field="barCode" width="150" title="条形码" />
         <vxe-column field="model" width="130" title="型号" />
@@ -278,8 +345,14 @@ onMounted(() => {
       </vxe-table>
     </div>
 
+    <div class="footer-container">
+      <el-button type="warning" @click="handleBatchPrice">批量调价</el-button>
+      <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
+    </div>
+
     <div class="pagination-container">
       <el-pagination
+        v-if="totalPages > 1"
         v-model:current-page="listQuery.page"
         v-model:page-size="listQuery.pageSize"
         :total="totalProducts"
@@ -301,6 +374,16 @@ onMounted(() => {
       ref="productImportRef"
       @success="fetchProducts"
     />
+
+    <ProductPrice
+      ref="priceRef"
+      :visible="priceFormVisibility"
+      :selected-ids="selectedRows.map((row: any) => row.id)"
+      :all-counts="totalProducts"
+      :search-params="listQuery"
+      @success="fetchProducts"
+      @close="priceFormVisibility = false"
+    />
   </div>
 </template>
 
@@ -315,6 +398,11 @@ onMounted(() => {
 }
 .fr {
   float: right;
+}
+.footer-container {
+  padding: 10px;
+  padding-left: 60px;
+  background: #fff;
 }
 .pagination-container {
   padding: 10px;

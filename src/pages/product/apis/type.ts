@@ -70,6 +70,17 @@ export interface ProductListRequestParams {
   pageSize?: number
 }
 
+export interface BatchUpdateRequestParams {
+  ids: number[]
+  adjustType: string
+  values: number[]
+  searchParams?: ProductListRequestParams
+}
+
+export interface BatchDeleteRequestParams {
+  ids: number[]
+}
+
 export interface ProductListResponseData {
   code: number
   message: string

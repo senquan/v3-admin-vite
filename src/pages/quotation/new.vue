@@ -188,8 +188,15 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
   }
 }
 
+function handelModelTypeBlur(row: any) {
+  if (modelOptions.value.length === 1 && modelOptions.value[0].label.toLowerCase() === row.modelType.toLowerCase()) {
+    handleIdChange(modelOptions.value[0].value, row)
+  }
+}
+
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
+    console.log(`fetching products ${modelType}`)
     fetchProducts({ model: modelType }).then((response: any) => {
       if (response.code === 0) {
         const colorOpts = response.data.colors.map((color: any) => ({
@@ -286,6 +293,24 @@ function handleColorChange(color: number, row: any) {
           if (sameColorProduct) {
             fillRowAndPrice(sameColorProduct, otherRow)
           }
+        }
+      })
+    }
+  }
+}
+
+function batchChangeModelType() {
+  const firstRow = tableData.value[0]
+  const firstModelType = firstRow?.modelType
+  if (!firstModelType) return
+  const prefix = firstModelType.substring(0, 3)
+  for (const row of tableData.value) {
+    if (row.modelType) {
+      const newModel = prefix + row.modelType.substring(3)
+      modelCache.value.forEach((model) => {
+        if (model.name === newModel) {
+          row.modelType = newModel
+          handelSearchProduct(row.modelType, row)
         }
       })
     }
@@ -883,6 +908,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                 <el-button @click="addRow" style="width: 200px;">
                   <el-icon style="margin-right: 20px;"><Plus /></el-icon>添加商品
                 </el-button>
+                <el-button type="primary" @click="batchChangeModelType()">批量修改型号</el-button>
               </div>
             </template>
             <template v-else>
@@ -898,6 +924,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                     v-model="row.modelType"
                     placeholder="请输入型号搜索"
                     @input="(val) => handelSearchId(val, row)"
+                    @blur="() => handelModelTypeBlur(row)"
                     @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
                   />
                 </template>

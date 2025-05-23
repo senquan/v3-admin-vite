@@ -34,7 +34,6 @@ function fetchList() {
 function handleSeriesClear() {
   listQuery.serie = ""
   cascaderOptions.value.serie = []
-  fetchList()
 }
 
 function handleFilter() {

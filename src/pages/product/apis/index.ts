@@ -50,10 +50,26 @@ export function updateProduct(id: number, data: Product.ProductCreateData) {
   })
 }
 
+export function batchUpdateProduct(data: Product.BatchUpdateRequestParams) {
+  return request<Product.ProductActionResponseData>({
+    url: "product/batch",
+    method: "put",
+    data
+  })
+}
+
 export function deleteProduct(id: number) {
   return request<Product.ProductActionResponseData>({
     url: `product/${id}`,
     method: "delete"
+  })
+}
+
+export function batchDeleteProduct(data: Product.BatchDeleteRequestParams) {
+  return request<Product.ProductActionResponseData>({
+    url: `product/batch/delete`,
+    method: "post",
+    data
   })
 }
 
