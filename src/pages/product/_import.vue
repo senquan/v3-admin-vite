@@ -12,6 +12,8 @@ const progress = ref(0)
 const totalRows = ref(0)
 const processedRows = ref(0)
 const successCount = ref(0)
+const updatedCount = ref(0)
+const ignoredCount = ref(0)
 const errorCount = ref(0)
 const errorMessages = ref<string[]>([])
 
@@ -40,6 +42,8 @@ function resetData() {
   totalRows.value = 0
   processedRows.value = 0
   successCount.value = 0
+  updatedCount.value = 0
+  ignoredCount.value = 0
   errorCount.value = 0
   errorMessages.value = []
 }
@@ -61,8 +65,14 @@ function handleRemove() {
   fileList.value = []
 }
 
+function handleRecent(count: number) {
+  if (!importing.value) {
+    visible.value = false
+    emit("success", count)
+  }
+}
+
 function beforeUpload(file: any) {
-  console.log("file", file)
   const isExcel = file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || file.type === "application/vnd.ms-excel"
   if (!isExcel) {
     ElMessage.error("只能上传Excel文件!")
@@ -98,6 +108,8 @@ async function processFile() {
   importing.value = true
   progress.value = 0
   successCount.value = 0
+  updatedCount.value = 0
+  ignoredCount.value = 0
   errorCount.value = 0
   errorMessages.value = []
 
@@ -182,6 +194,8 @@ async function processFile() {
               const result = await importProducts(batch)
               if (result.code === 0) {
                 successCount.value += result.data.success || 0
+                updatedCount.value += result.data.updated || 0
+                ignoredCount.value += result.data.ignored || 0
                 errorCount.value += result.data.error || 0
 
                 if (result.data.errorMessages) {
@@ -201,7 +215,7 @@ async function processFile() {
             progress.value = Math.floor((processedRows.value / totalRows.value) * 100)
           }
 
-          ElMessage.success(`导入完成，成功: ${successCount.value}，失败: ${errorCount.value}`)
+          ElMessage.success(`导入完成，新增: ${successCount.value}，更新: ${updatedCount.value}，忽略: ${ignoredCount.value}，失败: ${errorCount.value}`)
           emit("success")
         } else {
           ElMessage.warning("没有有效的商品数据可导入")
@@ -262,10 +276,12 @@ defineExpose({
         </el-upload>
       </div>
 
-      <div v-if="importing" class="progress-area">
+      <div class="progress-area">
         <div class="progress-info">
           <span>处理进度: {{ processedRows }}/{{ totalRows }}</span>
-          <span>成功: {{ successCount }}</span>
+          <span>新增: <el-link @click="handleRecent(successCount)">{{ successCount }}</el-link></span>
+          <span>更新: {{ updatedCount }}</span>
+          <span>忽略: {{ ignoredCount }}</span>
           <span>失败: {{ errorCount }}</span>
         </div>
         <el-progress :percentage="progress" :status="progress === 100 ? 'success' : ''" />

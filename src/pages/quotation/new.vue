@@ -14,6 +14,7 @@ interface TableRowData {
   id: string
   modelType: string
   modelTypeId: string
+  modelOld: string
   serie: string
   color: string
   name: string
@@ -41,6 +42,7 @@ const defaultRecord: TableRowData = {
   id: "",
   modelType: "",
   modelTypeId: "",
+  modelOld: "",
   serie: "",
   color: "",
   name: "",
@@ -79,6 +81,7 @@ const formData = ref({
 })
 const defaultColor = ref("")
 const bodyHeight = ref("calc(100vh - 310px)")
+const ignoreBlur = ref(false) // 忽略离焦事件
 
 // 添加表格引用
 const tableRef = ref()
@@ -121,6 +124,12 @@ const bonusLeft = computed(() => {
 
 const priceDetailVisible = ref(false)
 const priceDetailData = ref<any>([])
+
+const replaceFormVisible = ref(false)
+const replaceForm = ref({
+  old: "",
+  new: ""
+})
 
 const rules = {
   name: [{ required: true, message: "请输入订单名称", trigger: "blur" }]
@@ -189,9 +198,18 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
 }
 
 function handelModelTypeBlur(row: any) {
-  if (modelOptions.value.length === 1 && modelOptions.value[0].label.toLowerCase() === row.modelType.toLowerCase()) {
-    handleIdChange(modelOptions.value[0].value, row)
+  if (!ignoreBlur.value && modelOptions.value.length > 0) {
+    const matchedModel = modelOptions.value.find((option: { label: string }) =>
+      option.label.toLowerCase() === row.modelType.toLowerCase()
+    )
+    if (matchedModel) {
+      handleIdChange(matchedModel.value, row)
+    } else {
+      ElMessage.warning(`物料编号不存在: ${row.modelType}`)
+      row.modelType = row.modelOld
+    }
   }
+  ignoreBlur.value = false
 }
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
@@ -209,12 +227,12 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
         response.data.products.forEach((product: ProductListData) => {
           productCache.value.set(product.id, product)
         })
+        row.backupProducts = response.data.products.sort((a: any, b: any) => {
+          if (a.color === null) return -1
+          if (b.color === null) return 1
+          return 0
+        })
         if (refresh) {
-          row.backupProducts = response.data.products.sort((a: any, b: any) => {
-            if (a.color === null) return -1
-            if (b.color === null) return 1
-            return 0
-          })
           let selectedProduct = null
           if (defaultColor.value) {
             selectedProduct = row.backupProducts.find((product: any) =>
@@ -267,6 +285,7 @@ function fillRowAndPrice(product: any, row: any) {
 function fillRow(product: any, row: any) {
   row.id = product.id
   row.modelType = product.modelType?.name || ""
+  row.modelOld = product.modelType?.name || ""
   row.serie = product.modelType?.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
@@ -281,14 +300,16 @@ function fillRow(product: any, row: any) {
 function handleColorChange(color: number, row: any) {
   row.colorEditable = false
   if (!row.backupProducts) return
-  const selectedProduct = row.backupProducts.find((product: any) => product.colorId === color)
+  let c: number | null = color
+  if (!color) c = null
+  const selectedProduct = row.backupProducts.find((product: any) => product.colorId === c)
   if (selectedProduct) {
     fillRowAndPrice(selectedProduct, row)
     if (tableData.value.indexOf(row) === 0) {
       tableData.value.forEach((otherRow, index) => {
         if (index !== 0 && index !== tableData.value.length - 1 && otherRow.backupProducts && otherRow.backupProducts.length > 0) {
           const sameColorProduct = otherRow.backupProducts.find((product: any) =>
-            product.color?.value === defaultColor.value
+            product.color?.value === (defaultColor.value === "" ? undefined : defaultColor.value)
           )
           if (sameColorProduct) {
             fillRowAndPrice(sameColorProduct, otherRow)
@@ -300,21 +321,25 @@ function handleColorChange(color: number, row: any) {
 }
 
 function batchChangeModelType() {
-  const firstRow = tableData.value[0]
-  const firstModelType = firstRow?.modelType
-  if (!firstModelType) return
-  const prefix = firstModelType.substring(0, 3)
+  replaceFormVisible.value = false
+  const search = replaceForm.value.old
+  const replace = replaceForm.value.new
+  if (!search) return
   for (const row of tableData.value) {
     if (row.modelType) {
-      const newModel = prefix + row.modelType.substring(3)
-      modelCache.value.forEach((model) => {
-        if (model.name === newModel) {
-          row.modelType = newModel
-          handelSearchProduct(row.modelType, row)
-        }
-      })
+      if (row.modelType.includes(search)) {
+        const newModel = row.modelType.replace(search, replace).toLowerCase()
+        modelCache.value.forEach((model) => {
+          if (model.name.toLowerCase() === newModel) {
+            row.modelType = model.name
+            handelSearchProduct(row.modelType, row)
+          }
+        })
+      }
     }
   }
+  replaceForm.value.old = ""
+  replaceForm.value.new = ""
 }
 
 function calculatePrice(row: any) {
@@ -805,6 +830,7 @@ onMounted(async () => {
             id: String(product.id),
             modelType: product.modelType?.name || "",
             modelTypeId: product.modelType?.name || "",
+            modelOld: product.modelType?.name || "",
             serie: product.modelType?.serie?.name || "",
             color: product.color?.value || "",
             name: product.name || "",
@@ -820,6 +846,9 @@ onMounted(async () => {
           }
         })
         tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
+        tableData.value.forEach((row: any) => {
+          handelReloadColors(true, row)
+        })
         calculatePrice(null)
       }
     })
@@ -864,11 +893,15 @@ onUnmounted(() => {
 })
 
 function handleModelSelect(option: any, row: any) {
+  ignoreBlur.value = true
   row.modelTypeId = option.value
   row.modelType = option.label
-  setTimeout(() => {
-    row.popoverVisible = false
-  }, 100)
+  row.popoverVisible = false
+  if (option.value === "") {
+    row.modelType = row.modelOld
+    ElMessage.warning("型号无匹配结果")
+    return
+  }
   handleIdChange(option.value, row)
 }
 
@@ -908,7 +941,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                 <el-button @click="addRow" style="width: 200px;">
                   <el-icon style="margin-right: 20px;"><Plus /></el-icon>添加商品
                 </el-button>
-                <el-button type="primary" @click="batchChangeModelType()">批量修改型号</el-button>
+                <el-button type="primary" @click="replaceFormVisible = true">批量修改型号</el-button>
               </div>
             </template>
             <template v-else>
@@ -1110,6 +1143,25 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         </el-table>
       </el-dialog>
     </div>
+
+    <el-dialog v-model="replaceFormVisible" title="批量修改型号" width="500">
+      <el-form :model="replaceForm">
+        <el-form-item label="关键字" label-width="100">
+          <el-input v-model="replaceForm.old" />
+        </el-form-item>
+        <el-form-item label="替换为" label-width="100">
+          <el-input v-model="replaceForm.new" autocomplete="off" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="replaceFormVisible = false">取消</el-button>
+          <el-button type="primary" @click="batchChangeModelType">
+            替换
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <PreviewForm
       ref="previewFormRef"

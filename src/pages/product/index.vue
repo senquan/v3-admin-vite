@@ -18,6 +18,7 @@ const listQuery = reactive({
   color: "",
   serie: "",
   sort: "+id",
+  limit: 0,
   page: 1,
   pageSize: 20
 })
@@ -87,6 +88,14 @@ function handleSortChange(column: any) {
 
 // 搜索方法
 function handleFilter() {
+  fetchProducts()
+}
+
+function importSuccess(count: number) {
+  if (count > 0) {
+    listQuery.limit = count
+    listQuery.sort = "-createAt"
+  }
   fetchProducts()
 }
 
@@ -372,7 +381,7 @@ onMounted(() => {
 
     <ProductImport
       ref="productImportRef"
-      @success="fetchProducts"
+      @success="importSuccess"
     />
 
     <ProductPrice

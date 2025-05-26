@@ -134,6 +134,8 @@ export interface ProductImportResponseData {
   message: string
   data: {
     success: number
+    ignored: number
+    updated: number
     fail: number
     failList: any[]
     error: number

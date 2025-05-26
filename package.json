@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "2.3.1",
+    "@types/file-saver": "2.0.7",
     "@vueuse/core": "13.1.0",
     "axios": "1.8.4",
     "china-area-data": "5.0.1",
