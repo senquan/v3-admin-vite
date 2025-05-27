@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import dayjs from "dayjs"
 import PromotionForm from "./_form.vue"
 import RuleForm from "./_rule.vue"
-import { convertRule, deleteRule, fetchList, fetchPromotion } from "./apis"
+import { convertRule, deletePromotion, deleteRule, fetchList, fetchPromotion } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -179,10 +180,43 @@ function handleEditRule(id: number) {
   openRuleFrom(id)
 }
 
+function handleDelete(id: number) {
+  ElMessageBox.prompt("请输入\"确认删除活动\"以继续操作", "删除确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    inputPattern: /^确认删除活动$/,
+    inputErrorMessage: "请输入\"确认删除活动\"",
+    type: "warning"
+  }).then(({ value }) => {
+    if (value === "确认删除活动") {
+      deletePromotion(id).then(() => {
+        ElMessage.success("删除成功")
+        handleFilter()
+      }).catch(() => {
+        ElMessage({
+          type: "warning",
+          message: "删除失败"
+        })
+      })
+    }
+  }).catch(() => {
+    ElMessage({
+      type: "info",
+      message: "已取消删除"
+    })
+  })
+}
+
 function openFrom(id: number) {
   productFormRef.value?.open({
     platforms: [{ value: 0, label: "全平台" }, ...searchOptions.platforms],
     types: searchOptions.types,
+    promotions: tableData.value.map((item: any) => {
+      return {
+        value: item.id,
+        label: item.name
+      }
+    }),
     id
   })
   formVisibility.value = true
@@ -247,8 +281,8 @@ onMounted(() => {
           <template #default="data">
             <el-tag v-if="data.row.status === 0">草稿</el-tag>
             <el-tag v-if="data.row.status === 1" type="primary">已排期</el-tag>
-            <el-tag v-if="data.row.status === 2" type="success">进行中</el-tag>
-            <el-tag v-if="data.row.status === 3" type="danger">已结束</el-tag>
+            <el-tag v-if="data.row.status === 2 && (data.row.endTime && dayjs(data.row.endTime).isAfter(dayjs()))" type="success">进行中</el-tag>
+            <el-tag v-if="data.row.status === 3 || (data.row.status === 2 && data.row.endTime && dayjs(data.row.endTime).isBefore(dayjs()))" type="danger">已结束</el-tag>
             <el-tag v-if="data.row.status === 4" type="warning">已暂停</el-tag>
           </template>
         </vxe-column>
@@ -258,10 +292,11 @@ onMounted(() => {
         <vxe-column field="updatedAt" title="最后更新" width="150">
           <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
         </vxe-column>
-        <vxe-column field="actions" title="操作" width="220">
+        <vxe-column field="actions" title="操作" width="250">
           <template #default="data">
             <el-button type="success" @click="handleDetail(data.row.id)">详情</el-button>
             <el-button type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
+            <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>

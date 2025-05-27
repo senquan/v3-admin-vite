@@ -1,6 +1,24 @@
 import type * as Dict from "./type"
 import { request } from "@/http/axios"
 
+export function fetchList(params: Dict.CommonListRequestParams) {
+  return request<Dict.SettingsListResponseData>({
+    url: "settings/list",
+    method: "get",
+    params
+  })
+}
+
+export function batchUpdateSettings(data: Dict.SettingsCreateData[]) {
+  return request<Dict.CommonActionResponseData>({
+    url: `settings/batch`,
+    method: "post",
+    data: {
+      settings: data
+    }
+  })
+}
+
 export function fetchDictList(params: Dict.CommonListRequestParams) {
   return request<Dict.DictListResponseData>({
     url: "dict/list",

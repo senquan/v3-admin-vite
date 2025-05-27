@@ -90,6 +90,7 @@ export interface ModelListResponseData {
 }
 
 export interface CommonListRequestParams {
+  ids?: string
   keyword?: string
   sort?: string
   page?: number

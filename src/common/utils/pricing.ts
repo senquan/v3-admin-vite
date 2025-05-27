@@ -1,12 +1,14 @@
 import type { ProductListData } from "@/pages/product/apis/type"
 import type { RuleListData, RulesWithPromotionType } from "@/pages/promotion/apis/type"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 
 /**
  * 订单计价服务
  * 实现与后端相同的计价逻辑，用于前端本地计算
  */
-
-const BONUS_PRODUCT_SERIES_ID = 82
+const systemParamsStore = useSystemParamsStore()
+const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
+console.log("bonusSeriesIds", bonusSeriesIds)
 
 interface ProductWithQuantity extends ProductListData {
   quantity: number
@@ -54,7 +56,7 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
 
   // 分类处理产品数据
   validProducts.forEach((product) => {
-    const targetMap = product.modelType?.serie?.id === BONUS_PRODUCT_SERIES_ID ? bonusMap : productMap
+    const targetMap = bonusSeriesIds.value.includes(product.modelType?.serie?.id) ? bonusMap : productMap
     const quantity = Number(quantityMap.get(product.id)) || 0
 
     targetMap.set(product.id, {
@@ -111,6 +113,7 @@ function calculateDiscount(rules: Array<RuleListData>, products: any) {
     // 筛选符合条件的产品
     products.forEach((pwq: ProductWithQuantity) => {
       if (pwq != null && matchCondition(pwq, rule.condition)) {
+        console.log("matchCondition!!!!!!!!!!!")
         const productId = pwq.id
         const basePrice = Number(pwq.basePrice || 0)
         const currentDiscountValue = Number(rule.discountValue) // 当前规则的折扣值（百分比）
@@ -169,22 +172,35 @@ function calculateDiscount(rules: Array<RuleListData>, products: any) {
  * @param {string} conditionStr 条件字符串
  * @returns {boolean} 是否匹配
  */
-function matchCondition(product: ProductListData, conditionStr: string | object): boolean {
+function matchCondition(product: ProductWithQuantity, conditionStr: string | object): boolean {
   // 处理特殊情况：如果conditionStr为空或undefined，直接返回true
   // 解析JSON字符串为对象
   const condition = typeof conditionStr === "string" ? JSON.parse(conditionStr) : conditionStr
   for (const [field, criteria] of Object.entries(condition)) {
     // 获取产品对应字段的值
-    let productValue = product[field as keyof ProductListData]
-
-    // 如果是关联对象（如series, color等），获取其name属性s
-    if (field === "series") {
-      productValue = product.modelType?.serie?.name
-    } else if (productValue && typeof productValue === "object" && "name" in productValue) {
-      productValue = productValue.name
+    let productValue: any
+    if (field === "totalBasePrice") {
+      productValue = product.basePrice * product.quantity
+    } else if (field === "totalProjectPrice") {
+      productValue = product.projectPrice * product.quantity
+    } else {
+      productValue = product[field as keyof ProductWithQuantity]
     }
 
+    // 如果是关联对象（如series, color等），获取其name属性
+    if (field === "series") {
+      productValue = product.modelType?.serie?.name
+    } else if (productValue && typeof productValue === "object") {
+      if (field === "color") {
+        productValue = productValue.value
+      } else if ("name" in productValue) {
+        productValue = productValue.name
+      }
+    }
+    if (!productValue) productValue = ""
+    console.log("productValue", productValue)
     for (const [operator, values] of Object.entries(criteria as Record<string, unknown>)) {
+      console.log("operator", operator, values, typeof values)
       switch (operator) {
         case "equal":
           if (Array.isArray(values)) {
@@ -209,7 +225,6 @@ function matchCondition(product: ProductListData, conditionStr: string | object)
         case "contains":
           if (typeof productValue !== "string") return false
           if (!Array.isArray(values) || !values.some((pattern: string) => {
-            // 处理通配符匹配
             const regex = new RegExp(`^${pattern.replace(/\*/g, ".*")}$`)
             return regex.test(productValue)
           })) {
@@ -242,10 +257,11 @@ function matchCondition(product: ProductListData, conditionStr: string | object)
  * @param {Map} bonusMap 积分产品Map
  * @returns {number} 使用的积分点数
  */
-function calculateBonusPoint(bonusMap: Map<string, { quantity: number }>): number {
+function calculateBonusPoint(bonusMap: Map<string, { quantity: number, modelType: { value: string } }>): number {
   let totalPoints = 0
   bonusMap.forEach((item) => {
-    totalPoints += item.quantity
+    const factor = Number(item.modelType?.value) || 1
+    totalPoints += item.quantity * factor
   })
   return totalPoints
 }

@@ -86,6 +86,7 @@ const ignoreBlur = ref(false) // 忽略离焦事件
 // 添加表格引用
 const tableRef = ref()
 const formRef = ref()
+const oldInputRef = ref()
 const previewFormRef = ref()
 const previewFormVisible = ref(false)
 const onFocusQuantity = ref("")
@@ -145,17 +146,29 @@ const productCache = ref<Map<number, ProductListData>>(new Map())
 function addRow() {
   const newRow = { ...defaultRecord, rowId: getRowIdentity() }
   tableData.value.splice(tableData.value.length - 1, 0, newRow)
-  // 焦点设置在新加行第一个输入框
   nextTick(() => {
     const newRowIndex = tableData.value.length - 2
-    const inputs = tableRef.value?.$el.querySelectorAll(".el-table__row")
-    if (inputs && inputs[newRowIndex]) {
-      const firstInput = inputs[newRowIndex].querySelector("input")
-      if (firstInput) {
-        firstInput.focus()
-      }
-    }
+    focusInput(newRowIndex)
   })
+}
+
+function addRowNext(row: any) {
+  const newRowIndex = tableData.value.indexOf(row)
+  const newRow = { ...defaultRecord, rowId: getRowIdentity() }
+  tableData.value.splice(newRowIndex, 0, newRow)
+  nextTick(() => {
+    focusInput(newRowIndex)
+  })
+}
+
+function focusInput(index: number) {
+  const inputs = tableRef.value?.$el.querySelectorAll(".el-table__row")
+  if (inputs && inputs[index]) {
+    const firstInput = inputs[index].querySelector("input")
+    if (firstInput) {
+      firstInput.focus()
+    }
+  }
 }
 
 function handelSearchId(query: any, row: TableRowData | null = null) {
@@ -205,7 +218,6 @@ function handelModelTypeBlur(row: any) {
     if (matchedModel) {
       handleIdChange(matchedModel.value, row)
     } else {
-      ElMessage.warning(`物料编号不存在: ${row.modelType}`)
       row.modelType = row.modelOld
     }
   }
@@ -320,17 +332,24 @@ function handleColorChange(color: number, row: any) {
   }
 }
 
+function handleReplace() {
+  replaceFormVisible.value = true
+  setTimeout(() => {
+    oldInputRef.value?.input?.focus()
+  }, 200)
+}
+
 function batchChangeModelType() {
   replaceFormVisible.value = false
-  const search = replaceForm.value.old
-  const replace = replaceForm.value.new
+  const search = replaceForm.value.old.toUpperCase()
+  const replace = replaceForm.value.new.toUpperCase()
   if (!search) return
   for (const row of tableData.value) {
     if (row.modelType) {
       if (row.modelType.includes(search)) {
-        const newModel = row.modelType.replace(search, replace).toLowerCase()
+        const newModel = row.modelType.replace(search, replace)
         modelCache.value.forEach((model) => {
-          if (model.name.toLowerCase() === newModel) {
+          if (model.name === newModel) {
             row.modelType = model.name
             handelSearchProduct(row.modelType, row)
           }
@@ -535,6 +554,11 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 
   if (event.key === "Enter" || event.code === "Enter") {
+    if (replaceFormVisible.value) {
+      event.preventDefault()
+      batchChangeModelType()
+      return
+    }
     event.preventDefault()
     if (onFocusQuantity.value) {
       const currentRowIndex = tableData.value.findIndex((row: any) => row.rowId === onFocusQuantity.value)
@@ -941,7 +965,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                 <el-button @click="addRow" style="width: 200px;">
                   <el-icon style="margin-right: 20px;"><Plus /></el-icon>添加商品
                 </el-button>
-                <el-button type="primary" @click="replaceFormVisible = true">批量修改型号</el-button>
+                <el-button type="primary" @click="handleReplace">批量修改型号</el-button>
               </div>
             </template>
             <template v-else>
@@ -1038,6 +1062,9 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
           <template #default="{ row }">
             <el-button @click="handleDelete(row)" link>
               <el-icon :size="18" color="red"><CloseBold /></el-icon>
+            </el-button>
+            <el-button @click="addRowNext(row)" link>
+              <el-icon :size="18" color="red"><Plus /></el-icon>
             </el-button>
           </template>
         </el-table-column>
@@ -1147,7 +1174,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
     <el-dialog v-model="replaceFormVisible" title="批量修改型号" width="500">
       <el-form :model="replaceForm">
         <el-form-item label="关键字" label-width="100">
-          <el-input v-model="replaceForm.old" />
+          <el-input v-model="replaceForm.old" ref="oldInputRef" />
         </el-form-item>
         <el-form-item label="替换为" label-width="100">
           <el-input v-model="replaceForm.new" autocomplete="off" />
@@ -1306,5 +1333,9 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
   padding: 5px 12px;
   font-size: 14px;
   border-bottom: 1px solid #ebeef5;
+}
+
+.el-button + .el-button {
+  margin-left: 6px;
 }
 </style>

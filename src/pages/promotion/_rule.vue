@@ -34,7 +34,10 @@ const attrOptions = ref<any>([
   { label: "颜色", value: "color" },
   { label: "名称", value: "name" },
   { label: "日常价", value: "basePrice" },
-  { label: "工程价", value: "projectPrice" }
+  { label: "工程价", value: "projectPrice" },
+  { label: "数量", value: "quantity" },
+  { label: "日常总价", value: "totalBasePrice" },
+  { label: "工程总价", value: "totalProjectPrice" }
 ])
 const conditionOptions = ref<any>([
   { label: "等于", value: "equal" },
@@ -49,7 +52,21 @@ const conditionOptions = ref<any>([
 ])
 
 const rules = {
-  name: [{ required: true, message: "请输入规则名称", trigger: "blur" }]
+  name: [{ required: true, message: "请输入规则名称", trigger: "blur" }],
+  discountValue: [
+    { required: true, message: "请输入折扣值", trigger: "blur" },
+    {
+      validator: (rule: any, value: any, callback: any) => {
+        if (!/^-?\d+(\.\d+)?$/.test(String(value))) {
+          callback(new Error("折扣值必须为数字"))
+        } else {
+          callback()
+        }
+      },
+      trigger: "blur"
+    }
+  ],
+  condition: [{ required: true, message: "请输入规则条件内容", trigger: "blur" }]
 }
 
 const btnSubmit = reactive({
@@ -137,13 +154,17 @@ function handleAddRule() {
 
   // 处理多个值（用逗号分隔）
   let valueToUse = null
-  if (["in", "notIn", "equal", "notEqual", "contains"].includes(addRule.condition)) {
+  if (["in", "notIn", "contains"].includes(addRule.condition)) {
     // 对于数组类型的条件，将逗号分隔的值转换为数组
     valueToUse = addRule.value.split(",").map((item: string) => item.trim())
   } else {
-    // 对于数值类型的条件，将值转换为数字
-    if (!Number.isNaN(Number(addRule.value))) {
-      valueToUse = Number(addRule.value)
+    if (!["modelType", "series", "color", "name"].includes(addRule.attr)) {
+      // 对于数值类型的条件，将值转换为数字
+      if (!Number.isNaN(Number(addRule.value))) {
+        valueToUse = Number(addRule.value)
+      }
+    } else {
+      valueToUse = addRule.value
     }
   }
 
@@ -188,7 +209,15 @@ function handleSubmit() {
     btnSubmit.loading = true
     // 处理提交的数据
     const submitData = { ...formData }
-    if (submitData.condition) {
+    if (!submitData.condition || submitData.condition.trim() === "\"\"") {
+      ElMessage({
+        message: "条件内容不能为空",
+        type: "error",
+        offset: 0
+      })
+      btnSubmit.loading = false
+      return
+    } else {
       try {
         // 将文本转换回JSON对象
         submitData.condition = JSON.parse(submitData.condition)

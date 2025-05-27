@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
 import { ElMessage } from "element-plus"
-import { createPromotion, fetchPromotion, updatePromotion } from "./apis"
+import { createPromotion, fetchList, fetchPromotion, updatePromotion } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
@@ -14,7 +14,8 @@ const formData = reactive({
   endTime: "",
   status: 0,
   isStackable: false,
-  description: ""
+  description: "",
+  copyFrom: ""
 })
 
 const formRef = ref()
@@ -22,6 +23,7 @@ const visible = ref(false)
 const isEdit = ref(false)
 const platformOptions = ref<any>([])
 const typeOptions = ref<any>([])
+const promotionOptions = ref<any>([])
 const timeRange = ref<any[]>([])
 const defaultTime: [Date, Date] = [
   new Date(2000, 1, 1, 0, 0, 0),
@@ -46,12 +48,14 @@ function resetForm() {
   formData.status = 0
   formData.description = ""
   formData.isStackable = false
+  formData.copyFrom = ""
   timeRange.value = []
 }
 
 function open(options = {
   platforms: Array<{ label: string, value: string }>,
   types: Array<{ label: string, value: string }>,
+  promotions: Array<{ label: string, value: string }>,
   id: 0
 }) {
   visible.value = true
@@ -60,6 +64,7 @@ function open(options = {
   // 先加载选项数据
   if (options.platforms) platformOptions.value = options.platforms
   if (options.types) typeOptions.value = options.types
+  if (options.promotions) promotionOptions.value = options.promotions
   if (isEdit.value) {
     fetchPromotion(options.id).then((response) => {
       if (response.code === 0) {
@@ -72,7 +77,6 @@ function open(options = {
           }
         })
         timeRange.value = [formatDateTime(formData.startTime), formatDateTime(formData.endTime)]
-        console.log(formData)
       } else {
         ElMessage({
           message: response.message || "获取活动详情失败",
@@ -142,6 +146,20 @@ function handleTimeChange(value: any) {
     formData.endTime = value[1]
     console.log(value)
   }
+}
+
+function handleSearchPromotion(query: string) {
+  if (query.length < 2) return
+  fetchList({ keyword: query }).then((response: any) => {
+    if (response.code === 0) {
+      promotionOptions.value = response.data.promotions.map((promotion: any) => ({
+        value: promotion.id,
+        label: promotion.name
+      }))
+    } else {
+      ElMessage.error(`获取促销活动列表失败: ${response.message}`)
+    }
+  })
 }
 
 defineExpose({
@@ -218,6 +236,28 @@ defineExpose({
         <el-col :span="24">
           <el-form-item label="说明" prop="description">
             <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入活动说明" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row v-if="!isEdit">
+        <el-col :span="24">
+          <el-form-item label="复制自" prop="copyFrom">
+            <el-select
+              v-model="formData.copyFrom"
+              filterable
+              clearable
+              remote
+              :remote-method="handleSearchPromotion"
+              placeholder="请选择要复制的活动"
+            >
+              <el-option
+                v-for="po in promotionOptions"
+                :key="po.value"
+                :label="po.label"
+                :value="po.value"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>

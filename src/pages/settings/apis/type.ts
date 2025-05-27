@@ -8,6 +8,33 @@ export interface DictListData {
   updatedAt: string
 }
 
+export interface SettingsListData {
+  id: number
+  name: string
+  type: number
+  key: string
+  value: string
+  group: number
+  description: string
+}
+
+export interface SettingsListResponseData {
+  code: number
+  message: string
+  data: {
+    settings: SettingsListData[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
+export interface SettingsCreateData {
+  id?: number
+  key: string
+  value: string
+}
+
 export interface DictCreateData {
   id?: number
   name: string
