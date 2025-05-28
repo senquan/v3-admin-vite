@@ -4,7 +4,6 @@
 import { pinia } from "@/pinia"
 import { router } from "@/router"
 import { installPlugins } from "@/plugins"
-import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import App from "@/App.vue"
 
 // css
@@ -23,9 +22,6 @@ installPlugins(app)
 
 // 安装 pinia 和 router
 app.use(pinia).use(router)
-
-const systemParamsStore = useSystemParamsStore()
-systemParamsStore.loadParams()
 
 // router 准备就绪后挂载应用
 router.isReady().then(() => {

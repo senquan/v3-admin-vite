@@ -2,6 +2,7 @@
 import type { FormInstance, FormRules } from "element-plus"
 import type { LoginRequestData } from "./apis/type"
 import { useSettingsStore } from "@/pinia/stores/settings"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { useUserStore } from "@/pinia/stores/user"
 import ThemeSwitch from "@@/components/ThemeSwitch/index.vue"
 import { Key, Loading, Lock, Picture, User } from "@element-plus/icons-vue"
@@ -12,6 +13,7 @@ import { useFocus } from "./composables/useFocus"
 const router = useRouter()
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
+const systemParamsStore = useSystemParamsStore()
 
 const { isFocus, handleBlur, handleFocus } = useFocus()
 
@@ -100,6 +102,7 @@ function handleLogin() {
     loading.value = true
     loginApi(loginFormData).then(({ data }) => {
       userStore.setToken(data.token)
+      systemParamsStore.loadParams()
       // 如果勾选了记住我，保存用户名到本地存储
       if (rememberMe.value) {
         localStorage.setItem("rememberedUsername", loginFormData.username)
