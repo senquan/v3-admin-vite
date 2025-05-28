@@ -2,6 +2,7 @@
 import type { ProductListData } from "../product/apis/type"
 import type { PromotionListData, RulesWithPromotionType } from "../promotion/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { initPromotionRules, calculateOrderPrice as localCalculatePrice } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotion/apis"
@@ -27,12 +28,16 @@ interface TableRowData {
   backupProducts: Array<ProductListData>
   colorEditable: false
   popoverVisible: boolean
+  isBonus: boolean
 }
 
 const EMPTY_COLOR_NAME = "[默认色]"
 const PROMOTION_TYPE_DAILY = 1
 const PROMOTION_TYPE_PROMOTION = 2
 const PROMOTION_TYPE_FLASH = 3
+
+const systemParamsStore = useSystemParamsStore()
+const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
 
 const router = useRouter()
 const platformId = ref(0)
@@ -54,7 +59,8 @@ const defaultRecord: TableRowData = {
   colorOptions: [],
   backupProducts: [],
   colorEditable: false,
-  popoverVisible: false
+  popoverVisible: false,
+  isBonus: false
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -226,7 +232,6 @@ function handelModelTypeBlur(row: any) {
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
-    console.log(`fetching products ${modelType}`)
     fetchProducts({ model: modelType }).then((response: any) => {
       if (response.code === 0) {
         const colorOpts = response.data.colors.map((color: any) => ({
@@ -303,6 +308,7 @@ function fillRow(product: any, row: any) {
   row.name = product.name || ""
   row.imageUrls = product.imageUrls?.split(",") || []
   row.imageUrl = row.imageUrls[0] || ""
+  row.isBonus = bonusSeriesIds.value.includes(product.modelType?.serie?.id)
   row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
@@ -391,7 +397,10 @@ function calculatePrice(row: any) {
       if (row.id) {
         const matchedProduct = calculatedPrice.value?.products.find((p: any) => p.id === Number(row.id))
         if (matchedProduct) {
-          row.finalUnitPrice = Number(matchedProduct.unitPrice)
+          let minPrice = Math.min(matchedProduct.priceMap.get(PROMOTION_TYPE_DAILY)?.price || 0, matchedProduct.priceMap.get(PROMOTION_TYPE_PROMOTION)?.price || 0)
+          const flashDiscount = Number(((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0) / matchedProduct.quantity).toFixed(2))
+          if (minPrice === 0) minPrice = Number(matchedProduct.unitPrice)
+          row.finalUnitPrice = Number((minPrice - flashDiscount).toFixed(2))
           row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
         }
       }
@@ -415,7 +424,8 @@ function priceDetail(id: number) {
   if (matchLogsObj instanceof Map) {
     // 使用 Map 的 forEach 方法遍历
     matchLogsObj.forEach((value, type) => {
-      const productLogs = value.matchLogs.filter((log: { productId: number }) => log.productId === Number(id))
+      const productLogs = value.matchLogs.get(Number(id))
+      if (!productLogs) return
       productLogs.forEach((log: any) => {
         priceDetailData.value.push({
           message: `${typeNames[type]}: ${log.name}`,
@@ -459,12 +469,25 @@ function getSummaries(param: any) {
   const sums: (string | VNode)[] = []
   columns.forEach((column: { property: string }, index: number) => {
     if (index === 0) {
-      sums[index] = h("div", { style: { textDecoration: "underline" } }, [
+      sums[index] = h("div", [
         "总计"
       ])
       return
     }
-    const values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    let values
+    if (index === 4) {
+      values = data.map((item: Record<string, any>) => {
+        if (item.name.includes("套装") || item.name.includes("预售")) {
+          return Number(item[column.property]) * 10
+        } else if (item.isBonus || item.id === "") {
+          return 0
+        } else {
+          return Number(item[column.property])
+        }
+      })
+    } else {
+      values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    }
     if (index === 4 || index === 6 || index === 8) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
@@ -866,7 +889,8 @@ onMounted(async () => {
             colorOptions: [],
             backupProducts: [],
             colorEditable: false,
-            popoverVisible: false
+            popoverVisible: false,
+            isBonus: bonusSeriesIds.value.includes(product.modelType?.serie?.id)
           }
         })
         tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })

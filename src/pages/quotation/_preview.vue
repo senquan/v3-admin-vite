@@ -95,12 +95,25 @@ function getSummaries(param: any) {
   const sums: (string | VNode)[] = []
   columns.forEach((column: { property: string }, index: number) => {
     if (index === 0) {
-      sums[index] = h("div", { style: { textDecoration: "underline" } }, [
+      sums[index] = h("div", [
         "总计"
       ])
       return
     }
-    const values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    let values
+    if (index === 5) {
+      values = data.map((item: Record<string, any>) => {
+        if (item.name.includes("套装") || item.name.includes("预售")) {
+          return Number(item[column.property]) * 10
+        } else if (item.isBonus || item.id === "") {
+          return 0
+        } else {
+          return Number(item[column.property])
+        }
+      })
+    } else {
+      values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    }
     if (index === 5 || index === 7 || index === 9) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
@@ -125,10 +138,11 @@ function getSummaries(param: any) {
   <el-dialog
     v-model="visible"
     fullscreen
+    :show-close="false"
     :before-close="close"
     style="background-color: #4b8f88"
   >
-    <div id="print-area" style="background-color: #4b8f88">
+    <div id="print-area" style="background-color: #4b8f88; padding: 10px 10px 0 10px;">
       <div class="header-container">
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="title">
@@ -186,13 +200,12 @@ function getSummaries(param: any) {
             <div class="price-summary-table">
               <el-descriptions
                 class="margin-top"
-                :column="2"
+                :column="3"
                 border
               >
                 <el-descriptions-item align="right" label-width="150">
                   <template #label>
                     <div class="cell-item">
-                      <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
                       日常优惠券
                     </div>
                   </template>
@@ -201,16 +214,6 @@ function getSummaries(param: any) {
                 <el-descriptions-item align="right">
                   <template #label>
                     <div class="cell-item">
-                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
-                      日常到手价
-                    </div>
-                  </template>
-                  {{ summaryData.dailyPrice }}
-                </el-descriptions-item>
-                <el-descriptions-item align="right">
-                  <template #label>
-                    <div class="cell-item">
-                      <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
                       活动优惠券
                     </div>
                   </template>
@@ -219,7 +222,22 @@ function getSummaries(param: any) {
                 <el-descriptions-item align="right">
                   <template #label>
                     <div class="cell-item">
-                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
+                      限时优惠券
+                    </div>
+                  </template>
+                  {{ summaryData.flashDiscount }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      日常到手价
+                    </div>
+                  </template>
+                  {{ summaryData.dailyPrice }}
+                </el-descriptions-item>
+                <el-descriptions-item align="right">
+                  <template #label>
+                    <div class="cell-item">
                       活动到手价
                     </div>
                   </template>
@@ -227,17 +245,7 @@ function getSummaries(param: any) {
                 </el-descriptions-item>
                 <el-descriptions-item align="right">
                   <template #label>
-                    <div class="cell-item">
-                      <el-icon style="margin-right: 5px;"><Timer /></el-icon>
-                      限时活动
-                    </div>
-                  </template>
-                  {{ summaryData.flashDiscount }}
-                </el-descriptions-item>
-                <el-descriptions-item align="right">
-                  <template #label>
                     <div class="cell-item" style="color: red; font-weight: bold;">
-                      <el-icon style="margin-right: 5px;"><Money /></el-icon>
                       限时到手价
                     </div>
                   </template>
@@ -306,7 +314,7 @@ function getSummaries(param: any) {
   display: block;
   font-weight: normal;
   font-size: 16px;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 .header-container .intro {
   width: 600px;
@@ -322,7 +330,8 @@ function getSummaries(param: any) {
 }
 .price-summary-table {
   margin: auto;
-  width: 40%;
+  width: 800px;
+  margin-bottom: 10px;
 }
 
 .price-summary-table table {
@@ -383,6 +392,12 @@ function getSummaries(param: any) {
 }
 .bonus {
   margin-right: 20px;
+}
+.cell-item {
+  font-size: 16px;
+}
+#print-area .el-table td.el-table__cell div {
+  font-size: 16px;
 }
 /* 打印样式 */
 @media print {

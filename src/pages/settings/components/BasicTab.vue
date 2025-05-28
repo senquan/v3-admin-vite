@@ -13,7 +13,6 @@ function fetchSettings() {
   console.log(bonusSeriesSetting)
   if (bonusSeriesSetting) {
     settingsForm.bonusSeriesIds = bonusSeriesSetting.split(",").map((id: string) => Number(id))
-    console.log(settingsForm.bonusSeriesIds)
     if (settingsForm.bonusSeriesIds.length > 0) {
       fetchSerieList({ ids: settingsForm.bonusSeriesIds.join(",") }).then((seriesRes) => {
         if (seriesRes.data && seriesRes.data.series) {
@@ -118,6 +117,14 @@ defineExpose({
             :value="so.value"
           />
         </el-select>
+        <div class="tips">
+          <el-text size="small">
+            <el-icon>
+              <InfoFilled />
+            </el-icon>
+            设置作为赠品的系列, 只有设定的商品系列才参加赠品剩余额度的扣减。
+          </el-text>
+        </div>
       </el-descriptions-item>
     </el-descriptions>
   </div>
@@ -126,5 +133,9 @@ defineExpose({
 <style coped>
 .cell-item {
   text-align: center;
+}
+.tips > .el-text {
+  margin-top: 10px;
+  color: #909399;
 }
 </style>

@@ -8,7 +8,6 @@ import { useSystemParamsStore } from "@/pinia/stores/system-params"
  */
 const systemParamsStore = useSystemParamsStore()
 const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
-console.log("bonusSeriesIds", bonusSeriesIds)
 
 interface ProductWithQuantity extends ProductListData {
   quantity: number
@@ -62,7 +61,8 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
     targetMap.set(product.id, {
       ...product,
       quantity,
-      unitPrice: product.basePrice
+      unitPrice: product.basePrice,
+      priceMap: new Map()
     })
   })
 
@@ -76,7 +76,7 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
   // 按类型分组规则
   const resultMap = new Map()
   rulesMap.forEach((rules, promotionType) => {
-    resultMap.set(promotionType, calculateDiscount(rules, productMap))
+    resultMap.set(promotionType, calculateDiscount(rules, productMap, promotionType))
   })
   const usedBonusPoint = calculateBonusPoint(bonusMap)
 
@@ -84,7 +84,8 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
   const productsArray = Array.from(productMap, ([id, data]) => ({
     id,
     unitPrice: data.unitPrice,
-    quantity: data.quantity
+    quantity: data.quantity,
+    priceMap: data.priceMap
   }))
 
   return {
@@ -101,12 +102,12 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
  * @param {Map} products 产品Map
  * @returns {object} 折扣结果
  */
-function calculateDiscount(rules: Array<RuleListData>, products: any) {
+function calculateDiscount(rules: Array<RuleListData>, products: any, type: number) {
   let totalDiscount = 0
 
   // 创建一个Map来跟踪每个产品的累计折扣和最终单价
   const productDiscounts = new Map()
-  const matchLogs = [] as any[]
+  const matchLogs = new Map()
 
   // 遍历每条规则
   rules.forEach((rule) => {
@@ -126,6 +127,8 @@ function calculateDiscount(rules: Array<RuleListData>, products: any) {
           finalUnitPrice: basePrice
         }
 
+        const currentLog = matchLogs.get(productId) || []
+
         // 累加折扣值和折扣金额
         discountInfo.totalDiscountValue += currentDiscountValue
         discountInfo.totalDiscount += currentDiscount
@@ -137,14 +140,16 @@ function calculateDiscount(rules: Array<RuleListData>, products: any) {
         productDiscounts.set(productId, discountInfo)
 
         // 记录匹配日志
-        matchLogs.push({
+        currentLog.push({
           productId,
           ruleId: rule.id,
           name: rule.name,
           value: rule.discountValue,
+          discount: currentDiscount,
           pirce: basePrice * (1 - currentDiscountValue), // 单独应用此规则的价格
           stepPrice: basePrice * (1 - discountInfo.totalDiscountValue) // 应用所有已应用的折扣后的价格
         })
+        matchLogs.set(productId, currentLog)
       }
     })
   })
@@ -155,8 +160,11 @@ function calculateDiscount(rules: Array<RuleListData>, products: any) {
     // 更新productMap中对应产品的unitPrice
     const product = products.get(productId)
     if (product) {
-      // 确保最终价格不会低于0
-      product.unitPrice = Math.max(0, Number(discountInfo.finalUnitPrice.toFixed(2)))
+      // 更新productMap中对应产品的priceMap
+      product.priceMap.set(type, {
+        discount: Number(discountInfo.totalDiscount.toFixed(2)),
+        price: Math.max(0, Number(discountInfo.finalUnitPrice.toFixed(2)))
+      })
     }
   })
 
