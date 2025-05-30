@@ -101,7 +101,7 @@ function getSummaries(param: any) {
       return
     }
     let values
-    if (index === 5) {
+    if (index === 2) {
       values = data.map((item: Record<string, any>) => {
         if (item.name.includes("套装") || item.name.includes("预售")) {
           return Number(item[column.property]) * 10
@@ -114,7 +114,7 @@ function getSummaries(param: any) {
     } else {
       values = data.map((item: Record<string, any>) => Number(item[column.property]))
     }
-    if (index === 5 || index === 7 || index === 9) {
+    if (index === 2 || index === 4 || index === 6) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
           const value = Number(curr)
@@ -123,7 +123,7 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 5 ? 0 : 2)
+        }, 0)}`).toFixed(index === 2 ? 0 : 2)
       }
     } else {
       sums[index] = ""
@@ -137,9 +137,12 @@ function getSummaries(param: any) {
 <template>
   <el-dialog
     v-model="visible"
-    fullscreen
     :show-close="false"
     :before-close="close"
+    top="50px"
+    draggable
+    overflow
+    width="1200px"
     style="background-color: #4b8f88"
   >
     <div id="print-area" style="background-color: #4b8f88; padding: 10px 10px 0 10px;">
@@ -158,7 +161,7 @@ function getSummaries(param: any) {
         show-summary
         border
       >
-        <el-table-column prop="imageUrl" label="产品主图" width="100" align="center">
+        <el-table-column prop="imageUrl" label="产品主图" width="120" align="center">
           <template #default="{ row }">
             <div class="product-image-container">
               <el-image
@@ -175,15 +178,19 @@ function getSummaries(param: any) {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="modelType" label="型号" width="150" align="center" />
-        <el-table-column prop="serie" label="系列" width="120" align="center" />
-        <el-table-column prop="color" label="颜色" width="120" align="center" />
-        <el-table-column prop="name" label="名称" min-width="200" align="center" />
-        <el-table-column prop="quantity" label="数量" width="120" align="center" />
-        <el-table-column prop="basePrice" label="单价" width="80" align="center">
+        <el-table-column prop="name" label="商品信息" min-width="200" align="center">
+          <template #default="{ row }">
+            <div class="product-info">
+              <span>{{ row.modelType }} · {{ row.serie }}</span>
+              <span>{{ row.name }} · {{ row.color }} </span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="数量" width="100" align="center" />
+        <el-table-column prop="basePrice" label="单价" width="100" align="center">
           <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
         </el-table-column>
-        <el-table-column prop="originPrice" label="总价" width="120" align="center">
+        <el-table-column prop="originPrice" label="总价" width="100" align="center">
           <template #default="{ row }"><del>{{ row.originPrice }}</del></template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="到手单价" width="100" align="center">
@@ -219,13 +226,13 @@ function getSummaries(param: any) {
                   </template>
                   {{ summaryData.promotionDiscount }}
                 </el-descriptions-item>
-                <el-descriptions-item align="right">
+                <el-descriptions-item :rowspan="2" align="right">
                   <template #label>
-                    <div class="cell-item">
-                      限时优惠券
+                    <div class="cell-item-larger">
+                      限时到手价
                     </div>
                   </template>
-                  {{ summaryData.flashDiscount }}
+                  <span class="cell-item-larger">{{ summaryData.flashPrice }}</span>
                 </el-descriptions-item>
                 <el-descriptions-item align="right">
                   <template #label>
@@ -242,14 +249,6 @@ function getSummaries(param: any) {
                     </div>
                   </template>
                   {{ summaryData.promotionPrice }}
-                </el-descriptions-item>
-                <el-descriptions-item align="right">
-                  <template #label>
-                    <div class="cell-item" style="color: red; font-weight: bold;">
-                      限时到手价
-                    </div>
-                  </template>
-                  <span style="color: red; font-weight: bold;">{{ summaryData.flashPrice }}</span>
                 </el-descriptions-item>
               </el-descriptions>
             </div>
@@ -317,7 +316,7 @@ function getSummaries(param: any) {
   margin-top: 10px;
 }
 .header-container .intro {
-  width: 600px;
+  width: 480px;
   font-weight: bold;
   font-size: 35px;
   color: #fff;
@@ -327,6 +326,16 @@ function getSummaries(param: any) {
 }
 .header-container .intro span {
   font-size: 50px;
+}
+.product-info {
+  display: flex;
+  flex-direction: column;
+}
+.product-info span {
+  height: 35px;
+  line-height: 35px;
+  display: flex;
+  align-items: center;
 }
 .price-summary-table {
   margin: auto;
@@ -352,9 +361,7 @@ function getSummaries(param: any) {
 }
 .footer-container {
   background-color: #f5f7fa;
-  padding: 10px;
   margin-top: 10px;
-  border: 1px solid #ebeef5;
 }
 
 .highlight-price {
@@ -390,14 +397,26 @@ function getSummaries(param: any) {
   justify-content: center;
   gap: 10px;
 }
+.el-table .cell {
+  font-size: 16px;
+}
 .bonus {
   margin-right: 20px;
 }
 .cell-item {
   font-size: 16px;
 }
+.cell-item-larger {
+  font-size: 38px;
+  color: red;
+  font-weight: bold;
+}
+.el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+  font-size: 22px;
+}
 #print-area .el-table td.el-table__cell div {
-  font-size: 16px;
+  font-size: 22px;
+  color: black;
 }
 /* 打印样式 */
 @media print {

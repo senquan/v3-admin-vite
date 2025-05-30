@@ -29,6 +29,8 @@ interface TableRowData {
   colorEditable: false
   popoverVisible: boolean
   isBonus: boolean
+  imageUrls: string[]
+  imageUrl: string
 }
 
 const EMPTY_COLOR_NAME = "[默认色]"
@@ -60,7 +62,9 @@ const defaultRecord: TableRowData = {
   backupProducts: [],
   colorEditable: false,
   popoverVisible: false,
-  isBonus: false
+  isBonus: false,
+  imageUrls: [],
+  imageUrl: ""
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -872,6 +876,7 @@ onMounted(async () => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
           productCache.value.set(product.id, product)
+          const images = product.imageUrls?.split(",") || []
           return {
             rowId: getRowIdentity(),
             id: String(product.id),
@@ -890,7 +895,9 @@ onMounted(async () => {
             backupProducts: [],
             colorEditable: false,
             popoverVisible: false,
-            isBonus: bonusSeriesIds.value.includes(product.modelType?.serie?.id)
+            isBonus: bonusSeriesIds.value.includes(product.modelType?.serie?.id),
+            imageUrls: images,
+            imageUrl: images.length > 0 ? images[0] : ""
           }
         })
         tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
