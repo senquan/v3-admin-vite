@@ -1,6 +1,6 @@
 <script lang="ts" setup>
+import { findCascaderPath } from "@/common/utils/helper"
 import { request } from "@/http/axios"
-import { ElMessage } from "element-plus"
 import { fetchTagsList } from "../tags/apis"
 import { createProduct, fetchModels, fetchProduct, updateProduct } from "./apis"
 
@@ -16,6 +16,7 @@ const formData = reactive({
   materialId: "",
   barCode: "",
   modelType: 0,
+  serie: 0,
   colorId: "",
   basePrice: 0,
   projectPrice: 0,
@@ -29,12 +30,16 @@ const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const colors = ref<any>([])
+const series = ref<any>([])
 const modelLoading = ref(false)
 const modelOptions = ref<any>([])
 const tagOptions = ref<any>([])
 const selectedTags = ref<any>([])
 const tagsLoading = ref(false)
 const imageList = ref<any[]>([])
+const cascaderOptions = ref({
+  serie: [] as number[]
+})
 
 const rules = {
   name: [{ required: true, message: "请输入商品名称", trigger: "blur" }],
@@ -52,6 +57,7 @@ function resetForm() {
   formData.materialId = ""
   formData.barCode = ""
   formData.modelType = 0
+  formData.serie = 0
   formData.colorId = ""
   formData.basePrice = 0
   formData.projectPrice = 0
@@ -62,10 +68,12 @@ function resetForm() {
   selectedTags.value = []
   modelOptions.value = []
   imageList.value = []
+  cascaderOptions.value.serie = []
 }
 
 function open(options = {
   colors: Array<{ label: string, value: number }>,
+  series: Array<{ label: string, value: number }>,
   id: 0
 }) {
   visible.value = true
@@ -73,6 +81,7 @@ function open(options = {
 
   // 先加载选项数据
   if (options.colors) colors.value = options.colors
+  if (options.series) series.value = options.series
 
   if (isEdit.value) {
     isEdit.value = true
@@ -92,6 +101,9 @@ function open(options = {
             name: data.modelType.name
           }]
           formData.modelType = data.modelType.id
+        }
+        if (data.serie) {
+          cascaderOptions.value.serie = findCascaderPath(series.value, data.serie.id ?? 0) || []
         }
         // 加载标签
         tagOptions.value = []
@@ -174,11 +186,19 @@ function handleSearchTags(value: string) {
   })
 }
 
+function handleSeriesClear() {
+  formData.serie = 0
+  cascaderOptions.value.serie = []
+}
+
 function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     formData.tags = selectedTags.value
     formData.imageFiles = imageList.value.map((item: any) => item.response?.data?.url || item.url).filter((item: any) => item)
+    if (cascaderOptions.value.serie && cascaderOptions.value.serie.length > 0) {
+      formData.serie = cascaderOptions.value.serie[cascaderOptions.value.serie.length - 1]
+    }
     btnSubmit.loading = true
     const request = isEdit.value
       ? updateProduct(formData.id, formData)
@@ -297,6 +317,7 @@ defineExpose({
           <el-form-item label="型号" prop="modelType">
             <el-select
               v-model="formData.modelType"
+              :empty-values="[0]"
               filterable
               remote
               allow-create
@@ -317,6 +338,24 @@ defineExpose({
           </el-form-item>
         </el-col>
         <el-col :span="12">
+          <el-form-item label="系列" prop="serie">
+            <el-cascader
+              v-model="cascaderOptions.serie"
+              :options="series"
+              :props="{ expandTrigger: 'hover' }"
+              filterable
+              clearable
+              placeholder="选择系列"
+              @clear="handleSeriesClear()"
+              :debounce="500"
+              class="filter-item"
+            />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="12">
           <el-form-item label="颜色" prop="colorId">
             <el-select v-model="formData.colorId" placeholder="请选择颜色">
               <el-option
@@ -328,22 +367,19 @@ defineExpose({
             </el-select>
           </el-form-item>
         </el-col>
-      </el-row>
-
-      <el-row>
         <el-col :span="12">
           <el-form-item label="日常价" prop="basePrice">
             <el-input type="number" v-model="formData.basePrice" placeholder="请输入金额" />
           </el-form-item>
         </el-col>
+      </el-row>
+
+      <el-row>
         <el-col :span="12">
           <el-form-item label="工程价" prop="projectPrice">
             <el-input type="number" v-model="formData.projectPrice" placeholder="请输入金额" />
           </el-form-item>
         </el-col>
-      </el-row>
-
-      <el-row>
         <el-col :span="12">
           <el-form-item label="出厂价" prop="factoryPrice">
             <el-input type="number" v-model="formData.factoryPrice" placeholder="请输入金额" />

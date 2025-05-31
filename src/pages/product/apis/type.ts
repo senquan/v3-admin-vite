@@ -35,6 +35,8 @@ export interface ProductListData {
   barCode: string
   modelTypeId: number
   modelType: Models
+  serieId: number
+  serie: Series
   color: Color
   name: string
   basePrice: number

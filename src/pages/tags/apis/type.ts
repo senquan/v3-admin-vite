@@ -72,7 +72,6 @@ export interface ModelListData {
 
 export interface ModelCreateData {
   id?: number
-  serieId: number
   name: string
   image: string
   sort: number

@@ -7,7 +7,6 @@ import CommonForm from "./_form.vue"
 const loading = ref(false)
 const listQuery = reactive({
   keyword: "",
-  serie: "",
   page: 1,
   pageSize: 15
 })
@@ -16,24 +15,14 @@ const modelFormRef = ref<InstanceType<typeof CommonForm>>()
 const formVisibility = ref(false)
 const totalModel = ref(0)
 const totalPages = computed(() => Math.ceil(totalModel.value / listQuery.pageSize))
-const series = ref<any>([])
-const cascaderOptions = ref({
-  serie: [] as number[]
-})
 
 function fetchList() {
-  loadSeries()
   loading.value = true
   fetchModelList(listQuery).then((res) => {
     loading.value = false
     totalModel.value = res.data.total
     tableData.value = res.data.models
   })
-}
-
-function handleSeriesClear() {
-  listQuery.serie = ""
-  cascaderOptions.value.serie = []
 }
 
 function handleFilter() {
@@ -55,16 +44,9 @@ function openFrom(data: any) {
       id: 0,
       type: "model",
       editData: data ?? null,
-      extraData: series.value
+      extraData: null
     })
   })
-}
-
-function handleSeriesChange(value: any) {
-  if (Array.isArray(value) && value.length > 0) {
-    listQuery.serie = value[value.length - 1]
-  }
-  fetchList()
 }
 
 function handleDelete(id: number) {
@@ -94,23 +76,6 @@ function handleDelete(id: number) {
   })
 }
 
-function loadSeries() {
-  if (series.value.length === 0) {
-    fetchSeriesOpt().then((res: any) => {
-      const seriesOptData: Array<any> = []
-      if (res.data) {
-        for (const item of res.data) {
-          if (seriesOptData[item.parentId] === undefined) {
-            seriesOptData[item.parentId] = []
-          }
-          seriesOptData[item.parentId].push(item)
-        }
-      };
-      series.value = getCascaderOptions(seriesOptData, 0)
-    })
-  }
-}
-
 defineExpose({
   fetchList
 })
@@ -120,14 +85,12 @@ defineExpose({
   <div class="main-container">
     <div class="filter-container">
       <el-input v-model="listQuery.keyword" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" />
-      <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" class="filter-item" :options="series" :props="{ expandTrigger: 'hover' }" filterable clearable @clear="handleSeriesClear()" @change="handleSeriesChange" :debounce="500" />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增型号</el-button>
     </div>
     <div class="grid-grouping">
       <vxe-table :data="tableData">
         <vxe-column field="id" title="编号" width="80" />
-        <vxe-column field="serie.name" title="系列" width="150" />
         <vxe-column field="name" title="名称" min-width="200" align="left" />
         <vxe-column field="value" title="功能值" width="80" />
         <vxe-column field="sort" title="排序值" width="80" />

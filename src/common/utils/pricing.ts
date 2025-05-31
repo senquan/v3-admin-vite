@@ -55,7 +55,7 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
 
   // 分类处理产品数据
   validProducts.forEach((product) => {
-    const targetMap = bonusSeriesIds.value.includes(product.modelType?.serie?.id) ? bonusMap : productMap
+    const targetMap = bonusSeriesIds.value.includes(product.serie?.id) ? bonusMap : productMap
     const quantity = Number(quantityMap.get(product.id)) || 0
 
     targetMap.set(product.id, {
@@ -114,7 +114,7 @@ function calculateDiscount(rules: Array<RuleListData>, products: any, type: numb
     // 筛选符合条件的产品
     products.forEach((pwq: ProductWithQuantity) => {
       if (pwq != null && matchCondition(pwq, rule.condition)) {
-        console.log("matchCondition!!!!!!!!!!!")
+        // console.log("matchCondition!!!!!!!!!!!")
         const productId = pwq.id
         const basePrice = Number(pwq.basePrice || 0)
         const currentDiscountValue = Number(rule.discountValue) // 当前规则的折扣值（百分比）
@@ -197,7 +197,7 @@ function matchCondition(product: ProductWithQuantity, conditionStr: string | obj
 
     // 如果是关联对象（如series, color等），获取其name属性
     if (field === "series") {
-      productValue = product.modelType?.serie?.name
+      productValue = product.serie?.name
     } else if (productValue && typeof productValue === "object") {
       if (field === "color") {
         productValue = productValue.value
@@ -206,9 +206,9 @@ function matchCondition(product: ProductWithQuantity, conditionStr: string | obj
       }
     }
     if (!productValue) productValue = ""
-    console.log("productValue", productValue)
+    // console.log("productValue", productValue)
     for (const [operator, values] of Object.entries(criteria as Record<string, unknown>)) {
-      console.log("operator", operator, values, typeof values)
+      // console.log("operator", operator, values, typeof values)
       switch (operator) {
         case "equal":
           if (Array.isArray(values)) {

@@ -42,7 +42,6 @@ const formData = reactive({
   model: {
     id: 0,
     name: "",
-    serieId: 0,
     image: "",
     value: 0,
     sort: 0
@@ -117,10 +116,6 @@ function open(options = {
   if (options.type === "serie") {
     if (Array.isArray(options.extraData)) {
       categories.value = options.extraData as any[]
-    }
-  } else if (options.type === "model") {
-    if (Array.isArray(options.extraData)) {
-      series.value = options.extraData as any[]
     }
   }
   if (options.editData) {
@@ -212,7 +207,6 @@ function resetForm(type: string) {
     formData.model = {
       id: 0,
       name: "",
-      serieId: 0,
       image: "",
       value: 0,
       sort: 0
@@ -335,11 +329,6 @@ function handleCategoryChange(value: any) {
   formData.serie.categoryId = value[value.length - 1]
 }
 
-function handleSerieChange(value: any) {
-  if (value.length === 0) return
-  formData.model.serieId = value[value.length - 1]
-}
-
 function handleSearchTags(value: string) {
   if (value === "" && tagOptions.value.length > 0) return
   tagsLoading.value = true
@@ -375,14 +364,6 @@ defineExpose({
         <el-col :span="24">
           <el-form-item v-if="isSerieForm" label="类目" prop="categoryId">
             <el-cascader v-model="cascaderOptions.category" placeholder="选择类目" :options="categories" :props="{ expandTrigger: 'hover' }" @change="handleCategoryChange" filterable :debounce="500" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-row>
-        <el-col :span="24">
-          <el-form-item v-if="isModelForm" label="系列" prop="serieId">
-            <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" :options="series" :props="{ expandTrigger: 'hover' }" @change="handleSerieChange" filterable :debounce="500" />
           </el-form-item>
         </el-col>
       </el-row>

@@ -307,12 +307,12 @@ function fillRow(product: any, row: any) {
   row.id = product.id
   row.modelType = product.modelType?.name || ""
   row.modelOld = product.modelType?.name || ""
-  row.serie = product.modelType?.serie?.name || ""
+  row.serie = product.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
   row.imageUrls = product.imageUrls?.split(",") || []
   row.imageUrl = row.imageUrls[0] || ""
-  row.isBonus = bonusSeriesIds.value.includes(product.modelType?.serie?.id)
+  row.isBonus = bonusSeriesIds.value.includes(product.serie?.id)
   row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
@@ -883,7 +883,7 @@ onMounted(async () => {
             modelType: product.modelType?.name || "",
             modelTypeId: product.modelType?.name || "",
             modelOld: product.modelType?.name || "",
-            serie: product.modelType?.serie?.name || "",
+            serie: product.serie?.name || "",
             color: product.color?.value || "",
             name: product.name || "",
             quantity: item.quantity || 1,
@@ -895,7 +895,7 @@ onMounted(async () => {
             backupProducts: [],
             colorEditable: false,
             popoverVisible: false,
-            isBonus: bonusSeriesIds.value.includes(product.modelType?.serie?.id),
+            isBonus: bonusSeriesIds.value.includes(product.serie?.id),
             imageUrls: images,
             imageUrl: images.length > 0 ? images[0] : ""
           }

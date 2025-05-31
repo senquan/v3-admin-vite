@@ -57,7 +57,7 @@ async function fetchProducts() {
             materialId: item.materialId,
             barCode: item.barCode,
             model: item.modelType?.name || "",
-            serie: item.modelType?.serie?.name || "",
+            serie: item.serie?.name || "",
             color: item.color?.value || "",
             name: item.name,
             basePrice: item.basePrice,
@@ -207,7 +207,7 @@ async function handleExport() {
           物料编号: item.materialId || "",
           条形码: item.barCode || "",
           型号: item.modelType?.name || "",
-          系列: item.modelType?.serie?.name || "",
+          系列: item.serie?.name || "",
           颜色: item.color?.value || "",
           名称: item.name || "",
           标签: item.tags ? item.tags.map((tag: any) => tag.name).join(",") : "",
@@ -396,7 +396,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style coped>
+<style scoped>
 .filter-container {
   background: #fff;
 }

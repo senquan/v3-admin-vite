@@ -21,7 +21,7 @@ const fieldMapping = {
   物料编号: "materialId",
   条形码: "barCode",
   型号: "modelType",
-  系列: "series",
+  系列: "serie",
   颜色: "color",
   产品名称: "name",
   日常价: "basePrice",
