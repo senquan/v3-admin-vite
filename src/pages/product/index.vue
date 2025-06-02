@@ -197,7 +197,7 @@ async function handleExport() {
 
   try {
     // 获取所有数据（不分页）
-    const exportQuery = { ...listQuery, page: 1, pageSize: 1000 }
+    const exportQuery = { ...listQuery, page: 1, pageSize: totalProducts.value }
     const res = await fetchList(exportQuery)
 
     if (res.data && res.data.products && res.data.products.length > 0) {

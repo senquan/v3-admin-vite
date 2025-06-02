@@ -103,7 +103,7 @@ function getSummaries(param: any) {
     let values
     if (index === 2) {
       values = data.map((item: Record<string, any>) => {
-        if (item.name.includes("套装") || item.name.includes("预售")) {
+        if (item.serie.includes("套装") || item.serie.includes("预售")) {
           return Number(item[column.property]) * 10
         } else if (item.isBonus || item.id === "") {
           return 0
@@ -339,7 +339,7 @@ function getSummaries(param: any) {
 }
 .price-summary-table {
   margin: auto;
-  width: 800px;
+  width: 920px;
   margin-bottom: 10px;
 }
 

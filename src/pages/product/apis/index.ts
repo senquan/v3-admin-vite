@@ -5,7 +5,8 @@ export function fetchList(params: Product.ProductListRequestParams) {
   return request<Product.ProductListResponseData>({
     url: "product/list",
     method: "get",
-    params
+    params,
+    timeout: 10000
   })
 }
 

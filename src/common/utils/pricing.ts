@@ -48,8 +48,11 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
   const { products } = params
   // 过滤有效产品并创建数量映射
   const validProducts = products.filter(p => p.quantity > 0 && p.id)
-  const quantityMap = new Map(validProducts.map(p => [p.id, p.quantity]))
-
+  const quantityMap = new Map()
+  validProducts.forEach((product) => {
+    const currentQuantity = quantityMap.get(product.id) || 0
+    quantityMap.set(product.id, currentQuantity + product.quantity)
+  })
   const productMap = new Map() // 普通产品
   const bonusMap = new Map() // 赠品产品
 
@@ -122,6 +125,7 @@ function calculateDiscount(rules: Array<RuleListData>, products: any, type: numb
 
         // 获取产品当前的累计折扣信息，如果不存在则初始化
         const discountInfo = productDiscounts.get(productId) || {
+          quantity: pwq.quantity,
           totalDiscountValue: 0,
           totalDiscount: 0,
           finalUnitPrice: basePrice

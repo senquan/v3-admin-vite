@@ -396,6 +396,7 @@ function calculatePrice(row: any) {
   }
 
   calculatedPrice.value = localCalculatePrice({ products })
+  // console.log(calculatedPrice.value)
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
     tableData.value.forEach((row: TableRowData) => {
       if (row.id) {
@@ -481,7 +482,7 @@ function getSummaries(param: any) {
     let values
     if (index === 4) {
       values = data.map((item: Record<string, any>) => {
-        if (item.name.includes("套装") || item.name.includes("预售")) {
+        if (item.serie.includes("套装") || item.serie.includes("预售")) {
           return Number(item[column.property]) * 10
         } else if (item.isBonus || item.id === "") {
           return 0
