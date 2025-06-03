@@ -82,9 +82,9 @@ const registerFormRules: FormRules = {
       trigger: "blur"
     }
   ],
-  inviteCode: [
-    { required: true, message: "请输入邀请码", trigger: "blur" }
-  ],
+  // inviteCode: [
+  //   { required: true, message: "请输入邀请码", trigger: "blur" }
+  // ],
   code: [
     { required: true, message: "请输入验证码", trigger: "blur" }
   ]
@@ -288,7 +288,7 @@ onMounted(() => {
               @focus="handleFocus"
             />
           </el-form-item>
-          <el-form-item prop="inviteCode">
+          <!-- <el-form-item prop="inviteCode">
             <el-input
               v-model.trim="registerFormData.inviteCode"
               placeholder="邀请码"
@@ -298,7 +298,7 @@ onMounted(() => {
               @blur="handleBlur"
               @focus="handleFocus"
             />
-          </el-form-item>
+          </el-form-item> -->
           <el-form-item prop="code">
             <el-input
               v-model.trim="registerFormData.code"

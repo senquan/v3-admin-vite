@@ -45,6 +45,7 @@ const statusOptions = ref<any>([
   { label: "售后中", value: 5, color: "danger" },
   { label: "已完成", value: 6, color: "success" }
 ])
+const materialList = ref("")
 
 function getMatchedStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
@@ -140,6 +141,9 @@ function loadDetail(id: number) {
     if (res.data) {
       returnForm.orderId = id
       if (res.data.items && Array.isArray(res.data.items)) {
+        for (const item of res.data.items) {
+          materialList.value += `<${item.product.materialId}*${item.quantity}>`
+        }
         res.data.items.forEach((item: any) => {
           item.returnQuantity = 0
           item.refund = 0
@@ -298,14 +302,9 @@ onMounted(() => {
     <el-drawer v-model="detailDrawer" title="订单详情" size="38%" direction="rtl">
       <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
         <el-tab-pane label="物料详情" name="materia">
-          <el-table :data="orderDetail.items">
-            <el-table-column label="物料编号" min-width="200" align="left">
-              <template #default="scope">
-                <el-text truncated>{{ scope.row.product.materialId }}</el-text>
-              </template>
-            </el-table-column>
-            <el-table-column prop="quantity" width="80" label="数量" />
-          </el-table>
+          <div>
+            {{ materialList }}
+          </div>
         </el-tab-pane>
         <el-tab-pane label="申请售后" name="service">
           <div>

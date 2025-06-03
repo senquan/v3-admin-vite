@@ -3,7 +3,16 @@ import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { fetchSerieList } from "../../tags/apis"
 import { batchUpdateSettings } from "../apis"
 
-const settingsForm = reactive({
+const siteSettingsForm = reactive({
+  site_title: "",
+  site_logo: "",
+  site_description: "",
+  site_keywords: "",
+  site_icp: "",
+  site_enable_visit: 1,
+  site_enable_invite: 0
+})
+const quotationSettingsForm = reactive({
   bonusSeriesIds: [] as number[]
 })
 const seriesOptions = ref<any>([])
@@ -12,9 +21,9 @@ function fetchSettings() {
   const bonusSeriesSetting = useSystemParamsStore().getParam("bonus_series_ids")
   console.log(bonusSeriesSetting)
   if (bonusSeriesSetting) {
-    settingsForm.bonusSeriesIds = bonusSeriesSetting.split(",").map((id: string) => Number(id))
-    if (settingsForm.bonusSeriesIds.length > 0) {
-      fetchSerieList({ ids: settingsForm.bonusSeriesIds.join(",") }).then((seriesRes) => {
+    quotationSettingsForm.bonusSeriesIds = bonusSeriesSetting.split(",").map((id: string) => Number(id))
+    if (quotationSettingsForm.bonusSeriesIds.length > 0) {
+      fetchSerieList({ ids: quotationSettingsForm.bonusSeriesIds.join(",") }).then((seriesRes) => {
         if (seriesRes.data && seriesRes.data.series) {
           const seriesData = seriesRes.data.series.map((item: any) => ({
             label: item.name,
@@ -29,11 +38,18 @@ function fetchSettings() {
       }
     }
   } else {
-    settingsForm.bonusSeriesIds = []
+    quotationSettingsForm.bonusSeriesIds = []
     if (seriesOptions.value.length === 0) {
       remoteSearchSeries("")
     }
   }
+
+  siteSettingsForm.site_title = useSystemParamsStore().getParam("site_title") || ""
+  siteSettingsForm.site_description = useSystemParamsStore().getParam("site_description") || ""
+  siteSettingsForm.site_keywords = useSystemParamsStore().getParam("site_keywords") || ""
+  siteSettingsForm.site_icp = useSystemParamsStore().getParam("site_icp") || ""
+  siteSettingsForm.site_enable_visit = Number(useSystemParamsStore().getParam("enable_visit")) || 1
+  siteSettingsForm.site_enable_invite = Number(useSystemParamsStore().getParam("enable_invite")) || 0
 }
 
 function remoteSearchSeries(query: string) {
@@ -58,9 +74,7 @@ function fetchSeriesOptions(query: any) {
   })
 }
 
-function saveSettings() {
-  const settings = []
-  settings.push({ name: "赠品系列", key: "bonus_series_ids", value: settingsForm.bonusSeriesIds.join(","), isEnabled: 1 })
+function saveSettings(settings: any[]) {
   batchUpdateSettings(settings).then((res) => {
     if (res.code === 0) {
       ElMessage({ type: "success", message: "保存成功" })
@@ -77,6 +91,24 @@ function saveSettings() {
   })
 }
 
+function saveQuotationSettings() {
+  const settings = []
+  settings.push({ key: "bonus_series_ids", value: quotationSettingsForm.bonusSeriesIds.join(","), isEnabled: 1 })
+  saveSettings(settings)
+}
+
+function saveSiteSettings() {
+  const settings = []
+  for (const key in siteSettingsForm) {
+    if (Object.prototype.hasOwnProperty.call(siteSettingsForm, key)) {
+      const value = siteSettingsForm[key as keyof typeof siteSettingsForm]
+      if (value === "") continue
+      settings.push({ type: 6, key, value, isEnabled: 1 })
+    }
+  }
+  saveSettings(settings)
+}
+
 defineExpose({
   fetchSettings
 })
@@ -86,13 +118,56 @@ defineExpose({
   <div class="main-container">
     <el-descriptions
       class="margin-top"
+      title="站点设置"
+      :column="2"
+      size="large"
+      border
+    >
+      <template #extra>
+        <el-button type="primary" @click="saveSiteSettings">保存</el-button>
+      </template>
+      <el-descriptions-item label-width="150">
+        <template #label>
+          <div class="cell-item">
+            站点名称
+          </div>
+        </template>
+        <el-input
+          v-model="siteSettingsForm.site_title"
+          placeholder="请输入站点名称"
+          style="width: 80%;"
+        />
+      </el-descriptions-item>
+      <el-descriptions-item label-width="150">
+        <template #label>
+          <div class="cell-item">
+            ICP
+          </div>
+        </template>
+        <el-input
+          v-model="siteSettingsForm.site_icp"
+          placeholder="请输入ICP备案编号"
+          style="width: 80%;"
+        />
+      </el-descriptions-item>
+      <el-descriptions-item label-width="150" :span="2">
+        <template #label>
+          <div class="cell-item">
+            站点描述
+          </div>
+        </template>
+        <el-input v-model="siteSettingsForm.site_description" type="textarea" :rows="3" placeholder="请输入站点描述信息" />
+      </el-descriptions-item>
+    </el-descriptions>
+    <el-descriptions
+      class="margin-top"
       title="报价设置"
       :column="2"
       size="large"
       border
     >
       <template #extra>
-        <el-button type="primary" @click="saveSettings">保存</el-button>
+        <el-button type="primary" @click="saveQuotationSettings">保存</el-button>
       </template>
       <el-descriptions-item label-width="150">
         <template #label>
@@ -101,7 +176,7 @@ defineExpose({
           </div>
         </template>
         <el-select
-          v-model="settingsForm.bonusSeriesIds"
+          v-model="quotationSettingsForm.bonusSeriesIds"
           multiple
           filterable
           clearable
@@ -131,6 +206,9 @@ defineExpose({
 </template>
 
 <style coped>
+.margin-top {
+  margin-top: 20px;
+}
 .cell-item {
   text-align: center;
 }
