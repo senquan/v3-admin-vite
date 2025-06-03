@@ -28,12 +28,13 @@ function filterDynamicRoutes(routes: RouteRecordRaw[], roles: string[]) {
 // 将权限数据转换为路由
 function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRaw[] {
   const routes: AppRouteRecordRaw[] = []
-
+  const modules = import.meta.glob("./../../pages/**/*.vue")
   permissions.forEach((permission) => {
     if (permission.type === 1 && permission.status === 1) { // 只处理菜单类型且启用的权限
+      const componentPath = modules[`../../${permission.component}`]
       const route: AppRouteRecordRaw = {
         path: permission.path || "",
-        component: permission.component ? () => import(/* @vite-ignore */ `./../../${permission.component}`) : () => import("@/layouts/index.vue"),
+        component: permission.component ? componentPath : () => import("@/layouts/index.vue"),
         redirect: permission.redirect,
         meta: {
           title: permission.title,
