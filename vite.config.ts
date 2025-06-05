@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
       // 反向代理
       proxy: {
         "/api": {
-          target: "http://localhost:5002/",
+          target: "http://localhost:5003/",
           changeOrigin: true,
           rewrite: path => path
         }
