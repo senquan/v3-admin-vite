@@ -151,6 +151,8 @@ const cacheInitialized = ref(false)
 const cacheExpiry = 30 * 60 * 1000 // 30分钟缓存过期
 const lastCacheTime = ref(0)
 const productCache = ref<Map<number, ProductListData>>(new Map())
+const topAlertVisible = ref(true)
+const topAlertMessage = ref("报单服务正在初始化")
 
 // 添加行函数
 function addRow() {
@@ -819,6 +821,10 @@ function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
 }
 
 function orderPreview() {
+  if (topAlertVisible.value) {
+    ElMessage.warning("系统错误，暂停预览。")
+    return
+  }
   previewFormRef.value?.open({
     data: tableData.value,
     title: formData.value?.name || "",
@@ -863,11 +869,10 @@ async function initModelCache() {
 }
 
 onMounted(async () => {
-  platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   if (orderId.value > 0) {
     // 获取订单详情
-    fetchOrder(orderId.value).then((response: OrderDetailResponseData) => {
+    fetchOrder(orderId.value).then(async (response: OrderDetailResponseData) => {
       if (response.code === 0) {
         const order = response.data
         formData.value.id = order.id
@@ -905,6 +910,7 @@ onMounted(async () => {
         tableData.value.forEach((row: any) => {
           handelReloadColors(true, row)
         })
+        await initRules()
         calculatePrice(null)
       }
     })
@@ -916,7 +922,10 @@ onMounted(async () => {
     ]
   }
   await initModelCache()
+  window.addEventListener("keydown", handleKeyDown)
+})
 
+async function initRules() {
   try {
     fetchPromotionRules({ platformId: platformId.value }).then((response: any) => {
       if (response.code === 0) {
@@ -927,7 +936,12 @@ onMounted(async () => {
           }))
         })
         initPromotionRules(roles)
-        rulesInitialized.value = true
+        if (roles.length > 0) {
+          rulesInitialized.value = true
+          topAlertVisible.value = false
+        } else {
+          topAlertMessage.value = "未找到促销规则，请联系运营"
+        }
         if (calculateQuested.value) {
           calculatePrice(null)
         }
@@ -936,9 +950,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("获取促销规则失败:", error)
   }
-
-  window.addEventListener("keydown", handleKeyDown)
-})
+}
 
 function getRowIdentity() {
   return `row_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
@@ -972,6 +984,9 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
 
 <template>
   <div class="quotation-main-container">
+    <div style="max-width: 600px; margin: 10px auto">
+      <el-alert v-if="topAlertVisible" :title="topAlertMessage" type="error" effect="dark" :closable="false" />
+    </div>
     <div class="grid-grouping" :style="{ height: bodyHeight }">
       <el-table
         ref="tableRef"

@@ -272,7 +272,7 @@ function matchCondition(product: ProductWithQuantity, conditionStr: string | obj
 function calculateBonusPoint(bonusMap: Map<string, { quantity: number, modelType: { value: string } }>): number {
   let totalPoints = 0
   bonusMap.forEach((item) => {
-    const factor = Number(item.modelType?.value) || 1
+    const factor = Number(item.modelType?.value) || 0
     totalPoints += item.quantity * factor
   })
   return totalPoints

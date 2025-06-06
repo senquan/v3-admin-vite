@@ -8,6 +8,7 @@ const visible = ref(false)
 const orderData = ref<any>([])
 const summaryData = reactive<any>({})
 const title = ref("")
+const platform = ref("")
 
 const btnSubmit = reactive({
   loading: false
@@ -15,6 +16,7 @@ const btnSubmit = reactive({
 
 function open(options = {
   data: Array<any>,
+  platform: "",
   title: "",
   summary: {
     dialyDiscount: 0,
@@ -29,6 +31,7 @@ function open(options = {
   Object.assign(summaryData, options.summary)
   title.value = options.title
   visible.value = true
+  platform.value = options.platform
 }
 
 function close() {
@@ -264,9 +267,11 @@ function getSummaries(param: any) {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <span class="bonus">{{ (summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
-            <span class="bonus">{{ (summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
-            <span class="bonus">{{ (summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+            <div>
+              <span class="bonus">{{ (summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+              <span class="bonus">{{ (summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+              <span class="bonus">{{ (summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+            </div>
           </el-col>
         </el-row>
       </div>
@@ -282,7 +287,7 @@ function getSummaries(param: any) {
   </el-dialog>
 </template>
 
-<style>
+<style scoped>
 .dialog-footer {
   display: flex;
   justify-content: center;
