@@ -8,7 +8,7 @@ const visible = ref(false)
 const orderData = ref<any>([])
 const summaryData = reactive<any>({})
 const title = ref("")
-const platform = ref("")
+const platform = ref(0)
 
 const btnSubmit = reactive({
   loading: false
@@ -16,7 +16,7 @@ const btnSubmit = reactive({
 
 function open(options = {
   data: Array<any>,
-  platform: "",
+  platformId: 0,
   title: "",
   summary: {
     dialyDiscount: 0,
@@ -31,7 +31,7 @@ function open(options = {
   Object.assign(summaryData, options.summary)
   title.value = options.title
   visible.value = true
-  platform.value = options.platform
+  platform.value = options.platformId
 }
 
 function close() {
@@ -267,7 +267,7 @@ function getSummaries(param: any) {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <div>
+            <div v-if="platform === 1">
               <span class="bonus">{{ (summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
               <span class="bonus">{{ (summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
               <span class="bonus">{{ (summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>

@@ -135,6 +135,7 @@ const bonusLeft = computed(() => {
 
 const priceDetailVisible = ref(false)
 const priceDetailData = ref<any>([])
+const isPricing = ref(false)
 
 const replaceFormVisible = ref(false)
 const replaceForm = ref({
@@ -382,7 +383,7 @@ function calculatePrice(row: any) {
     calculateQuested.value = true
     return
   }
-
+  isPricing.value = true
   const products = tableData.value.filter((item: any) => item && item.quantity > 0).map((item: any) => {
     const product = productCache.value.get(Number(item.id))
     if (!product) return null
@@ -414,6 +415,7 @@ function calculatePrice(row: any) {
     })
     formData.value.matchLogs = calculatedPrice.value.resultMap
   }
+  isPricing.value = false
 }
 
 function priceDetail(id: number) {
@@ -825,9 +827,14 @@ function orderPreview() {
     ElMessage.warning("系统错误，暂停预览。")
     return
   }
+  if (isPricing.value) {
+    ElMessage.warning("正在计算价格中，请稍等。")
+    return
+  }
   previewFormRef.value?.open({
     data: tableData.value,
     title: formData.value?.name || "",
+    platformId: platformId.value || 0,
     summary: {
       dialyDiscount,
       dailyPrice,
