@@ -124,7 +124,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style coped>
+<style scoped>
 .filter-container {
   background: #fff;
 }

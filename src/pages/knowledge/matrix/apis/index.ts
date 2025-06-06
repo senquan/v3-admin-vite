@@ -15,11 +15,10 @@ export function fetchMatrixOpt() {
   })
 }
 
-export function fetchStaff(params: Matrix.MatrixStaffListRequestParams) {
-  return request<Matrix.MatrixStaffListResponseData>({
-    url: `user/list`,
-    method: "get",
-    params
+export function getMatrix(id: number) {
+  return request<Matrix.MatrixDetailResponseData>({
+    url: `matrix/${id}`,
+    method: "get"
   })
 }
 
@@ -28,5 +27,20 @@ export function createMatrix(data: Matrix.MatrixCreateData) {
     url: "matrix/",
     method: "post",
     data
+  })
+}
+
+export function updateMatrix(id: number, data: Matrix.MatrixCreateData) {
+  return request<Matrix.MatrixActionResponseData>({
+    url: `matrix/${id}`,
+    method: "put",
+    data
+  })
+}
+
+export function deleteMatrix(id: number) {
+  return request<Matrix.MatrixActionResponseData>({
+    url: `matrix/${id}`,
+    method: "delete"
   })
 }

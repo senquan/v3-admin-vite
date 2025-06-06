@@ -1,38 +1,33 @@
 export interface MatrixListData {
-  id: number
-  name: string
-  training_scope: string[]
-  trainer: string | null
-  training_mode: number
-  training_category: number
-  planned_participants: number
-  planned_time: string
-  training_hours: number
-  assessment_method: number
-  exam_method: number
-  status: number
+  _id: number
+  category_id: number
+  ref: string
+  standard: string
+  assessment_method: string
+  creator: number
+  updater: number
   created_time: string
   updated_time: string
-}
-
-export interface StaffListData {
-  id: number
-  name: string
-  type: number
+  category?: {
+    id: number
+    name: string
+  }
+  creator_info?: {
+    id: number
+    name: string
+  }
+  updater_info?: {
+    id: number
+    name: string
+  }
 }
 
 export interface MatrixCreateData {
   id?: number
-  name: string
-  training_scope: string[]
-  trainer: string | null
-  training_mode: number
-  training_category: number
-  planned_participants: number
-  planned_time: string
-  training_hours: number
-  assessment_method: number
-  exam_method: number
+  category_id: number
+  ref: string
+  standard: string
+  assessment_method: number[]
 }
 
 export interface MatrixListRequestParams {
@@ -57,18 +52,7 @@ export interface MatrixListResponseData {
   code: number
   message: string
   data: {
-    matrixs: MatrixListData[]
-    total: number
-    page: number
-    pageSize: number
-  }
-}
-
-export interface MatrixStaffListResponseData {
-  code: number
-  message: string
-  data: {
-    users: StaffListData[]
+    matrices: MatrixListData[]
     total: number
     page: number
     pageSize: number

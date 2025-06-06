@@ -1,16 +1,15 @@
 export interface CoursewareListData {
   id: number
-  name: string
-  training_scope: string[]
-  trainer: string | null
-  training_mode: number
-  training_category: number
-  planned_participants: number
-  planned_time: string
-  training_hours: number
-  assessment_method: number
-  exam_method: number
+  title: string
+  description: string | null
+  category: number
+  tags: string | null
   status: number
+  view_count: number
+  download_count: number
+  is_deleted: number
+  creator: number | null
+  updater: number | null
   created_time: string
   updated_time: string
 }
@@ -23,16 +22,12 @@ export interface StaffListData {
 
 export interface CoursewareCreateData {
   id?: number
-  name: string
-  training_scope: string[]
-  trainer: string | null
-  training_mode: number
-  training_category: number
-  planned_participants: number
-  planned_time: string
-  training_hours: number
-  assessment_method: number
-  exam_method: number
+  title: string
+  description?: string
+  category: number
+  tags?: string
+  status?: number
+  materialIds?: number[]
 }
 
 export interface CoursewareListRequestParams {

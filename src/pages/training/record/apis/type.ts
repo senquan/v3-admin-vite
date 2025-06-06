@@ -21,18 +21,19 @@ export interface StaffListData {
   type: number
 }
 
-export interface RecordCreateData {
-  id?: number
+export interface UploadFile {
+  url: string
   name: string
-  training_scope: string[]
-  trainer: string | null
-  training_mode: number
-  training_category: number
-  planned_participants: number
-  planned_time: string
-  training_hours: number
-  assessment_method: number
-  exam_method: number
+}
+
+export interface RecordCreateData {
+  id: number
+  participants: number[]
+  participants_outer: number[]
+  contents: string
+  contents_select: UploadFile[]
+  contents_matrix: number[]
+  coursewares: number[]
 }
 
 export interface RecordListRequestParams {
@@ -56,7 +57,7 @@ export interface RecordListResponseData {
   code: number
   message: string
   data: {
-    plans: RecordListData[]
+    records: RecordListData[]
     total: number
     page: number
     pageSize: number

@@ -1,18 +1,19 @@
 <script lang="ts" setup>
 import { getCascaderOptions } from "@/common/utils/helper"
 import { request } from "@/http/axios"
+import { fetchCategoryListOpt } from "../../setting/apis"
 import { fetchList as fetchCoursewares } from "./../../knowledge/courseware/apis"
-import { fetchMatrixOpt } from "./../../knowledge/matrix/apis"
 import { createRecord, fetchStaff } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
 const formData = reactive({
+  id: 0,
   participants: [],
   participants_outer: [],
   contents: "",
-  contents_select: [],
-  contents_matrix: [],
+  contents_select: [] as { name: string, url: string }[],
+  contents_matrix: [] as number[],
   coursewares: []
 })
 
@@ -45,6 +46,7 @@ const btnSubmit = reactive({
 })
 
 function resetForm() {
+  formData.id = 0
   formData.participants = []
   formData.participants_outer = []
   formData.contents = ""
@@ -52,6 +54,7 @@ function resetForm() {
   formData.contents_matrix = []
   formData.coursewares = []
   fileList.value = []
+  handleMatrixClear()
 }
 
 function open(options = {
@@ -59,10 +62,12 @@ function open(options = {
   data: {} as any,
   dicts: {} as any
 }) {
+  console.log(options)
   Object.assign(planData, options.data)
   dicts.value = options.dicts
   visible.value = true
   resetForm()
+  formData.id = planData.id
   scopeOptions.value = options.scopes
   if (planData.training_category === 3 || planData.training_category === 4) {
     loadMatrix()
@@ -103,25 +108,41 @@ function loadParticipants(node: any, resolve: any, type: string = "inner") {
 
 function loadMatrix() {
   if (matrix.value.length > 0) return
-  fetchMatrixOpt().then((res: any) => {
-    const matrixOptData: Array<any> = []
+  fetchCategoryListOpt().then((res) => {
+    const categoryOptData: Array<any> = []
     if (res.data) {
-      for (const item of res.data) {
-        if (matrixOptData[item.parentId] === undefined) {
-          matrixOptData[item.parentId] = []
+      for (const item of res.data.categories) {
+        const parent = item.parentId || 0
+        if (categoryOptData[parent] === undefined) {
+          categoryOptData[parent] = []
         }
-        matrixOptData[item.parentId].push(item)
+        categoryOptData[parent].push(item)
       }
-    };
-    matrix.value = getCascaderOptions(matrixOptData, 0)
+      matrix.value = getCascaderOptions(categoryOptData, 0, 0, 3)
+    }
   })
 }
 
 function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
+    if (formData.participants.length === 0 && formData.participants_outer.length === 0) {
+      ElMessage({
+        message: "请选择参与人员",
+        type: "error",
+        offset: 0
+      })
+      return
+    }
     btnSubmit.loading = true
-
+    if (planData.training_category === 1 || planData.training_category === 2) {
+      formData.contents_select = fileList.value.map((item: any) => {
+        return {
+          name: item.name,
+          url: item.response.data.url
+        }
+      }).filter((item: any) => item.url !== "")
+    }
     createRecord(formData).then((response) => {
       btnSubmit.loading = false
       if (response.code === 0) {
@@ -221,6 +242,11 @@ function handleMatrixClear() {
   cascaderOptions.value.matrix = []
 }
 
+function handleMatrixChange(value: any[]) {
+  formData.contents_matrix = value.map((item: any) => item[item.length - 1])
+  console.log(formData.contents_matrix)
+}
+
 defineExpose({
   open
 })
@@ -299,13 +325,14 @@ defineExpose({
               <el-cascader
                 v-model="cascaderOptions.matrix"
                 multiple
-                :options="matrix"
-                :props="{ expandTrigger: 'hover' }"
+                placeholder="选择培训内容"
                 filterable
                 clearable
-                placeholder="选择培训内容"
-                @clear="handleMatrixClear()"
+                :options="matrix"
+                :props="{ expandTrigger: 'hover', multiple: true, checkStrictly: true }"
                 :debounce="500"
+                @change="(value: any) => handleMatrixChange(value as number[])"
+                @clear="handleMatrixClear()"
                 class="filter-item"
                 style="width: 380px; margin-top: 20px;"
               />
