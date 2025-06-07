@@ -25,6 +25,7 @@ export interface RuleListData {
   promotionId: number
   condition: string
   discountValue: number
+  discountName?: string
   updatedAt: number
 }
 

@@ -12,7 +12,7 @@ const emit = defineEmits(["success", "close"])
 const formData = reactive({
   id: 0,
   name: "",
-  type: 1,
+  type: 5,
   promotionId: 0,
   discountValue: 0,
   condition: ""
@@ -50,6 +50,7 @@ const conditionOptions = ref<any>([
   { label: "不包含", value: "notIn" },
   { label: "匹配", value: "contains" }
 ])
+const percentageDiscount = ref(true)
 
 const rules = {
   name: [{ required: true, message: "请输入规则名称", trigger: "blur" }],
@@ -76,7 +77,7 @@ const btnSubmit = reactive({
 function resetForm() {
   formData.id = 0
   formData.name = ""
-  formData.type = 1
+  formData.type = 5
   formData.discountValue = 0
   formData.condition = ""
 }
@@ -218,6 +219,32 @@ function handleSubmit() {
       btnSubmit.loading = false
       return
     } else {
+      console.log("submitData.condition", submitData.condition)
+      const name = typeOptions.value.find((pf: any) => pf.value === submitData.type)?.label
+      if (name.includes("满额")) {
+        // 条件必须包含总价 totalBasePrice
+        if (!submitData.condition.includes("totalBasePrice") && !submitData.condition.includes("totalProjectPrice")) {
+          ElMessage({
+            message: "满额规则必须包含总价 totalBasePrice 或 totalProjectPrice",
+            type: "error",
+            offset: 0
+          })
+          btnSubmit.loading = false
+          return
+        }
+      } else if (name.includes("满件")) {
+        // 条件必须包含数量 quantity
+        if (!submitData.condition.includes("quantity")) {
+          ElMessage({
+            message: "满件规则必须包含数量 quantity",
+            type: "error",
+            offset: 0
+          })
+          btnSubmit.loading = false
+          return
+        }
+      }
+
       try {
         // 将文本转换回JSON对象
         submitData.condition = JSON.parse(submitData.condition)
@@ -265,6 +292,15 @@ function handleSubmit() {
   })
 }
 
+function handleDiscountTypeChange(value: number) {
+  const name = typeOptions.value.find((pf: any) => pf.value === value)?.label
+  if (name.includes("折扣")) {
+    percentageDiscount.value = true
+  } else {
+    percentageDiscount.value = false
+  }
+}
+
 defineExpose({
   open
 })
@@ -294,7 +330,7 @@ defineExpose({
       <el-row>
         <el-col :span="12">
           <el-form-item label="类型" prop="type">
-            <el-select v-model="formData.type" placeholder="请选择类型">
+            <el-select v-model="formData.type" placeholder="请选择类型" @change="handleDiscountTypeChange">
               <el-option
                 v-for="pf in typeOptions"
                 :key="pf.value"
@@ -307,6 +343,13 @@ defineExpose({
         <el-col :span="12">
           <el-form-item label="折扣值" prop="discountValue">
             <el-input v-model="formData.discountValue" placeholder="请输入折扣值" />
+            <el-text size="small">
+              <el-icon>
+                <InfoFilled />
+              </el-icon>
+              <span v-if="percentageDiscount"> 百分比值, 1 为 100%</span>
+              <span v-else> 固定值</span>
+            </el-text>
           </el-form-item>
         </el-col>
       </el-row>

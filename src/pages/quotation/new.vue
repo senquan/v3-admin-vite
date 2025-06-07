@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
-import type { PromotionListData, RulesWithPromotionType } from "../promotion/apis/type"
+import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotion/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
+import { getNonZeroMin } from "@@/utils/helper"
 import { initPromotionRules, calculateOrderPrice as localCalculatePrice } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotion/apis"
@@ -405,11 +406,11 @@ function calculatePrice(row: any) {
       if (row.id) {
         const matchedProduct = calculatedPrice.value?.products.find((p: any) => p.id === Number(row.id))
         if (matchedProduct) {
-          let minPrice = Math.min(matchedProduct.priceMap.get(PROMOTION_TYPE_DAILY)?.price || 0, matchedProduct.priceMap.get(PROMOTION_TYPE_PROMOTION)?.price || 0)
-          const flashDiscount = Number(((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0) / matchedProduct.quantity).toFixed(2))
-          if (minPrice === 0) minPrice = Number(matchedProduct.unitPrice)
-          row.finalUnitPrice = Number((minPrice - flashDiscount).toFixed(2))
-          row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
+          // 非零最小值
+          const maxDiscount = Math.max(matchedProduct.priceMap.get(PROMOTION_TYPE_DAILY)?.discount || 0, matchedProduct.priceMap.get(PROMOTION_TYPE_PROMOTION)?.discount || 0)
+          const flashDiscount = Number((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0).toFixed(2))
+          row.payPrice = Number((matchedProduct.unitPrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(2))
+          row.finalUnitPrice = Number((row.payPrice / matchedProduct.quantity).toFixed(2))
         }
       }
     })
@@ -438,8 +439,8 @@ function priceDetail(id: number) {
       productLogs.forEach((log: any) => {
         priceDetailData.value.push({
           message: `${typeNames[type]}: ${log.name}`,
-          value: `${(Number(log.value) * 100).toFixed(4)}%`,
-          step: `${Number(log.stepPrice).toFixed(2)}`
+          value: `${Number(log.discount).toFixed(2)}`,
+          step: `${Number(log.pirce).toFixed(2)}`
         })
       })
     })
@@ -876,6 +877,7 @@ async function initModelCache() {
 }
 
 onMounted(async () => {
+  platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   if (orderId.value > 0) {
     // 获取订单详情
@@ -923,6 +925,7 @@ onMounted(async () => {
     })
   } else {
     // 初始化两行数据，确保每行都有唯一的 rowId
+    initRules()
     tableData.value = [
       { ...defaultRecord, rowId: getRowIdentity() },
       { ...defaultRecord, rowId: getRowIdentity() }
@@ -939,7 +942,8 @@ async function initRules() {
         const roles = response.data.promotions.flatMap((promotion: PromotionListData) => {
           return promotion.rules.map((rule: RulesWithPromotionType) => ({
             ...rule,
-            promotionType: promotion.type
+            promotionType: promotion.type,
+            discountName: response.data.types.find((type: TypeListData) => type.value === String(rule.type))?.name || ""
           }))
         })
         initPromotionRules(roles)
@@ -1220,7 +1224,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         <el-table :data="priceDetailData" empty-text="没有优惠">
           <el-table-column property="message" label="规则" min-width="300" />
           <el-table-column property="value" label="折扣值" width="100" />
-          <el-table-column property="step" label="折后价" width="100" />
+          <el-table-column property="step" label="折后总价" width="100" />
         </el-table>
       </el-dialog>
     </div>

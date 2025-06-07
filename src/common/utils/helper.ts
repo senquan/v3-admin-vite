@@ -254,3 +254,9 @@ export function findCascaderPath(options: any[], targetId: number, path: number[
   }
   return null
 }
+
+export function getNonZeroMin(arr: number[]) {
+  const nonZeroValues = arr.filter((value: number) => value !== 0)
+  if (nonZeroValues.length === 0) return 0
+  return Math.min(...nonZeroValues)
+}

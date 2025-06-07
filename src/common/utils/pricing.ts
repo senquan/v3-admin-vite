@@ -82,6 +82,7 @@ export function calculateOrderPrice(params: { products: Array<ProductWithQuantit
     resultMap.set(promotionType, calculateDiscount(rules, productMap, promotionType))
   })
   const usedBonusPoint = calculateBonusPoint(bonusMap)
+  // console.log("productMap", productMap)
 
   // 计算价格和数量
   const productsArray = Array.from(productMap, ([id, data]) => ({
@@ -114,46 +115,79 @@ function calculateDiscount(rules: Array<RuleListData>, products: any, type: numb
 
   // 遍历每条规则
   rules.forEach((rule) => {
+    // console.log("rule", rule)
     // 筛选符合条件的产品
     products.forEach((pwq: ProductWithQuantity) => {
       if (pwq != null && matchCondition(pwq, rule.condition)) {
         // console.log("matchCondition!!!!!!!!!!!")
+        // console.log("pwq", pwq)
         const productId = pwq.id
         const basePrice = Number(pwq.basePrice || 0)
-        const currentDiscountValue = Number(rule.discountValue) // 当前规则的折扣值（百分比）
-        const currentDiscount = basePrice * pwq.quantity * currentDiscountValue // 当前规则的折扣金额
+        const totalPrice = basePrice * pwq.quantity
+        const currentDiscountValue = Number(rule.discountValue) // 当前规则的折扣值
+        let currentDiscount // 当前商品的总折扣值
+        let exclusion = false
+        if (rule.discountName?.includes("折")) {
+          currentDiscount = basePrice * pwq.quantity * currentDiscountValue // 当前规则的折扣金额
+        } else if (rule.discountName?.includes("特价")) {
+          currentDiscount = currentDiscountValue * pwq.quantity
+          exclusion = true
+        } else {
+          currentDiscount = currentDiscountValue
+        }
+        // console.log("currentDiscountValue/currentDiscount", currentDiscountValue, currentDiscount)
 
         // 获取产品当前的累计折扣信息，如果不存在则初始化
         const discountInfo = productDiscounts.get(productId) || {
+          exclusion,
           quantity: pwq.quantity,
-          totalDiscountValue: 0,
           totalDiscount: 0,
           finalUnitPrice: basePrice
         }
+        if (!discountInfo.exclusion && exclusion) discountInfo.exclusion = exclusion
 
-        const currentLog = matchLogs.get(productId) || []
+        let currentLog = matchLogs.get(productId) || []
 
-        // 累加折扣值和折扣金额
-        discountInfo.totalDiscountValue += currentDiscountValue
-        discountInfo.totalDiscount += currentDiscount
+        if (discountInfo.exclusion) {
+          // 如果是排除型规则，直接应用折扣
+          if (exclusion) {
+            currentLog = []
+            // 特价商品也是减额
+            discountInfo.totalDiscount = currentDiscount
+            discountInfo.finalUnitPrice = basePrice - currentDiscountValue
 
-        // 计算新的最终单价（考虑所有已应用的折扣）
-        discountInfo.finalUnitPrice = basePrice * (1 - discountInfo.totalDiscountValue)
+            // 记录匹配日志
+            currentLog.push({
+              productId,
+              ruleId: rule.id,
+              name: rule.name,
+              value: rule.discountValue,
+              discount: currentDiscount,
+              pirce: discountInfo.finalUnitPrice * pwq.quantity,
+              stepPrice: discountInfo.finalUnitPrice * pwq.quantity
+            })
+            matchLogs.set(productId, currentLog)
+          }
+        } else {
+          // 如果是叠加型规则，根据当前折扣计算最终单价
+          discountInfo.totalDiscount += currentDiscount
+          discountInfo.finalUnitPrice = ((basePrice * pwq.quantity) - discountInfo.totalDiscount) / pwq.quantity
+          // console.log("discountInfo.finalUnitPrice", discountInfo.finalUnitPrice)
 
+          // 记录匹配日志
+          currentLog.push({
+            productId,
+            ruleId: rule.id,
+            name: rule.name,
+            value: rule.discountValue,
+            discount: currentDiscount,
+            pirce: totalPrice - discountInfo.totalDiscount, // 应用所有已应用的折扣后的价格
+            stepPrice: totalPrice - currentDiscount // 单独应用此规则的价格
+          })
+          matchLogs.set(productId, currentLog)
+        }
         // 更新产品的折扣信息
         productDiscounts.set(productId, discountInfo)
-
-        // 记录匹配日志
-        currentLog.push({
-          productId,
-          ruleId: rule.id,
-          name: rule.name,
-          value: rule.discountValue,
-          discount: currentDiscount,
-          pirce: basePrice * (1 - currentDiscountValue), // 单独应用此规则的价格
-          stepPrice: basePrice * (1 - discountInfo.totalDiscountValue) // 应用所有已应用的折扣后的价格
-        })
-        matchLogs.set(productId, currentLog)
       }
     })
   })
@@ -202,15 +236,14 @@ function matchCondition(product: ProductWithQuantity, conditionStr: string | obj
     // 如果是关联对象（如series, color等），获取其name属性
     if (field === "series") {
       productValue = product.serie?.name
+    } else if (field === "color") {
+      productValue = productValue?.value || ""
     } else if (productValue && typeof productValue === "object") {
-      if (field === "color") {
-        productValue = productValue.value
-      } else if ("name" in productValue) {
+      if ("name" in productValue) {
         productValue = productValue.name
       }
     }
     if (!productValue) productValue = ""
-    // console.log("productValue", productValue)
     for (const [operator, values] of Object.entries(criteria as Record<string, unknown>)) {
       // console.log("operator", operator, values, typeof values)
       switch (operator) {
