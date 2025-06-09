@@ -45,7 +45,7 @@ export interface TypeListData {
 
 export interface PromotionCreateData {
   id?: number
-  platformId: number
+  platformIds: number[]
   name: string
   type: number
   startTime: string
@@ -100,6 +100,7 @@ export interface PromotionDetailResponseData {
   message: string
   data: {
     promotion: PromotionListData
+    platforms: number[]
     types: TypeListData[]
   }
 }

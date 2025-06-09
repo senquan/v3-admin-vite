@@ -20,6 +20,7 @@ const searchOptions = reactive({
 })
 const detailDrawer = ref(false)
 const promotionDetail = ref<any>([])
+const promotionPlatforms = ref<any>([])
 const ruleTypes = ref<any>([])
 const totalPromotions = ref(0)
 const tableData = ref<any>([])
@@ -51,10 +52,11 @@ async function fetchPromotions() {
           }
         })
         tableData.value = res.data.promotions.map((item: any) => {
+          const itemPlatforms = item?.platforms
           return {
             id: item.id,
             name: item.name,
-            platformName: res.data.platforms.find((platform: any) => Number(platform.value) === item.platformId)?.label || "全平台",
+            platformName: (!itemPlatforms || itemPlatforms.length === 0) ? "全平台" : itemPlatforms.map((platform: any) => platform.name).join("、"),
             type: res.data.types.find((type: any) => Number(type.value) === item.type)?.label || "",
             startTime: item.startTime,
             endTime: item.endTime,
@@ -90,6 +92,9 @@ function loadDetail(id: number) {
       }
       if (res.data.promotion) {
         promotionDetail.value = res.data.promotion
+      }
+      if (res.data.platforms) {
+        promotionPlatforms.value = res.data.platforms.map((platform: { name: string }) => platform.name)
       }
     }
   })
@@ -263,7 +268,9 @@ onMounted(() => {
         @sort-change="handleSortChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="platformName" width="80" title="平台" />
+        <vxe-column field="platformName" width="200" title="平台">
+          <template #default="{ row }"><el-text truncated>{{ row.platformName }}</el-text></template>
+        </vxe-column>
         <vxe-column field="type" width="80" title="类型" />
         <vxe-column field="name" width="200" title="活动名称" />
         <vxe-column field="description" min-width="200" title="活动内容" align="left">
@@ -337,15 +344,15 @@ onMounted(() => {
           <el-button v-if="false" type="primary" @click="handleConvertRule">Excel规则转换</el-button>
           <el-button type="primary" @click="handleNewRule">增加规则</el-button>
         </template>
-        <el-descriptions-item width="60px" align="center">
+        <el-descriptions-item width="100px" :span="2">
           <template #label>
             <div class="cell-item">
               平台
             </div>
           </template>
-          {{ searchOptions.platforms.find((platform: any) => Number(platform.value) === promotionDetail.platformId)?.label || "全平台" }}
+          {{ promotionPlatforms.length > 0 ? promotionPlatforms.join(", ") : "全平台" }}
         </el-descriptions-item>
-        <el-descriptions-item width="60px">
+        <el-descriptions-item width="100px" :span="2">
           <template #label>
             <div class="cell-item">
               活动名称

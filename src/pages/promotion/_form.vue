@@ -8,7 +8,7 @@ const emit = defineEmits(["success", "close"])
 const formData = reactive({
   id: 0,
   name: "",
-  platformId: 0,
+  platformIds: [] as number[],
   type: 1,
   startTime: "",
   endTime: "",
@@ -41,7 +41,7 @@ const btnSubmit = reactive({
 function resetForm() {
   formData.id = 0
   formData.name = ""
-  formData.platformId = 0
+  formData.platformIds = []
   formData.type = 1
   formData.startTime = ""
   formData.endTime = ""
@@ -77,6 +77,11 @@ function open(options = {
           }
         })
         timeRange.value = [formatDateTime(formData.startTime), formatDateTime(formData.endTime)]
+        if (response.data.platforms.length === 0) {
+          formData.platformIds = [0]
+        } else {
+          formData.platformIds = response.data.platforms.map((platform: any) => platform.id)
+        }
       } else {
         ElMessage({
           message: response.message || "获取活动详情失败",
@@ -189,7 +194,7 @@ defineExpose({
       </el-row>
 
       <el-row>
-        <el-col :span="12">
+        <el-col :span="24">
           <el-form-item label="类型" prop="type">
             <el-select v-model="formData.type" placeholder="请选择活动类型">
               <el-option
@@ -201,9 +206,12 @@ defineExpose({
             </el-select>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
-          <el-form-item label="平台" prop="platformId">
-            <el-select v-model="formData.platformId" placeholder="请选择平台">
+      </el-row>
+
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="平台" prop="platformIds">
+            <el-select v-model="formData.platformIds" multiple placeholder="请选择平台">
               <el-option
                 v-for="pf in platformOptions"
                 :key="pf.value"
