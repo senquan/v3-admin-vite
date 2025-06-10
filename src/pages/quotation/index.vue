@@ -18,6 +18,7 @@ const tableData = ref<any>([])
 const newDialogVisibility = ref(false)
 const selectedPlatform = ref("")
 const platformOptions = ref<any>([])
+const otherPlatformOptions = ref<any>([])
 const detailDrawer = ref(false)
 const orderDetail = ref<any>([])
 const activeTab = ref("materia")
@@ -81,6 +82,7 @@ async function fetchOrders() {
             value: item.value
           }
         })
+        otherPlatformOptions.value = res.data.platforms.filter((item: any) => ![1, 2, 3, 4, 6].includes(Number(item.value)))
         platformOptions.value.unshift({
           label: "全部",
           value: 0
@@ -115,12 +117,17 @@ function handleNew() {
 
 function platformSelection() {
   if (selectedPlatform.value) {
-    newDialogVisibility.value = false
-    router.push(`/quotation/new?platform=${selectedPlatform.value}`)
+    navto(selectedPlatform.value)
   } else {
     ElMessage.warning("请选择平台类型")
   }
 }
+
+function navto(platform: string) {
+  newDialogVisibility.value = false
+  router.push(`/quotation/new?platform=${platform}`)
+}
+
 function handleReturn(id: number) {
   handleDetail(id)
   activeTab.value = "service"
@@ -217,6 +224,10 @@ function handleUpdateStatus() {
       ElMessage.error("更新状态失败")
     })
   })
+}
+
+function hasPlatform(platformId: number) {
+  return platformOptions.value.some((platform: any) => Number(platform.value) === platformId)
 }
 
 onMounted(() => {
@@ -380,10 +391,14 @@ onMounted(() => {
       width="30%"
       :close-on-click-modal="false"
     >
-      <div>
-        <p>请选择报价单平台类型</p>
-        <el-select v-model="selectedPlatform" placeholder="请选择平台类型" style="width: 100%" @change="platformSelection">
-          <el-option v-for="item in platformOptions" :key="item.value" :label="item.label" :value="item.value" />
+      <div style="text-align: center;">
+        <svg-icon name="preserve-color/platform-douyin" v-if="hasPlatform(1)" @click="navto('1')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <svg-icon name="preserve-color/platform-jingdong" v-if="hasPlatform(2)" @click="navto('2')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <svg-icon name="preserve-color/platform-taobao" v-if="hasPlatform(3)" @click="navto('3')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <svg-icon name="preserve-color/platform-xianyu" v-if="hasPlatform(4)" @click="navto('4')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <svg-icon name="preserve-color/platform-pdd" v-if="hasPlatform(6)" @click="navto('6')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <el-select v-model="selectedPlatform" v-if="otherPlatformOptions.length > 0" placeholder="请选择其他平台类型" style="width: 100%; margin-top: 20px;" @change="platformSelection">
+          <el-option v-for="item in otherPlatformOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </div>
     </el-dialog>
@@ -406,5 +421,9 @@ onMounted(() => {
 .footer-container {
   margin-top: 20px;
   text-align: center;
+}
+.platform-icon {
+  margin-left: 10px;
+  cursor: pointer;
 }
 </style>

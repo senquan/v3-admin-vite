@@ -12,6 +12,12 @@ export interface OrderListData {
   id: number
   name: string
   platformId: number
+  platform: {
+    id: number
+    name: string
+    group: number
+    remark: string
+  }
   authCode: string
   customerId: number
   reviewerId: number | null

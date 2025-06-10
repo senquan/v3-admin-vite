@@ -6,7 +6,8 @@ const emit = defineEmits(["success", "close"])
 
 const formData = ref({
   id: 0,
-  tags: [] as number[]
+  tags: [] as number[],
+  platforms: [] as number[]
 })
 
 const formRef = ref()
@@ -14,7 +15,10 @@ const visible = ref(false)
 const allTags = ref<{
   key: number
   label: string
-  disabled: boolean
+}[]>([])
+const allPlatforms = ref<{
+  key: number
+  label: string
 }[]>([])
 
 const rules = {
@@ -41,10 +45,20 @@ function open(options = {
       allTags.value = response.data.allTags.map((item: any) => {
         return {
           key: item.id,
-          label: item.name,
-          disabled: formData.value.tags.includes(item.id)
+          label: item.name
         }
       })
+      formData.value.platforms = response.data.platforms?.map((item: any) => {
+        return item.platformId
+      }) || []
+      allPlatforms.value = response.data.allPlatforms?.map((item: any) => {
+        return {
+          key: Number(item.value),
+          label: item.name
+        }
+      }) || []
+
+      console.log(formData.value.platforms)
     } else {
       ElMessage({
         message: response.message || `获取员工角色失败`,
@@ -64,7 +78,8 @@ function open(options = {
 function resetForm() {
   formData.value = {
     id: 0,
-    tags: []
+    tags: [],
+    platforms: []
   }
 }
 
@@ -119,7 +134,7 @@ defineExpose({
 <template>
   <el-dialog
     v-model="visible"
-    title="更新角色标签"
+    title="更新角色资源权限"
     width="50%"
     :before-close="close"
   >
@@ -134,6 +149,16 @@ defineExpose({
             v-model="formData.tags"
             :data="allTags"
             :titles="['可用标签', '已选标签']"
+            align="center"
+          />
+        </el-col>
+      </el-row>
+      <el-row style="margin-top: 20px;">
+        <el-col :span="24">
+          <el-transfer
+            v-model="formData.platforms"
+            :data="allPlatforms"
+            :titles="['可选平台', '已选平台']"
             align="center"
           />
         </el-col>

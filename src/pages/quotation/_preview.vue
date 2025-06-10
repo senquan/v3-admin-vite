@@ -9,6 +9,7 @@ const orderData = ref<any>([])
 const summaryData = reactive<any>({})
 const title = ref("")
 const platform = ref(0)
+const license = ref("")
 
 const btnSubmit = reactive({
   loading: false
@@ -18,6 +19,7 @@ function open(options = {
   data: Array<any>,
   platformId: 0,
   title: "",
+  license: "",
   summary: {
     dialyDiscount: 0,
     dailyPrice: 0,
@@ -30,6 +32,7 @@ function open(options = {
   orderData.value = Array.isArray(options.data) ? options.data.filter(item => item.modelType && item.quantity > 0) : []
   Object.assign(summaryData, options.summary)
   title.value = options.title
+  license.value = options.license
   visible.value = true
   platform.value = options.platformId
 }
@@ -153,7 +156,7 @@ function getSummaries(param: any) {
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="title">
           公牛官方报价单
-          <span>授权编码：2212077530202253</span>
+          <span>授权编码：{{ license }}</span>
         </div>
         <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
       </div>
@@ -287,7 +290,7 @@ function getSummaries(param: any) {
   </el-dialog>
 </template>
 
-<style scoped>
+<style>
 .dialog-footer {
   display: flex;
   justify-content: center;
@@ -417,10 +420,10 @@ function getSummaries(param: any) {
   font-weight: bold;
 }
 .el-descriptions__body .el-descriptions__table .el-descriptions__cell {
-  font-size: 22px;
+  font-size: 25px;
 }
 #print-area .el-table td.el-table__cell div {
-  font-size: 22px;
+  font-size: 25px;
   color: black;
 }
 /* 打印样式 */

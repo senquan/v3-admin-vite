@@ -15,6 +15,7 @@ const formData = reactive({
 const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
+const remarkFieldName = ref("备注")
 
 const rules = {
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
@@ -32,6 +33,9 @@ function open(options = {
 }) {
   visible.value = true
   resetForm()
+  if (options.extraData === 1) {
+    remarkFieldName.value = "授权编码"
+  }
 
   if (options.editData) {
     isEdit.value = true
@@ -139,6 +143,13 @@ defineExpose({
         <el-col :span="24">
           <el-form-item label="字典值" prop="value">
             <el-input v-model="formData.value" placeholder="请输入字典值" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item :label="`${remarkFieldName}`" prop="remark">
+            <el-input v-model="formData.remark" :placeholder="`请输入${remarkFieldName}`" />
           </el-form-item>
         </el-col>
       </el-row>

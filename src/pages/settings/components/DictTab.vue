@@ -104,7 +104,7 @@ defineExpose({
         <vxe-column field="name" title="名称" width="250" align="left" />
         <vxe-column field="value" title="值" width="100" />
         <vxe-column field="icon" title="图标" width="100" />
-        <vxe-column field="remark" title="备注" min-width="200" align="left" />
+        <vxe-column field="remark" :title="Number(listQuery.group) === 1 ? '授权编码' : '备注'" min-width="200" align="left" />
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
             <el-button type="primary" @click="handleEdit(data.row)">编辑</el-button>

@@ -101,6 +101,7 @@ const previewFormRef = ref()
 const previewFormVisible = ref(false)
 const onFocusQuantity = ref("")
 const currentRow = ref<any>(null)
+const licenseCode = ref("")
 
 // 列选中功能
 const selectedCells = ref<Array<{ rowIndex: number, columnIndex: number }>>([])
@@ -239,7 +240,7 @@ function handelModelTypeBlur(row: any) {
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
-    fetchProducts({ model: modelType }).then((response: any) => {
+    fetchProducts({ model: modelType, platform: platformId.value }).then((response: any) => {
       if (response.code === 0) {
         const colorOpts = response.data.colors.map((color: any) => ({
           value: color.id,
@@ -835,6 +836,7 @@ function orderPreview() {
     data: tableData.value,
     title: formData.value?.name || "",
     platformId: platformId.value || 0,
+    license: licenseCode.value || "",
     summary: {
       dialyDiscount,
       dailyPrice,
@@ -885,6 +887,7 @@ onMounted(async () => {
         const order = response.data
         formData.value.id = order.id
         platformId.value = order.platformId
+        licenseCode.value = order.platform?.remark || ""
         formData.value.name = order.name
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product

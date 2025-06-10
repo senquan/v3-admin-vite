@@ -10,6 +10,7 @@ export type CurrentUserResponseData = ApiResponseData<{
   last_login_time: string
   last_login_ip: string
   roles: string[]
+  platforms: number[]
 }>
 
 export type UserPermissionsResponseData = ApiResponseData<{

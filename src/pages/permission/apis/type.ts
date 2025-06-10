@@ -58,6 +58,8 @@ export interface RoleTagsResponseData {
   data: {
     tags: Tag[]
     allTags: Tag[]
+    platforms: Tag[]
+    allPlatforms: Tag[]
     total: number
     page: number
     pageSize: number
