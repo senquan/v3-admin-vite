@@ -189,7 +189,7 @@ function getSummaries(param: any) {
           <template #default="{ row }">
             <div class="product-info">
               <span>{{ row.modelType }} · {{ row.serie }}</span>
-              <span>{{ row.name }} · {{ row.color }} </span>
+              <el-text truncated>{{ row.name }} · {{ row.color }}</el-text>
             </div>
           </template>
         </el-table-column>
@@ -423,9 +423,13 @@ function getSummaries(param: any) {
 :deep(.el-descriptions__body .el-descriptions__table .el-descriptions__cell) {
   font-size: 25px;
 }
-:deep(.el-table td.el-table__cell div) {
+:deep(.el-table td.el-table__cell div),
+.product-info span {
   font-size: 25px;
   color: black;
+}
+.product-info {
+  display: inline;
 }
 /* 打印样式 */
 @media print {

@@ -299,7 +299,7 @@ onMounted(() => {
         <el-option v-for="item in searchOptions.colors" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" class="filter-item" :options="series" :props="{ expandTrigger: 'hover' }" filterable clearable @clear="handleSeriesClear()" @change="handleSeriesChange" :debounce="500" />
-      <el-button type="primary" @click="handleFilter">搜索</el-button>
+      <el-button type="primary" @click="handleFilter" style="margin-left: 12px;">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增商品</el-button>
       <el-button type="primary" @click="handleImport">批量导入商品</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
