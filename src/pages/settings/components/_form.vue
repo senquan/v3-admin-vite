@@ -9,6 +9,7 @@ const formData = reactive({
   name: "",
   group: 0,
   value: "",
+  icon: "",
   remark: ""
 })
 
@@ -58,6 +59,7 @@ function resetForm() {
     name: "",
     group: 0,
     value: "",
+    icon: "",
     remark: ""
   })
 }
@@ -140,9 +142,14 @@ defineExpose({
         </el-col>
       </el-row>
       <el-row>
-        <el-col :span="24">
+        <el-col :span="12">
           <el-form-item label="字典值" prop="value">
             <el-input v-model="formData.value" placeholder="请输入字典值" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="图标" prop="icon">
+            <el-input v-model="formData.icon" placeholder="请输入图标名" />
           </el-form-item>
         </el-col>
       </el-row>

@@ -130,7 +130,7 @@ function getSummaries(param: any) {
             return prev
           }
         }, 0)}`).toFixed(index === 2 ? 0 : 2)
-        sums[index] = String(Math.floor(Number(sums[index]) * 10) / 10)
+        sums[index] = formatPrice(sums[index])
       }
     } else {
       sums[index] = ""
@@ -138,6 +138,10 @@ function getSummaries(param: any) {
   })
 
   return sums
+}
+
+function formatPrice(price: string) {
+  return String(Math.floor(Number(price) * 10) / 10)
 }
 </script>
 
@@ -193,18 +197,18 @@ function getSummaries(param: any) {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="120" align="center" />
+        <el-table-column prop="quantity" label="数量" width="80" align="center" />
         <el-table-column prop="basePrice" label="单价" width="120" align="center">
-          <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
+          <template #default="{ row }"><del>{{ formatPrice(row.basePrice) }}</del></template>
         </el-table-column>
         <el-table-column prop="originPrice" label="总价" width="120" align="center">
-          <template #default="{ row }"><del>{{ Math.floor(row.originPrice * 10) / 10 }}</del></template>
+          <template #default="{ row }"><del>{{ formatPrice(row.originPrice) }}</del></template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="到手单价" width="120" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ row.finalUnitPrice }}</span></template>
+          <template #default="{ row }"><span class="highlight-price">{{ formatPrice(row.finalUnitPrice) }}</span></template>
         </el-table-column>
         <el-table-column prop="payPrice" label="到手总价" width="120" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ Math.floor(row.payPrice * 10) / 10 }}</span></template>
+          <template #default="{ row }"><span class="highlight-price">{{ formatPrice(row.payPrice) }}</span></template>
         </el-table-column>
       </el-table>
 
@@ -223,7 +227,7 @@ function getSummaries(param: any) {
                       日常优惠券
                     </div>
                   </template>
-                  {{ summaryData.dialyDiscount }}
+                  {{ formatPrice(summaryData.dialyDiscount) }}
                 </el-descriptions-item>
                 <el-descriptions-item align="right">
                   <template #label>
@@ -231,7 +235,7 @@ function getSummaries(param: any) {
                       活动优惠券
                     </div>
                   </template>
-                  {{ summaryData.promotionDiscount }}
+                  {{ formatPrice(summaryData.promotionDiscount) }}
                 </el-descriptions-item>
                 <el-descriptions-item :rowspan="2" align="right">
                   <template #label>
@@ -239,7 +243,7 @@ function getSummaries(param: any) {
                       限时到手价
                     </div>
                   </template>
-                  <span class="cell-item-larger">{{ summaryData.flashPrice }}</span>
+                  <span class="cell-item-larger">{{ formatPrice(summaryData.flashPrice) }}</span>
                 </el-descriptions-item>
                 <el-descriptions-item align="right">
                   <template #label>
@@ -247,7 +251,7 @@ function getSummaries(param: any) {
                       日常到手价
                     </div>
                   </template>
-                  {{ summaryData.dailyPrice }}
+                  {{ formatPrice(summaryData.dailyPrice) }}
                 </el-descriptions-item>
                 <el-descriptions-item align="right">
                   <template #label>
@@ -255,7 +259,7 @@ function getSummaries(param: any) {
                       活动到手价
                     </div>
                   </template>
-                  {{ summaryData.promotionPrice }}
+                  {{ formatPrice(summaryData.promotionPrice) }}
                 </el-descriptions-item>
               </el-descriptions>
             </div>
@@ -272,9 +276,9 @@ function getSummaries(param: any) {
           </el-col>
           <el-col :span="8">
             <div v-if="platform === 1">
-              <span class="bonus">{{ (summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
-              <span class="bonus">{{ (summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
-              <span class="bonus">{{ (summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2) }}</span>
+              <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
+              <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
+              <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
             </div>
           </el-col>
         </el-row>
@@ -335,10 +339,6 @@ function getSummaries(param: any) {
 }
 .header-container .intro span {
   font-size: 50px;
-}
-.product-info {
-  display: flex;
-  flex-direction: column;
 }
 .product-info span {
   height: 35px;
@@ -423,13 +423,16 @@ function getSummaries(param: any) {
 :deep(.el-descriptions__body .el-descriptions__table .el-descriptions__cell) {
   font-size: 25px;
 }
-:deep(.el-table td.el-table__cell div),
-.product-info span {
+:deep(.el-table td.el-table__cell div) {
   font-size: 25px;
   color: black;
 }
 .product-info {
   display: inline;
+}
+.product-info span {
+  font-size: 21px;
+  color: black;
 }
 /* 打印样式 */
 @media print {

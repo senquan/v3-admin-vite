@@ -79,10 +79,12 @@ async function fetchOrders() {
         platformOptions.value = res.data.platforms.map((item: any) => {
           return {
             label: item.name,
-            value: item.value
+            value: item.value,
+            icon: item.icon,
+            code: item.remark
           }
         })
-        otherPlatformOptions.value = res.data.platforms.filter((item: any) => ![1, 2, 3, 4, 6].includes(Number(item.value)))
+        otherPlatformOptions.value = platformOptions.value.filter((item: any) => item.icon === "")
         platformOptions.value.unshift({
           label: "全部",
           value: 0
@@ -117,15 +119,16 @@ function handleNew() {
 
 function platformSelection() {
   if (selectedPlatform.value) {
-    navto(selectedPlatform.value)
+    const code = platformOptions.value.find((item: any) => item.value === selectedPlatform.value)?.code
+    navto(selectedPlatform.value, code)
   } else {
     ElMessage.warning("请选择平台类型")
   }
 }
 
-function navto(platform: string) {
+function navto(platform: string, code: string) {
   newDialogVisibility.value = false
-  router.push(`/quotation/new?platform=${platform}`)
+  router.push(`/quotation/new?platform=${platform}&code=${code}`)
 }
 
 function handleReturn(id: number) {
@@ -225,10 +228,6 @@ function handleUpdateStatus() {
       ElMessage.error("更新状态失败")
     })
   })
-}
-
-function hasPlatform(platformId: number) {
-  return platformOptions.value.some((platform: any) => Number(platform.value) === platformId)
 }
 
 onMounted(() => {
@@ -393,11 +392,21 @@ onMounted(() => {
       :close-on-click-modal="false"
     >
       <div style="text-align: center;">
-        <svg-icon name="preserve-color/platform-douyin" v-if="hasPlatform(1)" @click="navto('1')" class="platform-icon" style="width: 5em; height: 5em;" />
-        <svg-icon name="preserve-color/platform-jingdong" v-if="hasPlatform(2)" @click="navto('2')" class="platform-icon" style="width: 5em; height: 5em;" />
-        <svg-icon name="preserve-color/platform-taobao" v-if="hasPlatform(3)" @click="navto('3')" class="platform-icon" style="width: 5em; height: 5em;" />
-        <svg-icon name="preserve-color/platform-xianyu" v-if="hasPlatform(4)" @click="navto('4')" class="platform-icon" style="width: 5em; height: 5em;" />
-        <svg-icon name="preserve-color/platform-pdd" v-if="hasPlatform(6)" @click="navto('6')" class="platform-icon" style="width: 5em; height: 5em;" />
+        <el-tooltip
+          v-for="item in platformOptions.filter((item: any) => item.value !== '' && item.icon !== '')"
+          :key="item.value"
+          :content="item.label"
+          effect="dark"
+          placement="top"
+        >
+          <svg-icon name="preserve-color/platform-douyin" v-if="item.icon === 'douyin'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-jingdong" v-if="item.icon === 'jingdong'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-tianmao" v-if="item.icon === 'tianmao'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-taobao" v-if="item.icon === 'taobao'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-xianyu" v-if="item.icon === 'xianyu'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-pdd" v-if="item.icon === 'pdd'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <el-text />
+        </el-tooltip>
         <el-select v-model="selectedPlatform" v-if="otherPlatformOptions.length > 0" placeholder="请选择其他平台类型" style="width: 100%; margin-top: 20px;" @change="platformSelection">
           <el-option v-for="item in otherPlatformOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>

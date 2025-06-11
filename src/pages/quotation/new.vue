@@ -883,6 +883,7 @@ async function initModelCache() {
 onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
+  licenseCode.value = String(router.currentRoute.value.query.code) || ""
   if (orderId.value > 0) {
     // 获取订单详情
     fetchOrder(orderId.value).then(async (response: OrderDetailResponseData) => {
