@@ -91,7 +91,7 @@ const formData = ref({
 })
 const defaultColor = ref("")
 const bodyHeight = ref("calc(100vh - 310px)")
-const ignoreBlur = ref(false) // 忽略离焦事件
+const ignoreBlur = ref(true) // 忽略离焦事件
 
 // 添加表格引用
 const tableRef = ref()
@@ -224,8 +224,9 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
   }
 }
 
+// 修改modelType后，如果没有匹配的型号则还原
 function handelModelTypeBlur(row: any) {
-  if (!ignoreBlur.value && modelOptions.value.length > 0) {
+  if (!ignoreBlur.value && row.modelOld !== "" && modelOptions.value.length > 0) {
     const matchedModel = modelOptions.value.find((option: { label: string }) =>
       option.label.toLowerCase() === row.modelType.toLowerCase()
     )
@@ -571,6 +572,7 @@ function handleFocusQuantity(row: any) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  console.log("event", event)
   if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.code === "KeyC")) {
     if (selectedCells.value.length === 1) {
       event.preventDefault()

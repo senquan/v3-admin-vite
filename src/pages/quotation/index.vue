@@ -148,6 +148,7 @@ function loadDetail(id: number) {
     if (res.data) {
       returnForm.orderId = id
       if (res.data.items && Array.isArray(res.data.items)) {
+        materialList.value = ""
         for (const item of res.data.items) {
           materialList.value += `<${item.product.materialId}*${item.quantity}>`
         }
