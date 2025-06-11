@@ -130,6 +130,7 @@ function getSummaries(param: any) {
             return prev
           }
         }, 0)}`).toFixed(index === 2 ? 0 : 2)
+        sums[index] = String(Math.floor(Number(sums[index]) * 10) / 10)
       }
     } else {
       sums[index] = ""
@@ -192,18 +193,18 @@ function getSummaries(param: any) {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="100" align="center" />
-        <el-table-column prop="basePrice" label="单价" width="100" align="center">
+        <el-table-column prop="quantity" label="数量" width="120" align="center" />
+        <el-table-column prop="basePrice" label="单价" width="120" align="center">
           <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
         </el-table-column>
-        <el-table-column prop="originPrice" label="总价" width="100" align="center">
-          <template #default="{ row }"><del>{{ row.originPrice }}</del></template>
+        <el-table-column prop="originPrice" label="总价" width="120" align="center">
+          <template #default="{ row }"><del>{{ Math.floor(row.originPrice * 10) / 10 }}</del></template>
         </el-table-column>
-        <el-table-column prop="finalUnitPrice" label="到手单价" width="100" align="center">
+        <el-table-column prop="finalUnitPrice" label="到手单价" width="120" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ row.finalUnitPrice }}</span></template>
         </el-table-column>
-        <el-table-column prop="payPrice" label="到手总价" width="100" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ row.payPrice }}</span></template>
+        <el-table-column prop="payPrice" label="到手总价" width="120" align="center">
+          <template #default="{ row }"><span class="highlight-price">{{ Math.floor(row.payPrice * 10) / 10 }}</span></template>
         </el-table-column>
       </el-table>
 
@@ -290,7 +291,7 @@ function getSummaries(param: any) {
   </el-dialog>
 </template>
 
-<style>
+<style scoped>
 .dialog-footer {
   display: flex;
   justify-content: center;
@@ -419,10 +420,10 @@ function getSummaries(param: any) {
   color: red;
   font-weight: bold;
 }
-.el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+:deep(.el-descriptions__body .el-descriptions__table .el-descriptions__cell) {
   font-size: 25px;
 }
-#print-area .el-table td.el-table__cell div {
+:deep(.el-table td.el-table__cell div) {
   font-size: 25px;
   color: black;
 }

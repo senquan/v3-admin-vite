@@ -425,6 +425,7 @@ function priceDetail(id: number) {
   priceDetailData.value = []
 
   const matchLogsObj = formData.value.matchLogs
+  console.log(matchLogsObj)
   const typeNames: Record<number, string> = {
     [PROMOTION_TYPE_DAILY]: "日常折扣",
     [PROMOTION_TYPE_PROMOTION]: "活动折扣",
@@ -440,7 +441,8 @@ function priceDetail(id: number) {
       productLogs.forEach((log: any) => {
         priceDetailData.value.push({
           message: `${typeNames[type]}: ${log.name}`,
-          value: `${Number(log.discount).toFixed(2)}`,
+          value: `${Number(log.value).toFixed(4)}`,
+          amount: `${Number(log.discount).toFixed(2)}`,
           step: `${Number(log.pirce).toFixed(2)}`
         })
       })
@@ -572,7 +574,6 @@ function handleFocusQuantity(row: any) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
-  console.log("event", event)
   if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.code === "KeyC")) {
     if (selectedCells.value.length === 1) {
       event.preventDefault()
@@ -1227,8 +1228,9 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
       <el-dialog v-model="priceDetailVisible" title="计价详情" width="600">
         <el-table :data="priceDetailData" empty-text="没有优惠">
           <el-table-column property="message" label="规则" min-width="300" />
-          <el-table-column property="value" label="折扣值" width="100" />
-          <el-table-column property="step" label="折后总价" width="100" />
+          <el-table-column property="value" label="折扣值" width="80" align="center" />
+          <el-table-column property="amount" label="折扣额" width="80" align="center" />
+          <el-table-column property="step" label="折后总价" width="80" align="center" />
         </el-table>
       </el-dialog>
     </div>
