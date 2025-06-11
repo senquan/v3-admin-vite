@@ -66,6 +66,7 @@ export interface ProductCreateData {
 export interface ProductListRequestParams {
   mid?: string
   model?: string
+  images?: string
   platform?: number
   keyword?: string
   sort?: string
