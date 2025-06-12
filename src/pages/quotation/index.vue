@@ -7,6 +7,7 @@ const loading = ref(false)
 const listQuery = reactive({
   type: "",
   platformId: 0,
+  username: "",
   keyword: "",
   color: "",
   sort: "+id",
@@ -85,7 +86,7 @@ async function fetchOrders() {
             code: item.remark
           }
         })
-        otherPlatformOptions.value = platformOptions.value.filter((item: any) => item.icon === "")
+        otherPlatformOptions.value = platformOptions.value.filter((item: any) => !item.icon)
         platformOptions.value.unshift({
           label: "全部",
           value: 0
@@ -243,6 +244,7 @@ onMounted(() => {
       <el-select v-model="listQuery.platformId" placeholder="选择平台" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
         <el-option v-for="item in platformOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
+      <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增订单</el-button>
     </div>
@@ -394,7 +396,7 @@ onMounted(() => {
     >
       <div style="text-align: center;">
         <el-tooltip
-          v-for="item in platformOptions.filter((item: any) => item.value !== '' && item.icon !== '')"
+          v-for="item in platformOptions.filter((item: any) => item.value !== 0 && item.icon)"
           :key="item.value"
           :content="item.label"
           effect="dark"

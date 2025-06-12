@@ -83,7 +83,11 @@ export interface SeriesListOptResponseData {
 }
 
 export interface OrderListRequestParams {
+  type?: string
+  platformId?: number
   keyword?: string
+  username?: string
+  color?: string
   sort?: string
   page?: number
   pageSize?: number

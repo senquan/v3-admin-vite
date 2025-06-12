@@ -91,7 +91,6 @@ const formData = ref({
 })
 const defaultColor = ref("")
 const bodyHeight = ref("calc(100vh - 310px)")
-const ignoreBlur = ref(true) // 忽略离焦事件
 
 // 添加表格引用
 const tableRef = ref()
@@ -226,7 +225,7 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
 
 // 修改modelType后，如果没有匹配的型号则还原
 function handelModelTypeBlur(row: any) {
-  if (!ignoreBlur.value && row.modelOld !== "" && modelOptions.value.length > 0) {
+  if (row.modelOld !== "" && row.modelType !== row.modelOld && modelOptions.value.length > 0) {
     const matchedModel = modelOptions.value.find((option: { label: string }) =>
       option.label.toLowerCase() === row.modelType.toLowerCase()
     )
@@ -236,11 +235,11 @@ function handelModelTypeBlur(row: any) {
       row.modelType = row.modelOld
     }
   }
-  ignoreBlur.value = false
 }
 
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
+    loading.value = true
     fetchProducts({ model: modelType, platform: platformId.value }).then((response: any) => {
       if (response.code === 0) {
         const colorOpts = response.data.colors.map((color: any) => ({
@@ -272,6 +271,7 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
             fillRowAndPrice(selectedProduct, row)
           }
         }
+        loading.value = false
         searchLoading.value = false
       } else {
         ElMessage.error(`获取物料编号列表失败: ${response.message}`)
@@ -426,7 +426,6 @@ function priceDetail(id: number) {
   priceDetailData.value = []
 
   const matchLogsObj = formData.value.matchLogs
-  console.log(matchLogsObj)
   const typeNames: Record<number, string> = {
     [PROMOTION_TYPE_DAILY]: "日常折扣",
     [PROMOTION_TYPE_PROMOTION]: "活动折扣",
@@ -836,6 +835,10 @@ function orderPreview() {
     ElMessage.warning("正在计算价格中，请稍等。")
     return
   }
+  if (loading.value) {
+    ElMessage.warning("正在加载数据，请稍等。")
+    return
+  }
   previewFormRef.value?.open({
     data: tableData.value,
     title: formData.value?.name || "",
@@ -887,6 +890,7 @@ onMounted(async () => {
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
   if (orderId.value > 0) {
     // 获取订单详情
+    loading.value = true
     fetchOrder(orderId.value).then(async (response: OrderDetailResponseData) => {
       if (response.code === 0) {
         const order = response.data
@@ -928,6 +932,7 @@ onMounted(async () => {
         })
         await initRules()
         calculatePrice(null)
+        loading.value = false
       }
     })
   } else {
@@ -979,7 +984,6 @@ onUnmounted(() => {
 })
 
 function handleModelSelect(option: any, row: any) {
-  ignoreBlur.value = true
   row.modelTypeId = option.value
   row.modelType = option.label
   row.popoverVisible = false
@@ -1061,7 +1065,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                     {{ item.label }}
                   </div>
                   <div v-if="searchLoading" class="model-option loading">
-                    <el-icon class="is-loading"><loading /></el-icon> 搜索中...
+                    <el-icon class="is-loading"><Loading /></el-icon> 搜索中...
                   </div>
                   <div v-if="modelOptions.length === 0 && !searchLoading" class="model-option empty">
                     无匹配结果
