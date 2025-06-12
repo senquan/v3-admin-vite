@@ -65,6 +65,7 @@ async function fetchOrders() {
             platformId: item.platformId,
             authCode: item.authCode,
             customer: item.customer,
+            user: item.user?.name,
             reviewer: item.reviewer,
             quantity: item.quantity,
             originPrice: item.originPrice,
@@ -254,7 +255,7 @@ onMounted(() => {
         @sort-change="handleSortChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="platform" width="80" title="平台">
+        <vxe-column field="platform" width="120" title="平台">
           <template #default="{ row }">{{ platformOptions.find((platform: any) => Number(platform.value) === row.platformId)?.label || "" }}</template>
         </vxe-column>
         <vxe-column field="createdAt" title="下单时间" width="180">
@@ -266,7 +267,7 @@ onMounted(() => {
             <el-tag v-if="data.row.remark">{{ data.row.remark }}</el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="customer" width="150" title="客户名" />
+        <vxe-column field="user" width="150" title="制单人" />
         <vxe-column field="reviewer" width="150" title="审核人" />
         <vxe-column field="quantity" width="80" title="数量" />
         <vxe-column field="originPrice" width="100" title="日常总价" />

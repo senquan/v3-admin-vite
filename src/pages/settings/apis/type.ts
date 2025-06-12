@@ -8,6 +8,11 @@ export interface DictListData {
   updatedAt: string
 }
 
+export interface Tag {
+  id: number
+  name: string
+}
+
 export interface SettingsListData {
   id: number
   name: string
@@ -51,6 +56,14 @@ export interface DictListResponseData {
     total: number
     page: number
     pageSize: number
+  }
+}
+
+export interface PlatformTagsResponseData {
+  code: number
+  message: string
+  data: {
+    tags: Tag[]
   }
 }
 

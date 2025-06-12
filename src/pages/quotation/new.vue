@@ -410,8 +410,9 @@ function calculatePrice(row: any) {
           // 非零最小值
           const maxDiscount = Math.max(matchedProduct.priceMap.get(PROMOTION_TYPE_DAILY)?.discount || 0, matchedProduct.priceMap.get(PROMOTION_TYPE_PROMOTION)?.discount || 0)
           const flashDiscount = Number((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0).toFixed(2))
-          row.payPrice = Number((matchedProduct.unitPrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(2))
-          row.finalUnitPrice = Number((row.payPrice / matchedProduct.quantity).toFixed(2))
+          const totalPrice = Number((matchedProduct.unitPrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(2))
+          row.finalUnitPrice = Number((totalPrice / matchedProduct.quantity).toFixed(2))
+          row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
         }
       }
     })

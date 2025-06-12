@@ -49,3 +49,10 @@ export function deleteDict(id: number) {
     method: "delete"
   })
 }
+
+export function getPlatformTags(id: number) {
+  return request<Dict.PlatformTagsResponseData>({
+    url: `tags/platform/${id}`,
+    method: "get"
+  })
+}

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ElMessage } from "element-plus"
-import { createDict, updateDict } from "../apis"
+import { fetchTagsList } from "../../tags/apis"
+import { createDict, getPlatformTags, updateDict } from "../apis"
 
 const emit = defineEmits(["success", "close"])
 
@@ -17,6 +18,9 @@ const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const remarkFieldName = ref("备注")
+const tagsLoading = ref(false)
+const tagOptions = ref<any>([])
+const selectedTags = ref<any>([])
 
 const rules = {
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
@@ -45,6 +49,27 @@ function open(options = {
         (formData as any)[key] = options.editData?.[key]
       }
     })
+
+    if (options.extraData === 1) {
+      // 平台字典获取标签
+      getPlatformTags(Number(formData.value)).then((res: any) => {
+        if (res.code === 0) {
+          tagOptions.value = []
+          selectedTags.value = []
+          if (res.data.tags) {
+            res.data.tags.forEach((item: any) => {
+              if (item.tag) {
+                tagOptions.value.push({
+                  id: item.tag.id,
+                  name: item.tag.name
+                })
+                selectedTags.value.push(item.tagId)
+              }
+            })
+          }
+        }
+      })
+    }
   } else {
     isEdit.value = false
     if (typeof options.extraData === "number") {
@@ -62,6 +87,7 @@ function resetForm() {
     icon: "",
     remark: ""
   })
+  selectedTags.value = []
 }
 
 function close() {
@@ -105,6 +131,19 @@ function handleSubmit() {
         offset: 0
       })
     })
+  })
+}
+
+function handleSearchTags(value: string) {
+  if (value.length < 3 && tagOptions.value.length > selectedTags.value.length) return
+  tagsLoading.value = true
+  fetchTagsList({ keyword: value }).then((response) => {
+    if (response.code === 0) {
+      tagOptions.value = response.data.tags
+      tagsLoading.value = false
+    } else {
+      ElMessage.error(`获取标签列表失败: ${response.message}`)
+    }
   })
 }
 
@@ -157,6 +196,30 @@ defineExpose({
         <el-col :span="24">
           <el-form-item :label="`${remarkFieldName}`" prop="remark">
             <el-input v-model="formData.remark" :placeholder="`请输入${remarkFieldName}`" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="标签" prop="tags">
+            <el-select
+              v-model="selectedTags"
+              multiple
+              filterable
+              remote
+              placeholder="请输入或选择标签"
+              :remote-method="handleSearchTags"
+              :loading="tagsLoading"
+            >
+              <el-option
+                v-for="tag in tagOptions"
+                :key="tag.id"
+                :label="tag.name"
+                :value="tag.id"
+              >
+                <span :style="{ color: tag.color }">{{ tag.name }}</span>
+              </el-option>
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
