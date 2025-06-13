@@ -66,7 +66,7 @@ async function fetchOrders() {
             platformId: item.platformId,
             authCode: item.authCode,
             customer: item.customer,
-            user: item.user?.name,
+            user: item.user?.staff?.name || item.user?.username || "",
             reviewer: item.reviewer,
             quantity: item.quantity,
             originPrice: item.originPrice,
