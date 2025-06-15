@@ -76,6 +76,7 @@ export interface ProductListRequestParams {
 
 export interface BatchUpdateRequestParams {
   ids: number[]
+  scope: string
   adjustType: string
   values: number[]
   searchParams?: ProductListRequestParams

@@ -2,6 +2,7 @@
 import type { ProductListData } from "../product/apis/type"
 import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotion/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import { copyTextToClipboard } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { initPromotionRules, calculateOrderPrice as localCalculatePrice } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
@@ -16,6 +17,7 @@ interface TableRowData {
   modelType: string
   modelTypeId: string
   modelOld: string
+  materialId: string
   serie: string
   color: string
   name: string
@@ -50,6 +52,7 @@ const defaultRecord: TableRowData = {
   modelType: "",
   modelTypeId: "",
   modelOld: "",
+  materialId: "",
   serie: "",
   color: "",
   name: "",
@@ -107,6 +110,7 @@ const selectedCells = ref<Array<{ rowIndex: number, columnIndex: number }>>([])
 const hoveredCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
 const lastSelectedCell = ref<{ rowIndex: number, columnIndex: number } | null>(null)
 const copiedValue = ref("")
+const materialList = ref("")
 
 const dialyDiscount = computed(() => {
   return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_DAILY)?.discount || 0
@@ -312,6 +316,7 @@ function fillRow(product: any, row: any) {
   row.id = product.id
   row.modelType = product.modelType?.name || ""
   row.modelOld = product.modelType?.name || ""
+  row.materialId = product.materialId || ""
   row.serie = product.serie?.name || ""
   row.color = product.color?.value || ""
   row.name = product.name || ""
@@ -529,11 +534,16 @@ function submitOrder(type: number) {
     const products = tableData.value.filter((item: any) => item.id !== "" && item.quantity > 0).map((item: any) => ({
       id: item.id,
       unitPrice: item.finalUnitPrice,
-      quantity: item.quantity
+      quantity: item.quantity,
+      materialId: item.materialId
     }))
     if (products.length === 0) {
       ElMessage.warning("请添加商品")
       return
+    }
+    materialList.value = ""
+    for (const product of products) {
+      materialList.value += `<${product.materialId}*${product.quantity}>`
     }
     formData.value.type = type
     formData.value.platformId = platformId.value
@@ -541,9 +551,14 @@ function submitOrder(type: number) {
     const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
     request.then((response: any) => {
       if (response.code === 0) {
-        ElMessage.success("提交订单成功")
-        router.push({
-          path: "/quotation/quotation"
+        ElMessageBox.alert(materialList.value, "提交订单成功", {
+          confirmButtonText: "复制物料详情并关闭",
+          callback: () => {
+            copyTextToClipboard(materialList.value)
+            router.push({
+              path: "/quotation/quotation"
+            })
+          }
         })
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
@@ -909,6 +924,7 @@ onMounted(async () => {
             modelType: product.modelType?.name || "",
             modelTypeId: product.modelType?.name || "",
             modelOld: product.modelType?.name || "",
+            materialId: product.materialId || "",
             serie: product.serie?.name || "",
             color: product.color?.value || "",
             name: product.name || "",

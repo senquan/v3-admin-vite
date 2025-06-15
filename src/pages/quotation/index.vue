@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import { copyTextToClipboard } from "@/common/utils/helper"
 import { createReturnOrder, fetchList, fetchOrder, fetchOrderStatusLog, updateOrderStatus } from "./apis"
 
 const router = useRouter()
@@ -183,6 +184,11 @@ function handleTabClick(tab: any) {
   }
 }
 
+async function handleCopy() {
+  await copyTextToClipboard(materialList.value)
+  ElMessage.success("复制物料详情成功")
+}
+
 function handleSubmitReturn() {
   detailDrawer.value = false
   let total = 0
@@ -318,6 +324,9 @@ onMounted(() => {
         <el-tab-pane label="物料详情" name="materia">
           <div>
             {{ materialList }}
+          </div>
+          <div style="margin-top: 20px;">
+            <el-button type="primary" @click="handleCopy">复制</el-button>
           </div>
         </el-tab-pane>
         <el-tab-pane label="申请售后" name="service">

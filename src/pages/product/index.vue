@@ -6,6 +6,7 @@ import * as XLSX from "xlsx"
 import ProductForm from "./_form.vue"
 import ProductImport from "./_import.vue"
 import ProductPrice from "./_price.vue"
+import ProductTag from "./_tag.vue"
 import { batchDeleteProduct, deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
 
 // const userStore = useUserStore()
@@ -33,6 +34,8 @@ const productImportRef = ref<any>([])
 const priceRef = ref<any>([])
 const formVisibility = ref(false)
 const priceFormVisibility = ref(false)
+const tagRef = ref<any>([])
+const tagFormVisibility = ref(false)
 const series = ref<any>([])
 const cascaderOptions = ref({
   serie: [] as number[]
@@ -158,6 +161,10 @@ function handleImport() {
 
 function handleBatchPrice() {
   priceFormVisibility.value = true
+}
+
+function handleBatchTag() {
+  tagFormVisibility.value = true
 }
 
 function handleBatchDelete() {
@@ -360,6 +367,7 @@ onMounted(() => {
     </div>
 
     <div class="footer-container">
+      <el-button type="success" @click="handleBatchTag">批量标签</el-button>
       <el-button type="warning" @click="handleBatchPrice">批量调价</el-button>
       <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
     </div>
@@ -397,6 +405,16 @@ onMounted(() => {
       :search-params="listQuery"
       @success="fetchProducts"
       @close="priceFormVisibility = false"
+    />
+
+    <ProductTag
+      ref="tagRef"
+      :visible="tagFormVisibility"
+      :selected-ids="selectedRows.map((row: any) => row.id)"
+      :all-counts="totalProducts"
+      :search-params="listQuery"
+      @success="fetchProducts"
+      @close="tagFormVisibility = false"
     />
   </div>
 </template>

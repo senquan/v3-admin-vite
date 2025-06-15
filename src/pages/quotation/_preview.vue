@@ -10,6 +10,7 @@ const summaryData = reactive<any>({})
 const title = ref("")
 const platform = ref(0)
 const license = ref("")
+const platformBackgroundColor = ref("#4b8f88")
 
 const btnSubmit = reactive({
   loading: false
@@ -35,6 +36,11 @@ function open(options = {
   license.value = options.license
   visible.value = true
   platform.value = options.platformId
+  if (options.platformId === 2 || options.platformId === 6) {
+    platformBackgroundColor.value = "#fde9d9"
+  } else if (options.platformId === 3 || options.platformId === 4) {
+    platformBackgroundColor.value = "#c1def6"
+  }
 }
 
 function close() {
@@ -154,9 +160,9 @@ function formatPrice(price: string) {
     draggable
     overflow
     width="1200px"
-    style="background-color: #4b8f88"
+    :style="`background-color: ${platformBackgroundColor}`"
   >
-    <div id="print-area" style="background-color: #4b8f88; padding: 10px 10px 0 10px;">
+    <div id="print-area" :style="`background-color: ${platformBackgroundColor}; padding: 10px 10px 0 10px;`">
       <div class="header-container">
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="title">
@@ -205,7 +211,7 @@ function formatPrice(price: string) {
           <template #default="{ row }"><del>{{ formatPrice(row.originPrice) }}</del></template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="到手单价" width="120" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ formatPrice(row.finalUnitPrice) }}</span></template>
+          <template #default="{ row }"><span class="highlight-price">{{ row.finalUnitPrice }}</span></template>
         </el-table-column>
         <el-table-column prop="payPrice" label="到手总价" width="120" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ formatPrice(row.payPrice) }}</span></template>
@@ -265,7 +271,7 @@ function formatPrice(price: string) {
             </div>
           </el-col>
         </el-row>
-        <el-row :gutter="0" class="footer-info">
+        <el-row :gutter="0" class="footer-info" :style="`background-color: ${platformBackgroundColor}`">
           <el-col :span="8">
             VIP专属：
             <span>{{ title }}</span>
@@ -394,7 +400,6 @@ function formatPrice(price: string) {
 }
 .footer-info {
   text-align: center;
-  background-color: #4b8f88;
   color: white;
   font-size: 16px;
   font-weight: bold;

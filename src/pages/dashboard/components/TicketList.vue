@@ -43,6 +43,7 @@ const filteredTickets = computed(() => {
             <span>工单列表</span>
           </div>
           <el-radio-group v-model="activeFilter" size="small">
+            <el-button type="primary" size="small" style="margin-right: 20px; padding: 12px;">新建工单</el-button>
             <el-radio-button value="all">全部</el-radio-button>
             <el-radio-button value="active">未完成</el-radio-button>
             <el-radio-button value="completed">已完成</el-radio-button>

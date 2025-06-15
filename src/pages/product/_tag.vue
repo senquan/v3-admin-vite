@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { useUserStore } from "@/pinia/stores/user"
-import { batchUpdateProduct } from "./apis"
+// import { useUserStore } from "@/pinia/stores/user"
+import { fetchTagsList } from "../tags/apis"
+import { batchUpdateTags } from "./apis"
 
 const props = defineProps({
   visible: {
@@ -23,16 +24,19 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "success"])
 
-const userStore = useUserStore()
-const isAdmin = userStore.roles.includes("ADMIN")
+// const userStore = useUserStore()
+// const isAdmin = userStore.roles.includes("ADMIN")
 
 const formRef = ref()
 const loading = ref(false)
 const form = reactive({
   scope: "selected", // "selected" 或 "all"
-  adjustType: "percent", // "percent" 或 "fixed"
+  adjustType: "add",
   values: [] as number[]
 })
+const confirmDelete = ref("")
+const tagsLoading = ref(false)
+const tagOptions = ref<any>([])
 
 const rules = {
   scope: [{ required: true, message: "请选择调整范围", trigger: "change" }],
@@ -44,29 +48,26 @@ const scopeOptions = [
   { label: "所有搜索结果", value: "all" }
 ]
 
-const priceTypeOptions = [
-  { label: "日常价", value: "basePrice" },
-  { label: "工程价", value: "projectPrice" },
-  { label: "出厂价", value: "factoryPrice" }
-]
-
-if (!isAdmin) {
-  priceTypeOptions.splice(2, 1)
-}
-
 const adjustTypeOptions = [
-  { label: "按百分比调整", value: "percent" },
-  { label: "设置为固定价格", value: "fixed" }
+  { label: "增加标签", value: "add" },
+  { label: "清除所有标签", value: "clear" }
 ]
 
 function close() {
   formRef.value.resetFields()
+  form.values = []
+  confirmDelete.value = ""
   emit("close")
 }
 
 function submit() {
   formRef.value.validate(async (valid: boolean) => {
     if (!valid) return
+
+    if (form.adjustType === "clear" && confirmDelete.value !== "确认清除标签") {
+      ElMessage.warning("请输入正确的确认删除内容")
+      return
+    }
 
     loading.value = true
     try {
@@ -89,19 +90,32 @@ function submit() {
       }
 
       // 发送请求
-      const response = await batchUpdateProduct(requestData)
+      const response = await batchUpdateTags(requestData)
       if (response.code === 0) {
-        ElMessage.success("调整价格成功")
+        ElMessage.success("调整标签成功")
         emit("success")
         close()
       } else {
-        ElMessage.error(response.message || "调整价格失败")
+        ElMessage.error(response.message || "调整标签失败")
       }
     } catch (error: any) {
-      console.error("批量调整价格失败:", error)
-      ElMessage.error(error.message || "调整价格失败，请稍后重试")
+      console.error("批量调整标签失败:", error)
+      ElMessage.error(error.message || "调整标签失败，请稍后重试")
     } finally {
       loading.value = false
+    }
+  })
+}
+
+function handleSearchTags(value: string) {
+  if (value === "" && tagOptions.value.length > 0) return
+  tagsLoading.value = true
+  fetchTagsList({ keyword: value }).then((response) => {
+    if (response.code === 0) {
+      tagOptions.value = response.data.tags
+      tagsLoading.value = false
+    } else {
+      ElMessage.error(`获取标签列表失败: ${response.message}`)
     }
   })
 }
@@ -109,7 +123,7 @@ function submit() {
 
 <template>
   <el-dialog
-    title="批量调整价格"
+    title="批量调整标签"
     :model-value="props.visible"
     width="500px"
     @close="close"
@@ -151,27 +165,36 @@ function submit() {
         </el-radio-group>
       </el-form-item>
 
-      <el-form-item
-        v-for="(option, index) in priceTypeOptions"
-        :key="option.value"
-        :label="option.label"
-        :prop="`value[${index}]`"
-      >
-        <el-input-number
-          v-model="form.values[index]"
-          :precision="form.adjustType === 'percent' ? 2 : 2"
-          :min="form.adjustType === 'percent' ? -100 : 0"
-          :max="form.adjustType === 'percent' ? 1000 : 999999"
-          :step="form.adjustType === 'percent' ? 5 : 10"
-          style="width: 180px"
-        />
-        <span style="margin-left: 10px">
-          {{ form.adjustType === "percent" ? "%" : "元" }}
-        </span>
+      <el-form-item label="标签" prop="tags" v-if="form.adjustType === 'add'">
+        <el-select
+          v-model="form.values"
+          multiple
+          filterable
+          remote
+          placeholder="请输入或选择标签"
+          :remote-method="handleSearchTags"
+          :loading="tagsLoading"
+        >
+          <el-option
+            v-for="tag in tagOptions"
+            :key="tag.id"
+            :label="tag.name"
+            :value="tag.id"
+          >
+            <span :style="{ color: tag.color }">{{ tag.name }}</span>
+          </el-option>
+        </el-select>
       </el-form-item>
-      <div class="form-tip" v-if="form.adjustType === 'percent'">
-        正数表示上调, 负数表示下调， 如: 10% 表示上调 10%
-      </div>
+
+      <el-form-item label="确认删除" v-if="form.adjustType === 'clear'">
+        <el-input placeholder="请确认删除标签" v-model="confirmDelete" />
+        <el-text size="small" color="red">
+          <el-icon>
+            <InfoFilled />
+          </el-icon>
+          清除所有标签不能恢复, 确认请在输入框填入‘确认清除标签'
+        </el-text>
+      </el-form-item>
     </el-form>
 
     <template #footer>

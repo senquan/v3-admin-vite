@@ -260,3 +260,11 @@ export function getNonZeroMin(arr: number[]) {
   if (nonZeroValues.length === 0) return 0
   return Math.min(...nonZeroValues)
 }
+
+export async function copyTextToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch (err) {
+    console.error("Could not copy text: ", err)
+  }
+}

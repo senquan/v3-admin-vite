@@ -318,6 +318,7 @@ defineExpose({
             <el-select
               v-model="formData.modelType"
               :empty-values="[0]"
+              :value-on-clear="0"
               filterable
               remote
               allow-create

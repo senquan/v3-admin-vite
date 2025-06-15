@@ -81,3 +81,11 @@ export function importProducts(products: any[]) {
     data: { products }
   })
 }
+
+export function batchUpdateTags(data: Product.BatchUpdateRequestParams) {
+  return request<Product.ProductActionResponseData>({
+    url: "tags/batch",
+    method: "put",
+    data
+  })
+}
