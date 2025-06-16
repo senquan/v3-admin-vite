@@ -37,9 +37,9 @@ function open(options = {
   visible.value = true
   platform.value = options.platformId
   if (options.platformId === 2 || options.platformId === 6) {
-    platformBackgroundColor.value = "#fde9d9"
+    platformBackgroundColor.value = "#a30c1a"
   } else if (options.platformId === 3 || options.platformId === 4) {
-    platformBackgroundColor.value = "#c1def6"
+    platformBackgroundColor.value = "#29d"
   }
 }
 
@@ -183,7 +183,9 @@ function formatPrice(price: string) {
             <div class="product-image-container">
               <el-image
                 style="width: 80px; height: 80px"
-                :src="row.imageUrl"
+                :src="row.imageUrl?.replace('uploads', 'uploads/thumb/')"
+                :preview-src-list="row.imageUrls"
+                :preview-teleported="true"
                 fit="cover"
               >
                 <template #error>

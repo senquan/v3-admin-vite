@@ -269,14 +269,14 @@ onMounted(() => {
         <vxe-column field="createdAt" title="下单时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </vxe-column>
-        <vxe-column field="name" min-width="200" title="名称" align="left">
+        <vxe-column field="name" min-width="180" title="名称" align="left">
           <template #default="data">
             <span style="margin-right: 8px;">{{ data.row.name }}</span>
             <el-tag v-if="data.row.remark">{{ data.row.remark }}</el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="user" width="150" title="制单人" />
-        <vxe-column field="reviewer" width="150" title="审核人" />
+        <vxe-column field="user" width="120" title="制单人" />
+        <vxe-column field="reviewer" width="80" title="审核人" />
         <vxe-column field="quantity" width="80" title="数量" />
         <vxe-column field="originPrice" width="100" title="日常总价" />
         <vxe-column field="payPrice" width="100" title="到手总价" />

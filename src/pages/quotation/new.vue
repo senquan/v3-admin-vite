@@ -551,15 +551,22 @@ function submitOrder(type: number) {
     const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
     request.then((response: any) => {
       if (response.code === 0) {
-        ElMessageBox.alert(materialList.value, "提交订单成功", {
-          confirmButtonText: "复制物料详情并关闭",
-          callback: () => {
-            copyTextToClipboard(materialList.value)
-            router.push({
-              path: "/quotation/quotation"
-            })
-          }
-        })
+        if (type === 1) {
+          ElMessageBox.alert(materialList.value, "提交订单成功", {
+            confirmButtonText: "复制物料详情并关闭",
+            callback: () => {
+              copyTextToClipboard(materialList.value)
+              router.push({
+                path: "/quotation/quotation"
+              })
+            }
+          })
+        } else {
+          ElMessage.success("暂存草稿成功")
+          router.push({
+            path: "/quotation/quotation"
+          })
+        }
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
       }

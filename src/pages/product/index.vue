@@ -27,6 +27,7 @@ const listQuery = reactive({
 const searchOptions = reactive({
   colors: [] as Array<{ value: number, label: string }>
 })
+const tableRef = ref<any>([])
 const totalProducts = ref(0)
 const tableData = ref<any>([])
 const productFormRef = ref<any>([])
@@ -293,6 +294,15 @@ function handleSelectionChange(selection: any) {
   selectedRows.value = selection.records
 }
 
+function handleFormClose(id: number) {
+  if (id === 1) {
+    priceFormVisibility.value = false
+  } else if (id === 2) {
+    tagFormVisibility.value = false
+  }
+  tableRef.value?.clearCheckboxRow()
+}
+
 onMounted(() => {
   handleFilter()
   loadSeries()
@@ -319,6 +329,7 @@ onMounted(() => {
 
     <div class="grid-grouping">
       <vxe-table
+        ref="tableRef"
         :data="tableData"
         :loading
         :sort-config="{ remote: true }"
@@ -404,7 +415,7 @@ onMounted(() => {
       :all-counts="totalProducts"
       :search-params="listQuery"
       @success="fetchProducts"
-      @close="priceFormVisibility = false"
+      @close="handleFormClose(1)"
     />
 
     <ProductTag
@@ -414,7 +425,7 @@ onMounted(() => {
       :all-counts="totalProducts"
       :search-params="listQuery"
       @success="fetchProducts"
-      @close="tagFormVisibility = false"
+      @close="handleFormClose(2)"
     />
   </div>
 </template>
