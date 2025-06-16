@@ -89,6 +89,10 @@ export interface OrderListRequestParams {
   username?: string
   color?: string
   sort?: string
+  startDate?: string
+  endDate?: string
+  payStatus?: number[]
+  status?: number[]
   page?: number
   pageSize?: number
 }

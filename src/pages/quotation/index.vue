@@ -12,6 +12,10 @@ const listQuery = reactive({
   keyword: "",
   color: "",
   sort: "+id",
+  startDate: "",
+  endDate: "",
+  payStatus: [],
+  status: [],
   page: 1,
   pageSize: 20
 })
@@ -48,10 +52,19 @@ const statusOptions = ref<any>([
   { label: "售后中", value: 5, color: "danger" },
   { label: "已完成", value: 6, color: "success" }
 ])
+const payStatusOptions = ref<any>([
+  { label: "未支付", value: 0, color: "info" },
+  { label: "已支付", value: 1, color: "success" },
+  { label: "已退款", value: 2, color: "danger" }
+])
 const materialList = ref("")
 
 function getMatchedStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
+}
+
+function getPayStatus(statusValue: number) {
+  return payStatusOptions.value.find((status: { value: number }) => status.value === statusValue)
 }
 
 async function fetchOrders() {
@@ -108,6 +121,15 @@ async function fetchOrders() {
 function handleSortChange(column: any) {
   const { field, order } = column
   listQuery.sort = (order === "desc" ? "-" : "+") + field
+  handleFilter()
+}
+
+function handleFilterChange(filters: any) {
+  if (filters.field === "payStatus") {
+    listQuery.payStatus = filters.values
+  } else if (filters.field === "status") {
+    listQuery.status = filters.values
+  }
   handleFilter()
 }
 
@@ -247,6 +269,8 @@ onMounted(() => {
   <div class="main-container">
     <div class="filter-container">
       <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
+      <el-date-picker v-model="listQuery.startDate" placeholder="选择开始日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
+      <el-date-picker v-model="listQuery.endDate" placeholder="选择结束日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
       <el-select v-model="listQuery.platformId" placeholder="选择平台" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
         <el-option v-for="item in platformOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
@@ -260,7 +284,9 @@ onMounted(() => {
         :data="tableData"
         :loading
         :sort-config="{ remote: true }"
+        :filter-config="{ remote: true }"
         @sort-change="handleSortChange"
+        @filter-change="handleFilterChange"
       >
         <vxe-column field="id" width="80" title="编号" />
         <vxe-column field="platform" width="120" title="平台">
@@ -280,7 +306,7 @@ onMounted(() => {
         <vxe-column field="quantity" width="80" title="数量" />
         <vxe-column field="originPrice" width="100" title="日常总价" />
         <vxe-column field="payPrice" width="100" title="到手总价" />
-        <vxe-column field="status" width="80" title="订单状态">
+        <vxe-column field="status" width="100" title="订单状态" :filters="statusOptions">
           <template #default="{ row }">
             <el-tag
               v-if="getMatchedStatus(row.status)"
@@ -290,10 +316,14 @@ onMounted(() => {
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="payStatus" width="80" title="支付状态">
+        <vxe-column field="payStatus" width="100" title="支付状态" :filters="payStatusOptions">
           <template #default="{ row }">
-            <el-tag type="success" v-if="row.payStatus === 1">已支付</el-tag>
-            <el-tag type="danger" v-if="row.payStatus === 0">未支付</el-tag>
+            <el-tag
+              v-if="getPayStatus(row.payStatus)"
+              :type="getPayStatus(row.payStatus).color"
+            >
+              {{ getPayStatus(row.payStatus).label }}
+            </el-tag>
           </template>
         </vxe-column>
         <vxe-column field="actions" title="操作" width="180">

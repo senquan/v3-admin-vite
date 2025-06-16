@@ -241,6 +241,11 @@ function handelModelTypeBlur(row: any) {
   }
 }
 
+function handleModelFocus(row: any) {
+  row.popoverVisible = false
+  modelOptions.value = []
+}
+
 async function handelSearchProduct(modelType: string, row: any, refresh: boolean = true) {
   try {
     loading.value = true
@@ -548,6 +553,9 @@ function submitOrder(type: number) {
     formData.value.type = type
     formData.value.platformId = platformId.value
     formData.value.products = products
+    formData.value.flashPrice = flashPrice.value || 0
+    formData.value.dailyPrice = dailyPrice.value || 0
+    formData.value.promotionPrice = promotionPrice.value || 0
     const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
     request.then((response: any) => {
       if (response.code === 0) {
@@ -879,6 +887,20 @@ function orderPreview() {
   previewFormVisible.value = true
 }
 
+function orderMateria() {
+  materialList.value = ""
+  tableData.value.forEach((item: any) => {
+    if (item.materialId)
+      materialList.value += `<${item.materialId}*${item.quantity}>`
+  })
+  ElMessageBox.alert(materialList.value, "物料详情", {
+    confirmButtonText: "复制物料详情并关闭",
+    callback: () => {
+      copyTextToClipboard(materialList.value)
+    }
+  })
+}
+
 async function initModelCache() {
   if (cacheInitialized.value && Date.now() - lastCacheTime.value < cacheExpiry) {
     return true
@@ -1064,7 +1086,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               <el-popover
                 placement="bottom"
                 :width="150"
-                trigger="click"
+                trigger="contextmenu"
                 v-model:visible="row.popoverVisible"
                 popper-class="model-search-popover"
               >
@@ -1073,6 +1095,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                     v-model="row.modelType"
                     placeholder="请输入型号搜索"
                     @input="(val) => handelSearchId(val, row)"
+                    @focus="() => handleModelFocus(row)"
                     @blur="() => handelModelTypeBlur(row)"
                     @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
                   />
@@ -1239,6 +1262,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
+                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
                   <el-button type="success" @click="orderPreview()">报价预览</el-button>
                   <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
                   <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
