@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { formatDateTime } from "@/common/utils/datetime"
 import type { FormInstance } from "element-plus"
 import type * as CoursewareType from "./apis/type"
+import { formatDateTime } from "@/common/utils/datetime"
+import { request } from "@/http/axios"
 import * as CoursewareApi from "./apis"
 
 // 响应式数据
@@ -14,6 +15,7 @@ const isEdit = ref(false)
 const currentId = ref<number | null>(null)
 const formRef = ref<FormInstance>()
 const multipleSelection = ref<CoursewareType.CoursewareListData[]>([])
+const fileList = ref<any>([])
 
 // 查询参数
 const queryParams = reactive({
@@ -30,6 +32,7 @@ const formData = reactive<CoursewareType.CoursewareCreateData>({
   description: "",
   category: 1,
   tags: "",
+  files: [],
   status: 1
 })
 
@@ -85,15 +88,6 @@ function handleSearch() {
   fetchList()
 }
 
-// 重置搜索
-function handleReset() {
-  queryParams.keyword = ""
-  queryParams.category = ""
-  queryParams.status = ""
-  queryParams.page = 1
-  fetchList()
-}
-
 // 分页变化
 function handlePageChange(page: number) {
   queryParams.page = page
@@ -124,12 +118,18 @@ function handleEdit(row: CoursewareType.CoursewareListData) {
   return CoursewareApi.fetchDetail(row.id)
     .then((response) => {
       if (response.code === 0) {
+        resetForm()
         const data = response.data
         formData.title = data.title
         formData.description = data.description || ""
         formData.category = data.category
         formData.tags = data.tags || ""
+        formData.files = data.materials.map(m => ({
+          name: m.title,
+          url: m.file_path
+        }))
         formData.status = data.status
+        fileList.value = formData.files
         dialogVisible.value = true
       } else {
         ElMessage.error(response.message || "获取课件详情失败")
@@ -156,7 +156,7 @@ function handleDelete(row: CoursewareType.CoursewareListData) {
       return CoursewareApi.deleteCourseware(row.id)
     })
     .then((response) => {
-      if (response.code === 200) {
+      if (response.code === 0) {
         ElMessage.success("删除成功")
         fetchList()
       } else {
@@ -171,42 +171,6 @@ function handleDelete(row: CoursewareType.CoursewareListData) {
     })
 }
 
-// 批量删除
-function handleBatchDelete() {
-  if (multipleSelection.value.length === 0) {
-    ElMessage.warning("请选择要删除的课件")
-    return
-  }
-
-  return ElMessageBox.confirm(
-    `确定要删除选中的 ${multipleSelection.value.length} 个课件吗？`,
-    "提示",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning"
-    }
-  )
-    .then(() => {
-      const ids = multipleSelection.value.map((item) => item.id)
-      return CoursewareApi.batchDeleteCourseware({ ids })
-    })
-    .then((response) => {
-      if (response.code === 200) {
-        ElMessage.success("批量删除成功")
-        fetchList()
-      } else {
-        ElMessage.error(response.message || "批量删除失败")
-      }
-    })
-    .catch((error) => {
-      if (error !== "cancel") {
-        ElMessage.error("批量删除失败")
-        console.error(error)
-      }
-    })
-}
-
 // 表格选择变化
 function handleSelectionChange(selection: CoursewareType.CoursewareListData[]) {
   multipleSelection.value = selection
@@ -215,7 +179,16 @@ function handleSelectionChange(selection: CoursewareType.CoursewareListData[]) {
 // 提交表单
 function handleSubmit() {
   if (!formRef.value) return
-
+  if (fileList.value.length === 0) {
+    ElMessage.warning("请上传课件文件")
+    return
+  }
+  formData.files = fileList.value.map((item: any) => {
+    return {
+      name: item.name,
+      url: item.url || item.response.data.url
+    }
+  }).filter((item: any) => item.url !== "")
   return formRef.value.validate()
     .then(() => {
       if (isEdit.value && currentId.value) {
@@ -225,7 +198,7 @@ function handleSubmit() {
       }
     })
     .then((response) => {
-      if (response.code === 200) {
+      if (response.code === 0) {
         ElMessage.success(isEdit.value ? "更新成功" : "创建成功")
         dialogVisible.value = false
         fetchList()
@@ -245,8 +218,10 @@ function resetForm() {
   formData.description = ""
   formData.category = 1
   formData.tags = ""
+  formData.files = []
   formData.status = 1
   formRef.value?.clearValidate()
+  fileList.value = []
 }
 
 // 关闭对话框
@@ -257,13 +232,60 @@ function handleClose() {
 
 // 获取分类标签
 function getCategoryLabel(category: number) {
-  const option = categoryOptions.find((item) => item.value === category)
+  const option = categoryOptions.find((item: any) => item.value === category)
   return option ? option.label : "未知"
 }
 
 // 获取状态标签
 function getStatusLabel(status: number) {
   return status === 1 ? "启用" : "禁用"
+}
+
+function handlePreview(file: any) {
+  console.log(file)
+}
+
+function handleRemove(file: any, fileList: any) {
+  console.log(file, fileList)
+}
+
+function beforeRemove(file: any, fileList: any): boolean {
+  console.log(file, fileList)
+  return true
+}
+
+function beforeUpload(file: any) {
+  console.log(file)
+}
+
+function handleExceed(files: any, fileList: any) {
+  console.log(files, fileList)
+}
+
+function customUploadRequest(options: any) {
+  const { file, onSuccess, onError, onProgress } = options
+  const data = new FormData()
+  data.append("file", file)
+  return request({
+    url: "upload/file",
+    method: "POST",
+    data,
+    headers: {
+      "Content-Type": "multipart/form-data"
+    },
+    onUploadProgress: (progressEvent: any) => {
+      if (progressEvent.total) {
+        const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+        onProgress({ percent })
+      }
+    }
+  }).then((response: any) => {
+    onSuccess(response)
+    return response
+  }).catch((error: any) => {
+    onError(error)
+    return Promise.reject(error)
+  })
 }
 
 // 组件挂载时获取数据
@@ -302,7 +324,7 @@ onMounted(() => {
         批量删除
       </el-button> -->
     </div>
-      <!-- 表格 -->
+    <!-- 表格 -->
     <div class="grid-grouping">
       <el-table
         v-loading="loading"
@@ -400,6 +422,25 @@ onMounted(() => {
               :value="item.value"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="课件文件" prop="file">
+          <el-upload
+            v-model:file-list="fileList"
+            class="uploader"
+            multiple
+            :on-preview="handlePreview"
+            :on-remove="handleRemove"
+            :before-remove="beforeRemove"
+            :before-upload="beforeUpload"
+            :on-exceed="handleExceed"
+            :http-request="customUploadRequest"
+            style="width: 380px; margin-top: 20px;"
+          >
+            <el-button type="primary">
+              <el-icon><Upload /></el-icon>
+              上传课件文件
+            </el-button>
+          </el-upload>
         </el-form-item>
         <el-form-item label="标签" prop="tags">
           <el-input

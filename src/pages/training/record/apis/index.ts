@@ -1,6 +1,14 @@
 import type * as Record from "./type"
 import { request } from "@/http/axios"
 
+export function fetchListGroup(params: Record.RecordListRequestParams) {
+  return request<Record.RecordListResponseData>({
+    url: "record/group",
+    method: "get",
+    params
+  })
+}
+
 export function fetchList(params: Record.RecordListRequestParams) {
   return request<Record.RecordListResponseData>({
     url: "record/list",
@@ -22,5 +30,12 @@ export function createRecord(data: Record.RecordCreateData) {
     url: "record/",
     method: "post",
     data
+  })
+}
+
+export function fetchDetail(id: number) {
+  return request<Record.RecordDetailResponseData>({
+    url: `record/${id}`,
+    method: "get"
   })
 }

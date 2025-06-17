@@ -1,9 +1,16 @@
+export interface MaterialListData {
+  id: number
+  title: string
+  file_path: string
+}
+
 export interface CoursewareListData {
   id: number
   title: string
   description: string | null
   category: number
   tags: string | null
+  materials: MaterialListData[]
   status: number
   view_count: number
   download_count: number
@@ -20,12 +27,20 @@ export interface StaffListData {
   type: number
 }
 
+export interface CoursewareFile {
+  name: string
+  type?: string
+  size?: number
+  url: string
+}
+
 export interface CoursewareCreateData {
   id?: number
   title: string
   description?: string
   category: number
   tags?: string
+  files?: CoursewareFile[]
   status?: number
   materialIds?: number[]
 }

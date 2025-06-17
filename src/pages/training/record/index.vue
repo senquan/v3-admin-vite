@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { fetchList as fetchRecordList } from "./apis"
+import { formatDateTime } from "@/common/utils/datetime"
+import DetailForm from "./_detail.vue"
+import { fetchList as fetchListByBranch, fetchListGroup } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -10,10 +12,21 @@ const listQuery = reactive({
 const tableData = ref<any>([])
 const totalRecord = ref(0)
 const totalPages = computed(() => Math.ceil(totalRecord.value / listQuery.pageSize))
+const recordDrawer = ref(false)
+const recordData = ref<any>([])
+const categories = reactive([
+  { label: "制度学习", value: 1 },
+  { label: "会议传达", value: 2 },
+  { label: "安全技术培训", value: 3 },
+  { label: "三级教育", value: 4 }
+])
+const branchName = ref("")
+const recordFormRef = ref<any>([])
+const recordFormVisibility = ref(false)
 
 function fetchList() {
   loading.value = true
-  fetchRecordList(listQuery).then((res) => {
+  fetchListGroup(listQuery).then((res) => {
     loading.value = false
     totalRecord.value = res.data.total
     tableData.value = res.data.records
@@ -24,8 +37,31 @@ function handleFilter() {
   fetchList()
 }
 
-function handleDetail(row: any) {
-  console.log(row)
+function handleDetail(id: number, name: string) {
+  recordDrawer.value = true
+  branchName.value = name
+  loadDetail(id)
+}
+
+function loadDetail(id: number) {
+  fetchListByBranch({ branch: id }).then((res: any) => {
+    if (res.data && res.data.records) {
+      recordData.value = res.data.records
+    } else {
+      recordData.value = []
+    }
+  })
+}
+
+function handleRecordDetail(row: any) {
+  openDetail(row.id)
+}
+
+function openDetail(id: number) {
+  recordFormRef.value?.open({
+    id
+  })
+  recordFormVisibility.value = true
 }
 
 onMounted(() => {
@@ -49,7 +85,7 @@ onMounted(() => {
         <vxe-column field="actual" title="实际参培人数" width="150" align="center" />
         <vxe-column field="actions" title="操作" width="180">
           <template #default="data">
-            <el-button type="primary" @click="handleDetail(data.row)">培训记录</el-button>
+            <el-button type="primary" @click="handleDetail(data.row.id, data.row.name)">培训记录</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -68,6 +104,37 @@ onMounted(() => {
         @current-change="fetchList"
       />
     </div>
+
+    <el-drawer v-model="recordDrawer" :title="`${branchName}培训记录`" size="50%" direction="rtl">
+      <vxe-table
+        :data="recordData"
+        @cell-click="handleRecordDetail"
+      >
+        <vxe-column title="培训计划名称" min-width="200" align="left">
+          <template #default="data">
+            <el-text>{{ data.row.name }}</el-text>
+          </template>
+        </vxe-column>
+        <vxe-column title="培训时间" width="150" align="center">
+          <template #default="data">
+            <el-text truncated>{{ formatDateTime(data.row.actual_time) }}</el-text>
+          </template>
+        </vxe-column>
+        <vxe-column field="trainer" title="教培人员" width="80" />
+        <vxe-column title="培训分类" width="120">
+          <template #default="data">
+            <el-text>{{ categories.find((item) => item.value === data.row.training_category)?.label }}</el-text>
+          </template>
+        </vxe-column>
+        <vxe-column field="actual_participants" title="实际参培人数" width="110" />
+        <vxe-column field="passed" title="合格人数" width="80" />
+      </vxe-table>
+    </el-drawer>
+
+    <DetailForm
+      ref="recordFormRef"
+      @close="recordFormVisibility = false"
+    />
   </div>
 </template>
 

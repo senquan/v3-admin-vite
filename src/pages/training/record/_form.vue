@@ -44,6 +44,7 @@ const rules = {
 const btnSubmit = reactive({
   loading: false
 })
+const treeSelectKey = ref(0)
 
 function resetForm() {
   formData.id = 0
@@ -54,7 +55,9 @@ function resetForm() {
   formData.contents_matrix = []
   formData.coursewares = []
   fileList.value = []
+  scopeOptions.value = []
   handleMatrixClear()
+  treeSelectKey.value++
 }
 
 function open(options = {
@@ -62,7 +65,6 @@ function open(options = {
   data: {} as any,
   dicts: {} as any
 }) {
-  console.log(options)
   Object.assign(planData, options.data)
   dicts.value = options.dicts
   visible.value = true
@@ -271,6 +273,7 @@ defineExpose({
             <div>
               <el-text>本单位人员</el-text>
               <el-tree-select
+                :key="`inner-${treeSelectKey}`"
                 v-model="formData.participants"
                 lazy
                 :load="loadParticipants"
@@ -285,6 +288,7 @@ defineExpose({
             <div style="margin-top: 20px;">
               <el-text>外单位人员</el-text>
               <el-tree-select
+                :key="`outer-${treeSelectKey}`"
                 v-model="formData.participants_outer"
                 lazy
                 :load="loadOuterParticipants"

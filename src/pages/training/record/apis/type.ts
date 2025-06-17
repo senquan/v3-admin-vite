@@ -37,6 +37,7 @@ export interface RecordCreateData {
 }
 
 export interface RecordListRequestParams {
+  branch?: number
   keyword?: string
   sort?: string
   page?: number

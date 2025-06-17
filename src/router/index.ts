@@ -67,6 +67,32 @@ export const constantRoutes: RouteRecordRaw[] = [
     path: "/training",
     component: Layouts,
     meta: {
+      title: "技能中心",
+      elIcon: "DataBoard"
+    },
+    children: [
+      {
+        path: "plan",
+        component: () => import("@/pages/training/plan/index.vue"),
+        name: "Plan",
+        meta: {
+          title: "我的培训"
+        }
+      },
+      {
+        path: "record",
+        component: () => import("@/pages/training/record/index.vue"),
+        name: "Record",
+        meta: {
+          title: "考试记录"
+        }
+      }
+    ]
+  },
+  {
+    path: "/training",
+    component: Layouts,
+    meta: {
       title: "培训管理",
       elIcon: "DataBoard"
     },
