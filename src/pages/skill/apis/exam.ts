@@ -38,6 +38,23 @@ export interface Exam {
     _id: number
     username: string
   }
+  examEntity?: {
+    _id: number
+    title: string
+    description?: string
+    type: number
+    category_id: number
+    training_category: number
+    level: number
+    total_score: number
+    pass_score: number
+    duration: number
+    status: boolean
+    creator?: number
+    updater?: number
+    create_time?: string
+    update_time?: string
+  }
   examQuestions?: ExamQuestion[]
 }
 
@@ -113,6 +130,14 @@ export interface GenerateExamResponse {
 export function getExamList(params: ExamListParams) {
   return request<ExamListResponse>({
     url: "exam/list",
+    method: "get",
+    params
+  })
+}
+
+export function getMyExamList(params: ExamListParams) {
+  return request<ExamListResponse>({
+    url: "exam/mylist",
     method: "get",
     params
   })

@@ -46,3 +46,10 @@ export function generateExam(id: number) {
     method: "post"
   })
 }
+
+export function loadParticipants(id: number) {
+  return request<Record.RecordParticipantListResponseData>({
+    url: `record/${id}/participants`,
+    method: "get"
+  })
+}

@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import type { Exam, ExamListParams, GenerateExamParams } from "./apis/exam"
-import { generateExam, getExamDetail, getExamList, regenerateExam, updateExamSettings } from "./apis/exam"
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { generateExam, getExamDetail, getMyExamList, regenerateExam, updateExamSettings } from "./apis/exam"
+import type { Exam, ExamListParams, GenerateExamParams, ExamSettings } from "./apis/exam"
+
+const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
@@ -13,21 +18,18 @@ const settingsDialogVisible = ref(false)
 const currentExam = ref<Exam | null>(null)
 const generateFormRef = ref()
 const settingsFormRef = ref()
+const totalExams = ref(0)
 
 // 搜索表单
-const searchForm = reactive<ExamListParams>({
+const listQuery = reactive<ExamListParams>({
   keyword: "",
   type: undefined,
   category_id: undefined,
-  level: undefined
-})
-
-// 分页
-const pagination = reactive({
+  level: undefined,
   page: 1,
-  pageSize: 20,
-  total: 0
+  pageSize: 20
 })
+const totalPages = computed(() => Math.ceil(totalExams.value / Number(listQuery.pageSize)))
 
 // 生成考试表单
 const generateForm = reactive<GenerateExamParams>({
@@ -75,15 +77,13 @@ async function fetchExamList() {
   try {
     loading.value = true
     const params = {
-      ...searchForm,
-      page: pagination.page,
-      pageSize: pagination.pageSize
+      ...listQuery
     }
 
-    const response = await getExamList(params)
-    if (response.code === 200) {
+    const response = await getMyExamList(params)
+    if (response.code === 0) {
       tableData.value = response.data.exams
-      pagination.total = response.data.total
+      totalExams.value = response.data.total
     }
   } catch (error) {
     console.error("获取考试列表失败:", error)
@@ -94,20 +94,20 @@ async function fetchExamList() {
 }
 
 // 搜索
-// function handleSearch() {
-//   pagination.page = 1
-//   fetchExamList()
-// }
+function handleFilter() {
+  listQuery.page = 1
+  fetchExamList()
+}
 
 // 重置
 // function handleReset() {
-//   Object.assign(searchForm, {
+//   Object.assign(listQuery, {
 //     keyword: "",
 //     type: undefined,
 //     category_id: undefined,
 //     level: undefined
 //   })
-//   pagination.page = 1
+//   listQuery.page = 1
 //   fetchExamList()
 // }
 
@@ -118,14 +118,14 @@ function handleSortChange() {
 
 // 分页大小变化
 function handleSizeChange(size: number) {
-  pagination.pageSize = size
-  pagination.page = 1
+  listQuery.pageSize = size
+  listQuery.page = 1
   fetchExamList()
 }
 
 // 当前页变化
 function handleCurrentChange(page: number) {
-  pagination.page = page
+  listQuery.page = page
   fetchExamList()
 }
 
@@ -187,8 +187,32 @@ async function handleViewDetail(exam: Exam) {
 
 // 开始考试
 function handleStartExam(exam: Exam) {
-  console.log(exam)
-  ElMessage.info("开始考试功能待实现")
+  console
+  if (!exam.examEntity?._id) {
+    ElMessage.error('考试ID无效')
+    return
+  }
+
+  ElMessageBox.confirm(
+    `确定要开始考试「${exam.examEntity.title}」吗？\n考试时长：${exam.examEntity.duration}分钟\n题目数量：${exam.examQuestions?.length || 0}题`,
+    '开始考试',
+    {
+      confirmButtonText: '开始答题',
+      cancelButtonText: '取消',
+      type: 'info'
+    }
+  ).then(() => {
+    if (exam.examEntity?._id) {
+      router.push({
+        name: 'ExamTakingWithId',
+        params: {
+          examId: exam.examEntity._id!
+        }
+      })
+    }
+  }).catch(() => {
+    // 用户取消
+  })
 }
 
 // 编辑设置
@@ -346,24 +370,24 @@ onMounted(() => {
 
     <!-- 搜索和筛选 -->
     <!-- <el-card class="search-card">
-      <el-form :model="searchForm" inline>
+      <el-form :model="listQuery" inline>
         <el-form-item label="考试名称">
           <el-input
-            v-model="searchForm.keyword"
+            v-model="listQuery.keyword"
             placeholder="请输入考试名称"
             clearable
             style="width: 200px"
           />
         </el-form-item>
         <el-form-item label="考试类型">
-          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable style="width: 150px">
+          <el-select v-model="listQuery.type" placeholder="请选择类型" clearable style="width: 150px">
             <el-option label="练习考试" :value="1" />
             <el-option label="正式考试" :value="2" />
             <el-option label="模拟考试" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item label="考试分类">
-          <el-select v-model="searchForm.category_id" placeholder="请选择分类" clearable style="width: 150px">
+          <el-select v-model="listQuery.category_id" placeholder="请选择分类" clearable style="width: 150px">
             <el-option label="技能考试" :value="1" />
             <el-option label="安全考试" :value="2" />
             <el-option label="管理考试" :value="3" />
@@ -371,14 +395,14 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="难度级别">
-          <el-select v-model="searchForm.level" placeholder="请选择难度" clearable style="width: 150px">
+          <el-select v-model="listQuery.level" placeholder="请选择难度" clearable style="width: 150px">
             <el-option label="简单" :value="1" />
             <el-option label="中等" :value="2" />
             <el-option label="困难" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
+          <el-button type="primary" @click="handleFilter">
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
@@ -396,7 +420,7 @@ onMounted(() => {
         <div class="card-header">
           <span>考试列表</span>
           <div class="header-stats">
-            <el-tag type="info">共 {{ pagination.total }} 场考试</el-tag>
+            <el-tag type="info">共 {{ totalExams }} 场考试</el-tag>
           </div>
         </div>
       </template>
@@ -410,47 +434,41 @@ onMounted(() => {
         <el-table-column prop="title" label="考试名称" min-width="200">
           <template #default="{ row }">
             <div class="exam-title">
-              <div class="title">{{ row.title }}</div>
-              <div class="description">{{ row.description || "暂无描述" }}</div>
+              <div class="title">{{ row.examEntity?.title }}</div>
+              <div class="description">{{ row.examEntity?.description || "暂无描述" }}</div>
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column prop="type" label="考试类型" width="120">
+        <el-table-column prop="type" label="考试类型" width="120" align="center">
           <template #default="{ row }">
-            <el-tag :type="getExamTypeTagType(row.type)">{{ getExamTypeName(row.type) }}</el-tag>
+            <el-tag :type="getExamTypeTagType(row.examEntity?.type)">{{ getExamTypeName(row.examEntity?.type) }}</el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="categoryEntity.name" label="考试分类" width="120">
+        <el-table-column prop="categoryEntity.name" label="考试分类" width="120" align="center">
           <template #default="{ row }">
-            {{ row.categoryEntity?.name || "-" }}
+            {{ row.examEntity?.category_id || "-" }}
           </template>
         </el-table-column>
 
-        <el-table-column prop="level" label="难度级别" width="100">
+        <el-table-column prop="level" label="难度级别" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getLevelTagType(row.level)">{{ getLevelName(row.level) }}</el-tag>
+            <el-tag :type="getLevelTagType(row.examEntity?.level)">{{ getLevelName(row.examEntity?.level) }}</el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="total_score" label="总分" width="80" />
+        <el-table-column prop="total_score" label="总分" width="80"  align="center" />
 
-        <el-table-column prop="duration" label="考试时长" width="100">
+        <el-table-column prop="duration" label="考试时长" width="100" align="center">
           <template #default="{ row }">
-            {{ row.duration }}分钟
+            {{ row.examEntity?.duration }}分钟
           </template>
         </el-table-column>
 
-        <el-table-column prop="examQuestions" label="题目数量" width="100">
+        <el-table-column prop="examQuestions" label="题目数量" width="100" align="center">
           <template #default="{ row }">
-            {{ row.examQuestions?.length || 0 }}题
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="creatorEntity.username" label="创建者" width="120">
-          <template #default="{ row }">
-            {{ row.creatorEntity?.username || "-" }}
+            {{ row.examEntity?.examQuestions?.length || 0 }}题
           </template>
         </el-table-column>
 
@@ -460,7 +478,7 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row)">
               查看详情
@@ -479,15 +497,17 @@ onMounted(() => {
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="listQuery-container">
         <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
+          v-if="totalPages > 1"
+          v-model:current-page="listQuery.page"
+          v-model:page-size="listQuery.pageSize"
+          :total="totalExams"
+          background
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+          :page-sizes="[10, 20, 30, 50]"
+          @size-change="handleFilter"
+          @current-change="handleFilter"
         />
       </div>
     </el-card>
@@ -737,7 +757,7 @@ onMounted(() => {
   color: #909399;
 }
 
-.pagination-container {
+.listQuery-container {
   display: flex;
   justify-content: center;
   margin-top: 20px;
@@ -778,5 +798,9 @@ onMounted(() => {
 
 :deep(.el-table .cell) {
   padding: 8px 0;
+}
+.pagination-container {
+  padding: 10px;
+  background: #fff;
 }
 </style>

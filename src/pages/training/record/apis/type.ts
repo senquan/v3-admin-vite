@@ -21,6 +21,19 @@ export interface StaffListData {
   type: number
 }
 
+export interface ParticipantListData {
+  id: number
+  name: string
+  type: number
+  gender: number
+  age: number
+  organization: string
+  idcard: string
+  hours: number
+  passed: boolean
+  score: number
+}
+
 export interface UploadFile {
   url: string
   name: string
@@ -70,6 +83,17 @@ export interface RecordStaffListResponseData {
   message: string
   data: {
     users: StaffListData[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
+export interface RecordParticipantListResponseData {
+  code: number
+  message: string
+  data: {
+    participants: ParticipantListData[]
     total: number
     page: number
     pageSize: number

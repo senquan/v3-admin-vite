@@ -92,6 +92,33 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/exam",
+    component: () => import("@/pages/skill/exam-taking.vue"),
+    name: "ExamTaking",
+    meta: {
+      title: "考试答题",
+      hidden: true
+    }
+  },
+  {
+    path: "/exam/:examId/taking",
+    component: () => import("@/pages/skill/exam-taking.vue"),
+    name: "ExamTakingWithId",
+    meta: {
+      title: "考试答题",
+      hidden: true
+    }
+  },
+  {
+    path: "/exam/:examId/result",
+    component: () => import("@/pages/skill/exam-result.vue"),
+    name: "ExamResult",
+    meta: {
+      title: "考试结果",
+      hidden: true
+    }
+  },
+  {
     path: "/training",
     component: Layouts,
     meta: {
