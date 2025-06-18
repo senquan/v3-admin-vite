@@ -4,7 +4,9 @@ import { registerNavigationGuard } from "@/router/guard"
 import { createRouter } from "vue-router"
 import { flatMultiLevelRoutes } from "./helper"
 
-const Layouts = () => import("@/layouts/index.vue")
+function Layouts() {
+  return import("@/layouts/index.vue")
+}
 
 /**
  * @name 常驻路由
@@ -64,7 +66,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/training",
+    path: "/skill",
     component: Layouts,
     meta: {
       title: "技能中心",
@@ -72,19 +74,19 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: "plan",
-        component: () => import("@/pages/training/plan/index.vue"),
-        name: "Plan",
+        path: "skill",
+        component: () => import("@/pages/skill/index.vue"),
+        name: "my-training",
         meta: {
           title: "我的培训"
         }
       },
       {
-        path: "record",
-        component: () => import("@/pages/training/record/index.vue"),
-        name: "Record",
+        path: "myexam",
+        component: () => import("@/pages/skill/myexam.vue"),
+        name: "exam-center",
         meta: {
-          title: "考试记录"
+          title: "考试中心"
         }
       }
     ]

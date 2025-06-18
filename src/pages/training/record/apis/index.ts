@@ -39,3 +39,10 @@ export function fetchDetail(id: number) {
     method: "get"
   })
 }
+
+export function generateExam(id: number) {
+  return request<Record.RecordActionResponseData>({
+    url: `exam/generate/${id}`,
+    method: "post"
+  })
+}

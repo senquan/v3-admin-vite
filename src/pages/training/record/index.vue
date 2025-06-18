@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
 import DetailForm from "./_detail.vue"
-import { fetchList as fetchListByBranch, fetchListGroup } from "./apis"
+import { fetchList as fetchListByBranch, fetchListGroup, generateExam } from "./apis"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -53,15 +53,42 @@ function loadDetail(id: number) {
   })
 }
 
-function handleRecordDetail(row: any) {
-  openDetail(row.id)
+function handleRecordDetail(data: any) {
+  console.log(data)
+  if (data.columnIndex < 6) openDetail(data.row)
 }
 
-function openDetail(id: number) {
+function openDetail(row: any) {
   recordFormRef.value?.open({
-    id
+    data: row
   })
   recordFormVisibility.value = true
+}
+
+function handleCreateExam(id: number) {
+  ElMessageBox.confirm(
+    '确定要生成试卷吗？',
+    '生成试卷',
+    {
+      confirmButtonText: '是的',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    generateExam(id).then((res) => {
+      if (res.code === 0) {
+        ElMessage({
+          type: 'success',
+          message: '生成试卷成功',
+        })
+      }
+    })
+  })
+  .catch(() => {})
+}
+
+function handlePublish(id: number) {
+  console.log("课件发布" + id)
 }
 
 onMounted(() => {
@@ -128,6 +155,12 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actual_participants" title="实际参培人数" width="110" />
         <vxe-column field="passed" title="合格人数" width="80" />
+        <vxe-column title="操作" width="220">
+          <template #default="data">
+            <el-button v-if="data.row.assessment_method === 3" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
+            <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button>
+          </template>
+        </vxe-column>
       </vxe-table>
     </el-drawer>
 
