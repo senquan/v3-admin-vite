@@ -498,7 +498,7 @@ function getSummaries(param: any) {
       return
     }
     let values
-    if (index === 4) {
+    if (index === 5) {
       values = data.map((item: Record<string, any>) => {
         if (item.serie.includes("套装") || item.serie.includes("预售")) {
           return Number(item[column.property]) * 10
@@ -511,7 +511,7 @@ function getSummaries(param: any) {
     } else {
       values = data.map((item: Record<string, any>) => Number(item[column.property]))
     }
-    if (index === 4 || index === 6 || index === 8) {
+    if (index === 5 || index === 7 || index === 9) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
           const value = Number(curr)
@@ -520,9 +520,9 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 4 ? 0 : 2)
+        }, 0)}`).toFixed(index === 5 ? 0 : 2)
       }
-      if (index === 6) {
+      if (index === 7) {
         formData.value.originPrice = Number(sums[index])
       }
     } else {
@@ -1072,7 +1072,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         @cell-mouse-leave="handleCellMouseLeave"
         :cell-class-name="cellClassName"
       >
-        <el-table-column prop="id" label="型号" width="150" align="center">
+        <el-table-column prop="action" label="操作" width="80" align="center">
           <template #default="{ row, $index }">
             <template v-if="$index === tableData.length - 1">
               <div class="last-row-action">
@@ -1083,42 +1083,52 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               </div>
             </template>
             <template v-else>
-              <el-popover
-                placement="bottom"
-                :width="150"
-                trigger="contextmenu"
-                v-model:visible="row.popoverVisible"
-                popper-class="model-search-popover"
-              >
-                <template #reference>
-                  <el-input
-                    v-model="row.modelType"
-                    placeholder="请输入型号搜索"
-                    @input="(val) => handelSearchId(val, row)"
-                    @focus="() => handleModelFocus(row)"
-                    @blur="() => handelModelTypeBlur(row)"
-                    @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
-                  />
-                </template>
-                <div class="model-options">
-                  <div
-                    v-for="item in modelOptions"
-                    :key="item.value"
-                    class="model-option"
-                    @click="handleModelSelect(item, row)"
-                    @mousedown.prevent
-                  >
-                    {{ item.label }}
-                  </div>
-                  <div v-if="searchLoading" class="model-option loading">
-                    <el-icon class="is-loading"><Loading /></el-icon> 搜索中...
-                  </div>
-                  <div v-if="modelOptions.length === 0 && !searchLoading" class="model-option empty">
-                    无匹配结果
-                  </div>
-                </div>
-              </el-popover>
+              <el-button @click="handleDelete(row)" link>
+                <el-icon :size="18" color="red"><CloseBold /></el-icon>
+              </el-button>
+              <el-button @click="addRowNext(row)" link>
+                <el-icon :size="18" color="red"><Plus /></el-icon>
+              </el-button>
             </template>
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="型号" width="150" align="center">
+          <template #default="{ row }">
+            <el-popover
+              placement="bottom"
+              :width="150"
+              trigger="contextmenu"
+              v-model:visible="row.popoverVisible"
+              popper-class="model-search-popover"
+            >
+              <template #reference>
+                <el-input
+                  v-model="row.modelType"
+                  placeholder="请输入型号搜索"
+                  @input="(val) => handelSearchId(val, row)"
+                  @focus="() => handleModelFocus(row)"
+                  @blur="() => handelModelTypeBlur(row)"
+                  @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
+                />
+              </template>
+              <div class="model-options">
+                <div
+                  v-for="item in modelOptions"
+                  :key="item.value"
+                  class="model-option"
+                  @click="handleModelSelect(item, row)"
+                  @mousedown.prevent
+                >
+                  {{ item.label }}
+                </div>
+                <div v-if="searchLoading" class="model-option loading">
+                  <el-icon class="is-loading"><Loading /></el-icon> 搜索中...
+                </div>
+                <div v-if="modelOptions.length === 0 && !searchLoading" class="model-option empty">
+                  无匹配结果
+                </div>
+              </div>
+            </el-popover>
           </template>
         </el-table-column>
         <el-table-column prop="serie" label="系列" width="120" align="center" />
@@ -1172,16 +1182,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         </el-table-column>
         <el-table-column prop="payPrice" label="到手总价" width="100" align="center">
           <template #default="{ row }"><span class="highlight-price" style="cursor: pointer;" @click="priceDetail(row.id)">{{ row.payPrice }}</span></template>
-        </el-table-column>
-        <el-table-column prop="action" label="操作" width="80" align="center">
-          <template #default="{ row }">
-            <el-button @click="handleDelete(row)" link>
-              <el-icon :size="18" color="red"><CloseBold /></el-icon>
-            </el-button>
-            <el-button @click="addRowNext(row)" link>
-              <el-icon :size="18" color="red"><Plus /></el-icon>
-            </el-button>
-          </template>
         </el-table-column>
       </el-table>
 
@@ -1262,10 +1262,10 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
-                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
                   <el-button type="success" @click="orderPreview()">报价预览</el-button>
                   <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
                   <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
+                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
                 </div>
               </el-form-item>
               <div class="bonus-item">

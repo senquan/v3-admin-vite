@@ -1,13 +1,15 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
 import { copyTextToClipboard } from "@/common/utils/helper"
+import FileSaver from "file-saver"
+import * as XLSX from "xlsx"
 import { createReturnOrder, fetchList, fetchOrder, fetchOrderStatusLog, updateOrderStatus } from "./apis"
 
 const router = useRouter()
 const loading = ref(false)
 const listQuery = reactive({
   type: "",
-  platformId: 0,
+  platformIds: [],
   username: "",
   keyword: "",
   color: "",
@@ -101,10 +103,6 @@ async function fetchOrders() {
           }
         })
         otherPlatformOptions.value = platformOptions.value.filter((item: any) => !item.icon)
-        platformOptions.value.unshift({
-          label: "全部",
-          value: 0
-        })
       } else {
         tableData.value = []
       }
@@ -125,10 +123,13 @@ function handleSortChange(column: any) {
 }
 
 function handleFilterChange(filters: any) {
+  console.log(filters)
   if (filters.field === "payStatus") {
     listQuery.payStatus = filters.values
   } else if (filters.field === "status") {
     listQuery.status = filters.values
+  } else if (filters.field === "platform") {
+    listQuery.platformIds = filters.values
   }
   handleFilter()
 }
@@ -260,6 +261,77 @@ function handleUpdateStatus() {
   })
 }
 
+async function handleExport() {
+  loading.value = true
+  try {
+    // 获取所有数据（不分页）
+    const exportQuery = { ...listQuery, page: 1, pageSize: totalOrders.value }
+    const res = await fetchList(exportQuery)
+
+    if (res.data && res.data.orders && res.data.orders.length > 0) {
+      // 准备导出数据
+      const exportData = res.data.orders.map((item: any) => {
+        return {
+          订单编号: item.id || "",
+          平台: platformOptions.value.find((platform: any) => Number(platform.value) === Number(item.platformId))?.label || "",
+          下单时间: item.createdAt || "",
+          名称: item.name || "",
+          制单人: item.user?.staff?.name || item.user?.username || "",
+          审核人: item.reviewerId || "",
+          数量: item.quantity || "",
+          日常总价: item.originPrice || "",
+          到手总价: item.payPrice || "",
+          订单状态: getMatchedStatus(item.status)?.label || "",
+          支付状态: getPayStatus(item.payStatus)?.label || "",
+          支付时间: item.payAt || "",
+          备注: item.remark || ""
+        }
+      })
+
+      // 创建工作簿和工作表
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "商品列表")
+
+      // 设置列宽
+      const colWidth = [
+        { wch: 15 }, // 订单编号
+        { wch: 15 }, // 平台
+        { wch: 15 }, // 下单时间
+        { wch: 25 }, // 名称
+        { wch: 10 }, // 制单人
+        { wch: 10 }, // 审核人
+        { wch: 10 }, // 数量
+        { wch: 10 }, // 日常总价
+        { wch: 10 }, // 到手总价
+        { wch: 10 }, // 订单状态
+        { wch: 10 }, // 支付状态
+        { wch: 15 }, // 支付时间
+        { wch: 30 } // 备注
+      ]
+      worksheet["!cols"] = colWidth
+
+      // 生成Excel文件并下载
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+
+      // 生成文件名（包含当前日期）
+      const now = new Date()
+      const fileName = `订单列表_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}.xlsx`
+
+      FileSaver.saveAs(blob, fileName)
+      ElMessage.success("导出成功")
+    } else {
+      ElMessage.warning("没有数据可导出")
+    }
+  } catch (error) {
+    console.error("导出失败:", error)
+    ElMessage.error("导出失败，请稍后重试")
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
   fetchOrders()
 })
@@ -271,12 +343,10 @@ onMounted(() => {
       <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-date-picker v-model="listQuery.startDate" placeholder="选择开始日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
       <el-date-picker v-model="listQuery.endDate" placeholder="选择结束日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
-      <el-select v-model="listQuery.platformId" placeholder="选择平台" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
-        <el-option v-for="item in platformOptions" :key="item.value" :label="item.label" :value="item.value" />
-      </el-select>
       <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增订单</el-button>
+      <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
     <div class="grid-grouping">
@@ -289,7 +359,7 @@ onMounted(() => {
         @filter-change="handleFilterChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="platform" width="120" title="平台">
+        <vxe-column field="platform" width="120" title="平台" :filters="platformOptions">
           <template #default="{ row }">{{ platformOptions.find((platform: any) => Number(platform.value) === row.platformId)?.label || "" }}</template>
         </vxe-column>
         <vxe-column field="createdAt" title="下单时间" width="180">
