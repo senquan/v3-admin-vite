@@ -704,7 +704,7 @@ function copySelectedCells() {
   const row = tableData.value[cell.rowIndex]
 
   // 根据列索引获取对应的属性
-  const columnProps = ["modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
+  const columnProps = ["action", "modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
   const prop = columnProps[cell.columnIndex]
 
   if (prop === "color") {
@@ -729,7 +729,7 @@ async function pasteSelectedCells() {
   const promises = selectedCells.value.map(async (cell) => {
     const row = tableData.value[cell.rowIndex]
 
-    const columnProps = ["modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
+    const columnProps = ["action", "modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
     const prop = columnProps[cell.columnIndex]
 
     if (prop === "color" && copiedValue.value) {
@@ -769,7 +769,7 @@ function handleCellClick(row: any, column: any, _cell: any, event: any) {
   }
 
   const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
-  const columnIndex = event.target.parentElement.cellIndex || 2
+  const columnIndex = event.target.parentElement.cellIndex || 3
   const cellInfo = { rowIndex, columnIndex }
   // Ctrl/Command键多选不连续单元格
   if (event.ctrlKey || event.metaKey) {
