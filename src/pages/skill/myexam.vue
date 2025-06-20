@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useRouter } from 'vue-router'
+import type { Exam, ExamListParams, GenerateExamParams } from "./apis/exam"
 import { generateExam, getExamDetail, getMyExamList, regenerateExam, updateExamSettings } from "./apis/exam"
-import type { Exam, ExamListParams, GenerateExamParams, ExamSettings } from "./apis/exam"
 
 const router = useRouter()
 
@@ -117,17 +114,17 @@ function handleSortChange() {
 }
 
 // 分页大小变化
-function handleSizeChange(size: number) {
-  listQuery.pageSize = size
-  listQuery.page = 1
-  fetchExamList()
-}
+// function handleSizeChange(size: number) {
+//   listQuery.pageSize = size
+//   listQuery.page = 1
+//   fetchExamList()
+// }
 
 // 当前页变化
-function handleCurrentChange(page: number) {
-  listQuery.page = page
-  fetchExamList()
-}
+// function handleCurrentChange(page: number) {
+//   listQuery.page = page
+//   fetchExamList()
+// }
 
 // 显示生成对话框
 // function showGenerateDialog() {
@@ -187,24 +184,23 @@ async function handleViewDetail(exam: Exam) {
 
 // 开始考试
 function handleStartExam(exam: Exam) {
-  console
   if (!exam.examEntity?._id) {
-    ElMessage.error('考试ID无效')
+    ElMessage.error("考试ID无效")
     return
   }
 
   ElMessageBox.confirm(
     `确定要开始考试「${exam.examEntity.title}」吗？\n考试时长：${exam.examEntity.duration}分钟\n题目数量：${exam.examQuestions?.length || 0}题`,
-    '开始考试',
+    "开始考试",
     {
-      confirmButtonText: '开始答题',
-      cancelButtonText: '取消',
-      type: 'info'
+      confirmButtonText: "开始答题",
+      cancelButtonText: "取消",
+      type: "info"
     }
   ).then(() => {
     if (exam.examEntity?._id) {
       router.push({
-        name: 'ExamTakingWithId',
+        name: "ExamTakingWithId",
         params: {
           examId: exam.examEntity._id!
         }
@@ -458,7 +454,7 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="total_score" label="总分" width="80"  align="center" />
+        <el-table-column prop="total_score" label="总分" width="80" align="center" />
 
         <el-table-column prop="duration" label="考试时长" width="100" align="center">
           <template #default="{ row }">
@@ -472,24 +468,24 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="create_time" label="创建时间" width="180" sortable="custom">
+        <el-table-column prop="create_time" label="创建时间" width="180" sortable="custom" align="center">
           <template #default="{ row }">
             {{ formatDate(row.create_time) }}
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="400" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleViewDetail(row)">
+            <el-button type="primary" @click="handleViewDetail(row)">
               查看详情
             </el-button>
-            <el-button type="success" size="small" @click="handleStartExam(row)">
+            <el-button type="success" @click="handleStartExam(row)">
               开始考试
             </el-button>
-            <el-button type="warning" size="small" @click="handleEditSettings(row)">
+            <el-button type="warning" @click="handleEditSettings(row)">
               编辑设置
             </el-button>
-            <el-button type="info" size="small" @click="handleRegenerateExam(row)">
+            <el-button type="info" @click="handleRegenerateExam(row)">
               重新生成
             </el-button>
           </template>

@@ -67,28 +67,27 @@ function openDetail(row: any) {
 
 function handleCreateExam(id: number) {
   ElMessageBox.confirm(
-    '确定要生成试卷吗？',
-    '生成试卷',
+    "确定要生成试卷吗？",
+    "生成试卷",
     {
-      confirmButtonText: '是的',
-      cancelButtonText: '取消',
-      type: 'warning',
+      confirmButtonText: "是的",
+      cancelButtonText: "取消",
+      type: "warning"
     }
   ).then(() => {
     generateExam(id).then((res) => {
       if (res.code === 0) {
         ElMessage({
-          type: 'success',
-          message: '生成试卷成功',
+          type: "success",
+          message: "生成试卷成功"
         })
       }
     })
-  })
-  .catch(() => {})
+  }).catch(() => {})
 }
 
 function handlePublish(id: number) {
-  console.log("课件发布" + id)
+  console.log(`课件发布${id}`)
 }
 
 onMounted(() => {
@@ -132,12 +131,12 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="recordDrawer" :title="`${branchName}培训记录`" size="50%" direction="rtl">
+    <el-drawer v-model="recordDrawer" :title="`${branchName}培训记录`" size="55%" direction="rtl">
       <vxe-table
         :data="recordData"
         @cell-click="handleRecordDetail"
       >
-        <vxe-column title="培训计划名称" min-width="200" align="left">
+        <vxe-column title="培训计划名称" min-width="180" align="left">
           <template #default="data">
             <el-text>{{ data.row.name }}</el-text>
           </template>
@@ -157,7 +156,7 @@ onMounted(() => {
         <vxe-column field="passed" title="合格人数" width="80" />
         <vxe-column title="操作" width="220">
           <template #default="data">
-            <el-button v-if="data.row.assessment_method === 3" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
+            <el-button v-if="data.row.assessment_method === 1" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
             <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button>
           </template>
         </vxe-column>
