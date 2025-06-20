@@ -89,6 +89,7 @@ const formData = ref({
   flashPrice: 0,
   dailyPrice: 0,
   promotionPrice: 0,
+  bonusUsed: 0,
   products: [] as any[],
   matchLogs: [] as any[]
 })
@@ -98,6 +99,9 @@ const bodyHeight = ref("calc(100vh - 310px)")
 // 添加表格引用
 const tableRef = ref()
 const formRef = ref()
+
+// 防重复提交状态
+const isSubmitting = ref(false)
 const oldInputRef = ref()
 const previewFormRef = ref()
 const previewFormVisible = ref(false)
@@ -534,6 +538,12 @@ function getSummaries(param: any) {
 }
 
 function submitOrder(type: number) {
+  // 防重复提交检查
+  if (isSubmitting.value) {
+    ElMessage.warning("正在提交中，请勿重复操作")
+    return
+  }
+
   formRef.value.validate((valid: any) => {
     if (!valid) return
     const products = tableData.value.filter((item: any) => item.id !== "" && item.quantity > 0).map((item: any) => ({
@@ -546,6 +556,10 @@ function submitOrder(type: number) {
       ElMessage.warning("请添加商品")
       return
     }
+
+    // 设置提交状态
+    isSubmitting.value = true
+
     materialList.value = ""
     for (const product of products) {
       materialList.value += `<${product.materialId}*${product.quantity}>`
@@ -556,6 +570,7 @@ function submitOrder(type: number) {
     formData.value.flashPrice = flashPrice.value || 0
     formData.value.dailyPrice = dailyPrice.value || 0
     formData.value.promotionPrice = promotionPrice.value || 0
+    formData.value.bonusUsed = bonusUsed.value || 0
     const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
     request.then((response: any) => {
       if (response.code === 0) {
@@ -578,6 +593,10 @@ function submitOrder(type: number) {
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
       }
+    }).catch((error: any) => {
+      ElMessage.error(`提交订单失败: ${error.message || "网络错误"}`)
+    }).finally(() => {
+      isSubmitting.value = false
     })
   })
 }
@@ -1263,8 +1282,8 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               <el-form-item>
                 <div class="button-container">
                   <el-button type="success" @click="orderPreview()">报价预览</el-button>
-                  <el-button type="primary" @click="submitOrder(0)">暂存草稿</el-button>
-                  <el-button type="primary" @click="submitOrder(1)">提交订单</el-button>
+                  <el-button type="primary" @click="submitOrder(0)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
+                  <el-button type="primary" @click="submitOrder(1)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
                   <el-button type="primary" @click="orderMateria()">物料详情</el-button>
                 </div>
               </el-form-item>

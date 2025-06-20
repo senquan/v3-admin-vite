@@ -31,6 +31,7 @@ export interface OrderListData {
   payAt: string | null
   status: number
   remark: string | null
+  prices: string | null
   items: OrderItemsData[]
 }
 

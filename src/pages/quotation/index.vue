@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { formatDateTime } from "@/common/utils/datetime"
 import { copyTextToClipboard } from "@/common/utils/helper"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
+import PreviewForm from "./_preview.vue"
 import { createReturnOrder, fetchList, fetchOrder, fetchOrderStatusLog, updateOrderStatus } from "./apis"
 
 const router = useRouter()
@@ -60,6 +63,10 @@ const payStatusOptions = ref<any>([
   { label: "已退款", value: 2, color: "danger" }
 ])
 const materialList = ref("")
+const previewFormRef = ref()
+const previewFormVisible = ref(false)
+const systemParamsStore = useSystemParamsStore()
+const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
 
 function getMatchedStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
@@ -169,6 +176,65 @@ function handleDetail(id: number) {
 
 function handleEdit(id: number) {
   router.push(`/quotation/new?id=${id}`)
+}
+
+function handlePreview(id: number) {
+  fetchOrder(id).then(async (response: OrderDetailResponseData) => {
+    if (response.code === 0) {
+      const order = response.data
+      const prices = JSON.parse(order.prices || "{}")
+      const previewData = order.items.map((item: OrderItemsData) => {
+        const product = item.product
+        const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
+        const images = product.imageUrls?.split(",") || []
+        return {
+          rowId: getRowIdentity(),
+          id: String(product.id),
+          modelType: product.modelType?.name || "",
+          modelTypeId: product.modelType?.name || "",
+          modelOld: product.modelType?.name || "",
+          materialId: product.materialId || "",
+          serie: product.serie?.name || "",
+          color: product.color?.value || "",
+          name: product.name || "",
+          quantity: item.quantity || 1,
+          basePrice: product.basePrice || 0,
+          originPrice: originPrice || 0,
+          finalUnitPrice: item.unitPrice || 0,
+          payPrice: item.totalPrice || 0,
+          colorOptions: [],
+          backupProducts: [],
+          colorEditable: false,
+          popoverVisible: false,
+          isBonus: bonusSeriesIds.value.includes(product.serie?.id),
+          imageUrls: images,
+          imageUrl: images.length > 0 ? images[0] : ""
+        }
+      })
+      previewFormRef.value?.open({
+        data: previewData,
+        title: order.name || "",
+        platformId: order.platformId,
+        license: order.platform?.remark || "",
+        summary: {
+          dialyDiscount: Number(order.originPrice) - Number(prices.dailyPrice || order.payPrice),
+          dailyPrice: prices.dailyPrice || order.payPrice,
+          promotionDiscount: Number(order.originPrice) - Number(prices.promotionPrice || order.payPrice),
+          promotionPrice: prices.promotionPrice || order.payPrice,
+          flashDiscount: 0,
+          flashPrice: order.payPrice,
+          bonusUsed: prices.bonusUsed || 0
+        }
+      })
+      previewFormVisible.value = true
+    } else {
+      ElMessage.error(`获取订单详情失败: ${response.message || "网络错误"}`)
+    }
+  })
+}
+
+function getRowIdentity() {
+  return `row_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 }
 
 function loadDetail(id: number) {
@@ -396,8 +462,9 @@ onMounted(() => {
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="actions" title="操作" width="180">
+        <vxe-column field="actions" title="操作" width="260">
           <template #default="data">
+            <el-button type="success" @click="handlePreview(data.row.id)">报价预览</el-button>
             <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id)">继续报价</el-button>
             <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button>
             <el-button type="primary" v-if="data.row.status > -1" @click="handleReturn(data.row.id)">售后</el-button>
@@ -524,6 +591,11 @@ onMounted(() => {
         </el-select>
       </div>
     </el-dialog>
+
+    <PreviewForm
+      ref="previewFormRef"
+      @close="previewFormVisible = false"
+    />
   </div>
 </template>
 
