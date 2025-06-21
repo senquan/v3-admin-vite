@@ -14,7 +14,7 @@ const listQuery = reactive({
   category: "",
   method: "",
   keyword: "",
-  sort: "+id",
+  sort: "-id",
   page: 1,
   pageSize: 20
 })

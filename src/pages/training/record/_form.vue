@@ -307,7 +307,7 @@ defineExpose({
       <el-row>
         <el-col :span="24">
           <el-form-item label="培训内容" prop="contents">
-            <el-text>请填写 [{{ getTrainingCategory(planData.training_category) }}] 内容</el-text>
+            <el-text style="width: 100%;">请填写 [{{ getTrainingCategory(planData.training_category) }}] 内容</el-text>
             <div v-if="planData.training_category === 1 || planData.training_category === 2">
               <el-input v-model="formData.contents" type="textarea" :rows="3" style="width: 500px" />
               <el-upload

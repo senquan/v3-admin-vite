@@ -193,42 +193,44 @@ async function processFile() {
               const header = headers[j]
               const fieldName = fieldMapping[header as keyof typeof fieldMapping]
 
-              if (fieldName && row[j] !== undefined && row[j] !== '') {
+              if (fieldName && row[j] !== undefined && row[j] !== "") {
                 // 特殊处理数字字段
                 if (["difficulty", "score"].includes(fieldName)) {
                   question[fieldName] = Number.parseInt(row[j]) || 0
                 } else if (["option_a", "option_b", "option_c", "option_d", "option_e"].includes(fieldName)) {
                   // 处理选项
-                  const optionLabel = fieldName.split('_')[1].toUpperCase()
-                  console.log("optionLabel", optionLabel, correctOption)
+                  const optionLabel = fieldName.split("_")[1].toUpperCase()
+                  // 检查当前选项是否为正确答案（支持多选题）
+                  const correctAnswers = correctOption ? String(correctOption).toUpperCase() : ""
+                  const isCorrect = correctAnswers.includes(optionLabel)
+
+                  console.log("optionLabel", optionLabel, "correctAnswers", correctAnswers, "isCorrect", isCorrect)
                   options.push({
                     option_label: optionLabel,
                     option_content: row[j],
-                    is_correct: optionLabel === correctOption,
+                    is_correct: isCorrect
                   })
                 } else if (fieldName === "has_image") {
                   question[fieldName] = row[j] === "否" ? 0 : 1
                 } else if (fieldName === "category_id") {
-                  question[fieldName] = categoryMapping[row[j]as keyof typeof categoryMapping] || 0
+                  question[fieldName] = categoryMapping[row[j] as keyof typeof categoryMapping] || 0
                 } else if (fieldName === "fits_position") {
-                  question[fieldName] = fitsPositionMapping[row[j]as keyof typeof fitsPositionMapping] || 0
+                  question[fieldName] = fitsPositionMapping[row[j] as keyof typeof fitsPositionMapping] || 0
                 } else if (fieldName === "training_category") {
-                  question[fieldName] = trainingCategoryMapping[row[j]as keyof typeof trainingCategoryMapping] || 0
+                  question[fieldName] = trainingCategoryMapping[row[j] as keyof typeof trainingCategoryMapping] || 0
                 } else {
                   question[fieldName] = row[j]
                 }
               }
             }
 
-            // 标记正确答案
-            if (question.correctAnswer && options.length > 0) {
-              const correctLabel = question.correctAnswer.toUpperCase()
-              options.forEach(option => {
-                if (option.option_label === correctLabel) {
-                  option.is_correct = true
-                }
+            // 二次确认正确答案标记（兼容处理）
+            if (correctOption && options.length > 0) {
+              const correctAnswers = String(correctOption).toUpperCase()
+              options.forEach((option) => {
+                // 如果正确答案字符串包含当前选项标签，则标记为正确
+                option.is_correct = correctAnswers.includes(option.option_label)
               })
-              delete question.correctAnswer
             }
 
             // 添加选项到题目
