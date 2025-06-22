@@ -4,7 +4,8 @@ import type { PromotionListData, RulesWithPromotionType, TypeListData } from "..
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { copyTextToClipboard } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { initPromotionRules, calculateOrderPrice as localCalculatePrice } from "@@/utils/pricing"
+// import { calculateOrderPriceV3 as calculateOrderPrice, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
+import { calculateOrderPrice, initPromotionRules } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotion/apis"
 import PreviewForm from "./_preview.vue"
@@ -82,7 +83,8 @@ const rulesInitialized = ref(false)
 const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
-  type: 0,
+  type: 1,
+  status: 0,
   platformId: 0,
   name: "",
   originPrice: 0,
@@ -139,6 +141,10 @@ const bonusUsed = computed(() => {
 })
 const bonusLeft = computed(() => {
   return flashPrice.value * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
+})
+
+const project = computed(() => {
+  return formData.value.type === 1 ? "" : "工程"
 })
 
 const priceDetailVisible = ref(false)
@@ -260,6 +266,7 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
           label: color.value || EMPTY_COLOR_NAME
         }))
         if (row) {
+          defaultColor.value = row.color
           row.colorOptions = colorOpts
         }
         response.data.products.forEach((product: ProductListData) => {
@@ -332,7 +339,7 @@ function fillRow(product: any, row: any) {
   row.imageUrls = product.imageUrls?.split(",") || []
   row.imageUrl = row.imageUrls[0] || ""
   row.isBonus = bonusSeriesIds.value.includes(product.serie?.id)
-  row.basePrice = product.basePrice || "0"
+  row.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
   row.payPrice = (Number.parseFloat(product.finalUnitPrice || "0") * Number.parseFloat(row.quantity)).toFixed(2)
@@ -414,7 +421,9 @@ function calculatePrice(row: any) {
     return
   }
 
-  calculatedPrice.value = localCalculatePrice({ products })
+  // const result = calculateOrderPriceV3(products)
+  calculatedPrice.value = calculateOrderPrice({ products })
+  // console.log("result", result)
   // console.log(calculatedPrice.value)
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
     tableData.value.forEach((row: TableRowData) => {
@@ -537,7 +546,7 @@ function getSummaries(param: any) {
   return sums
 }
 
-function submitOrder(type: number) {
+function submitOrder(status: number) {
   // 防重复提交检查
   if (isSubmitting.value) {
     ElMessage.warning("正在提交中，请勿重复操作")
@@ -564,7 +573,7 @@ function submitOrder(type: number) {
     for (const product of products) {
       materialList.value += `<${product.materialId}*${product.quantity}>`
     }
-    formData.value.type = type
+    formData.value.status = status
     formData.value.platformId = platformId.value
     formData.value.products = products
     formData.value.flashPrice = flashPrice.value || 0
@@ -574,7 +583,7 @@ function submitOrder(type: number) {
     const request = formData.value.id > 0 ? updateOrder(formData.value.id, formData.value) : createOrder(formData.value)
     request.then((response: any) => {
       if (response.code === 0) {
-        if (type === 1) {
+        if (status === 1) {
           ElMessageBox.alert(materialList.value, "提交订单成功", {
             confirmButtonText: "复制物料详情并关闭",
             callback: () => {
@@ -890,6 +899,7 @@ function orderPreview() {
   }
   previewFormRef.value?.open({
     data: tableData.value,
+    type: formData.value?.type || 1,
     title: formData.value?.name || "",
     platformId: platformId.value || 0,
     license: licenseCode.value || "",
@@ -951,6 +961,7 @@ onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
+  formData.value.type = Number(router.currentRoute.value.query.type) || 1
   if (orderId.value > 0) {
     // 获取订单详情
     loading.value = true
@@ -977,7 +988,7 @@ onMounted(async () => {
             color: product.color?.value || "",
             name: product.name || "",
             quantity: item.quantity || 1,
-            basePrice: product.basePrice || 0,
+            basePrice: formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice || 0,
             originPrice: originPrice || 0,
             finalUnitPrice: 0,
             payPrice: 0,
@@ -1063,7 +1074,10 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
   event.stopPropagation()
   event.preventDefault()
   if (modelOptions.value.length > 0) {
-    handleModelSelect(modelOptions.value[0], row)
+    const matchedModel = modelOptions.value.find((option: { label: string }) =>
+      option.label.toLowerCase() === row.modelType.toLowerCase()
+    )
+    handleModelSelect(matchedModel || modelOptions.value[0], row)
   }
 }
 </script>
@@ -1080,7 +1094,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         :span-method="arraySpanMethod"
         border
         height="100%"
-        v-loading="loading"
         :summary-method="getSummaries"
         show-summary
         style="width: 100%"
@@ -1190,10 +1203,10 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
             </template>
           </template>
         </el-table-column>
-        <el-table-column prop="basePrice" label="单价" width="80" align="center">
+        <el-table-column prop="basePrice" :label="`${project}单价`" width="100" align="center">
           <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
         </el-table-column>
-        <el-table-column prop="originPrice" label="总价" width="120" align="center">
+        <el-table-column prop="originPrice" :label="`${project}总价`" width="100" align="center">
           <template #default="{ row }"><del>{{ row.originPrice }}</del></template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="到手单价" width="100" align="center">
@@ -1262,7 +1275,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                   <template #label>
                     <div class="cell-item" style="color: red; font-weight: bold;">
                       <el-icon style="margin-right: 5px;"><Money /></el-icon>
-                      限时到手价
+                      {{ formData.type === 2 ? "工程限时价" : "限时到手价" }}
                     </div>
                   </template>
                   <span style="color: red; font-weight: bold;">{{ flashPrice }}</span>

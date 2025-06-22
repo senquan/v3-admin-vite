@@ -11,14 +11,20 @@ const title = ref("")
 const platform = ref(0)
 const license = ref("")
 const platformBackgroundColor = ref("#4b8f88")
+const type = ref(1)
 
 const btnSubmit = reactive({
   loading: false
 })
 
+const project = computed(() => {
+  return type.value === 1 ? "" : "工程"
+})
+
 function open(options = {
   data: Array<any>,
   platformId: 0,
+  type: 1,
   title: "",
   license: "",
   summary: {
@@ -36,10 +42,11 @@ function open(options = {
   license.value = options.license
   visible.value = true
   platform.value = options.platformId
+  type.value = options.type
   if (options.platformId === 2 || options.platformId === 6) {
     platformBackgroundColor.value = "#a30c1a"
   } else if (options.platformId === 3 || options.platformId === 4) {
-    platformBackgroundColor.value = "#29d"
+    platformBackgroundColor.value = "#3d7fff"
   }
 }
 
@@ -163,13 +170,16 @@ function formatPrice(price: string) {
     :style="`background-color: ${platformBackgroundColor}`"
   >
     <div id="print-area" :style="`background-color: ${platformBackgroundColor}; padding: 10px 10px 0 10px;`">
-      <div class="header-container">
+      <div class="header-container" v-if="type === 1">
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="title">
           公牛官方报价单
           <span>授权编码：{{ license }}</span>
         </div>
         <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
+      </div>
+      <div class="header-container" v-else>
+        <div class="form-header" />
       </div>
 
       <el-table
@@ -206,10 +216,10 @@ function formatPrice(price: string) {
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="80" align="center" />
-        <el-table-column prop="basePrice" label="单价" width="120" align="center">
+        <el-table-column prop="basePrice" :label="`${project}单价`" width="120" align="center">
           <template #default="{ row }"><del>{{ formatPrice(row.basePrice) }}</del></template>
         </el-table-column>
-        <el-table-column prop="originPrice" label="总价" width="120" align="center">
+        <el-table-column prop="originPrice" :label="`${project}总价`" width="120" align="center">
           <template #default="{ row }"><del>{{ formatPrice(row.originPrice) }}</del></template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="到手单价" width="120" align="center">
@@ -248,7 +258,7 @@ function formatPrice(price: string) {
                 <el-descriptions-item :rowspan="2" align="right">
                   <template #label>
                     <div class="cell-item-larger">
-                      限时到手价
+                      {{ type === 2 ? "工程限时价" : "限时到手价" }}
                     </div>
                   </template>
                   <span class="cell-item-larger">{{ formatPrice(summaryData.flashPrice) }}</span>
@@ -283,7 +293,7 @@ function formatPrice(price: string) {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <div v-if="platform === 1">
+            <div v-if="platform === 1 && type === 1">
               <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
@@ -314,6 +324,13 @@ function formatPrice(price: string) {
   margin-bottom: 10px;
   justify-content: center;
   align-items: center;
+  .form-header {
+    background: url("@@/assets/images/layouts/preview-header.png") no-repeat;
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+    width: 100%;
+  }
 }
 .header-container .logo {
   margin-left: 35px;

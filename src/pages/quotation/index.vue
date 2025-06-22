@@ -161,7 +161,7 @@ function platformSelection() {
 
 function navto(platform: string, code: string) {
   newDialogVisibility.value = false
-  router.push(`/quotation/new?platform=${platform}&code=${code}`)
+  router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
 }
 
 function handleReturn(id: number) {
@@ -399,6 +399,7 @@ async function handleExport() {
 }
 
 onMounted(() => {
+  listQuery.type = router.currentRoute.value.path === "/quotation/quotation/project" ? "2" : "1"
   fetchOrders()
 })
 </script>
