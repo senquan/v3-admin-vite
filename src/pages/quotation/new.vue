@@ -974,6 +974,7 @@ onMounted(async () => {
         platformId.value = order.platformId
         licenseCode.value = order.platform?.remark || ""
         formData.value.name = order.name
+        formData.value.type = order.type
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))

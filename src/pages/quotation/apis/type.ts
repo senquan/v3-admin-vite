@@ -11,6 +11,7 @@ export interface FilterOptionsData {
 export interface OrderListData {
   id: number
   name: string
+  type: number
   platformId: number
   platform: {
     id: number
