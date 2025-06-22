@@ -269,10 +269,12 @@ async function handelSearchProduct(modelType: string, row: any, refresh: boolean
           defaultColor.value = row.color
           row.colorOptions = colorOpts
         }
-        response.data.products.forEach((product: ProductListData) => {
+        const productData = response.data.products
+        productData.forEach((product: ProductListData) => {
+          product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice || 0
           productCache.value.set(product.id, product)
         })
-        row.backupProducts = response.data.products.sort((a: any, b: any) => {
+        row.backupProducts = productData.sort((a: any, b: any) => {
           if (a.color === null) return -1
           if (b.color === null) return 1
           return 0
@@ -339,7 +341,7 @@ function fillRow(product: any, row: any) {
   row.imageUrls = product.imageUrls?.split(",") || []
   row.imageUrl = row.imageUrls[0] || ""
   row.isBonus = bonusSeriesIds.value.includes(product.serie?.id)
-  row.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice || "0"
+  row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
   row.payPrice = (Number.parseFloat(product.finalUnitPrice || "0") * Number.parseFloat(row.quantity)).toFixed(2)
@@ -975,6 +977,7 @@ onMounted(async () => {
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
+          product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
           productCache.value.set(product.id, product)
           const images = product.imageUrls?.split(",") || []
           return {
@@ -988,7 +991,7 @@ onMounted(async () => {
             color: product.color?.value || "",
             name: product.name || "",
             quantity: item.quantity || 1,
-            basePrice: formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice || 0,
+            basePrice: product.basePrice || 0,
             originPrice: originPrice || 0,
             finalUnitPrice: 0,
             payPrice: 0,
