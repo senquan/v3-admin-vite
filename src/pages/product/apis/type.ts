@@ -5,6 +5,7 @@ export interface Series {
 
 export interface Color {
   id: number
+  name: string
   value: string
 }
 
@@ -145,5 +146,19 @@ export interface ProductImportResponseData {
     failList: any[]
     error: number
     errorMessages: string[]
+  }
+}
+
+export interface ProductPriceHistoryResponseData {
+  code: number
+  message: string
+  data: {
+    basePrice: number
+    priceHistory: {
+      id: number
+      price: number
+      quantity: number
+      updatedAt: string
+    }[]
   }
 }

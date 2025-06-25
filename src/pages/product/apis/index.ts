@@ -89,3 +89,10 @@ export function batchUpdateTags(data: Product.BatchUpdateRequestParams) {
     data
   })
 }
+
+export function getProductPriceHistory(id: number) {
+  return request<Product.ProductPriceHistoryResponseData>({
+    url: `product/history/${id}`,
+    method: "get"
+  })
+}

@@ -4,6 +4,7 @@ import { getCascaderOptions } from "@/common/utils/helper"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
 import ProductForm from "./_form.vue"
+import ProductPriceHistory from "./_history.vue"
 import ProductImport from "./_import.vue"
 import ProductPrice from "./_price.vue"
 import ProductTag from "./_tag.vue"
@@ -33,8 +34,10 @@ const tableData = ref<any>([])
 const productFormRef = ref<any>([])
 const productImportRef = ref<any>([])
 const priceRef = ref<any>([])
+const historyRef = ref<any>([])
 const formVisibility = ref(false)
 const priceFormVisibility = ref(false)
+const historyFormVisibility = ref(false)
 const tagRef = ref<any>([])
 const tagFormVisibility = ref(false)
 const series = ref<any>([])
@@ -43,6 +46,7 @@ const cascaderOptions = ref({
 })
 const totalPages = computed(() => Math.ceil(totalProducts.value / listQuery.pageSize))
 const selectedRows = ref<any>([])
+const currentProductId = ref<number>(0)
 
 async function fetchProducts() {
   loading.value = true
@@ -110,6 +114,11 @@ function handleNew() {
 
 function handleEdit(id: number) {
   openFrom(id)
+}
+
+function handlePriceHistory(id: number) {
+  currentProductId.value = id
+  historyFormVisibility.value = true
 }
 
 function handleDelete(id: number) {
@@ -299,6 +308,8 @@ function handleFormClose(id: number) {
     priceFormVisibility.value = false
   } else if (id === 2) {
     tagFormVisibility.value = false
+  } else if (id === 3) {
+    historyFormVisibility.value = false
   }
   tableRef.value?.clearCheckboxRow()
 }
@@ -368,8 +379,9 @@ onMounted(() => {
             <span v-else>{{ data.row.factoryPrice }}</span>
           </template>
         </vxe-column>
-        <vxe-column field="actions" title="操作" width="180">
+        <vxe-column field="actions" title="操作" width="250">
           <template #default="data">
+            <el-button type="success" @click="handlePriceHistory(data.row.id)">价格</el-button>
             <el-button type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>
@@ -426,6 +438,13 @@ onMounted(() => {
       :search-params="listQuery"
       @success="fetchProducts"
       @close="handleFormClose(2)"
+    />
+
+    <ProductPriceHistory
+      ref="historyRef"
+      :id="currentProductId"
+      :visible="historyFormVisibility"
+      @close="handleFormClose(3)"
     />
   </div>
 </template>

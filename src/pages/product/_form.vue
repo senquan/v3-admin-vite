@@ -358,7 +358,7 @@ defineExpose({
       <el-row>
         <el-col :span="12">
           <el-form-item label="颜色" prop="colorId">
-            <el-select v-model="formData.colorId" placeholder="请选择颜色">
+            <el-select v-model="formData.colorId" placeholder="请选择颜色" :clearable="true">
               <el-option
                 v-for="co in colors"
                 :key="co.value"

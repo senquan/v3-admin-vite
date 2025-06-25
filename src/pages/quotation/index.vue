@@ -213,6 +213,7 @@ function handlePreview(id: number) {
       })
       previewFormRef.value?.open({
         data: previewData,
+        type: Number(listQuery.type) || 1,
         title: order.name || "",
         platformId: order.platformId,
         license: order.platform?.remark || "",
