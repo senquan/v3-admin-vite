@@ -158,6 +158,81 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/settings2",
+    meta: {
+      title: "系统设置2",
+      elIcon: "Link"
+    },
+    children: [
+      {
+        path: "https://juejin.cn/post/74451518951215432092",
+        component: () => {},
+        name: "Link12",
+        meta: {
+          title: "中文文档2"
+        }
+      },
+      {
+        path: "https://juejin.cn/post/74451518951215432093",
+        component: () => {},
+        name: "Link3",
+        meta: {
+          title: "中文文档3"
+        }
+      }
+    ]
+  },
+  {
+    path: "/settings3",
+    meta: {
+      title: "系统设置3",
+      elIcon: "Link"
+    },
+    children: [
+      {
+        path: "https://juejin.cn/post/74451518951215432093",
+        component: () => {},
+        name: "Link13",
+        meta: {
+          title: "中文文档3"
+        }
+      },
+      {
+        path: "https://juejin.cn/post/74451518951215432094",
+        component: () => {},
+        name: "Link4",
+        meta: {
+          title: "中文文档3"
+        }
+      }
+    ]
+  },
+  {
+    path: "/settings4",
+    meta: {
+      title: "系统设置4",
+      elIcon: "Link"
+    },
+    children: [
+      {
+        path: "https://juejin.cn/post/74451518951215432094",
+        component: () => {},
+        name: "Link14",
+        meta: {
+          title: "中文文档3"
+        }
+      },
+      {
+        path: "https://juejin.cn/post/74451518951215432095",
+        component: () => {},
+        name: "Link45",
+        meta: {
+          title: "中文文档5"
+        }
+      }
+    ]
   }
 ]
 

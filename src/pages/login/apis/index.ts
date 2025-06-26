@@ -17,3 +17,11 @@ export function loginApi(data: Auth.LoginRequestData) {
     data
   })
 }
+
+export function registerApi(data: Auth.RegisterRequestData) {
+  return request<Auth.RegisterResponseData>({
+    url: "users/register",
+    method: "post",
+    data
+  })
+}

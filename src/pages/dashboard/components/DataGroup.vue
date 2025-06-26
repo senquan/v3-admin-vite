@@ -1,16 +1,16 @@
 <script lang="ts" setup>
-import { useTransition } from '@vueuse/core'
+import { useTransition } from "@vueuse/core"
 
 const props = defineProps({
   data: {
     type: Object,
-    default: () => []
+    default: () => ({})
   }
 })
 
 const normalassets = computed(() => {
   if (!props.data.normal) return 0
-  return Math.round((parseFloat(props.data.normal) - parseFloat(props.data.debt)) * 100) / 100
+  return Math.round((Number.parseFloat(props.data.normal) - Number.parseFloat(props.data.debt)) * 100) / 100
 })
 
 const transitionNormalAssets = useTransition(normalassets)
@@ -20,12 +20,12 @@ const percentage = computed(() => {
 })
 
 const dreamprocess = computed(() => {
-  return '0 / 0'
+  return "0 / 0"
 })
 
 const remaining = computed(() => {
   if (!props.data.current_in) return 0
-  return Math.round((parseFloat(props.data.current_in) - parseFloat(props.data.current_out)) * 100) / 100
+  return Math.round((Number.parseFloat(props.data.current_in) - Number.parseFloat(props.data.current_out)) * 100) / 100
 })
 
 const liquidremain = computed(() => {
@@ -45,9 +45,9 @@ const budgetnew = computed(() => {
         <Money style="width: 48px; height: 48px;" />
       </div>
       <div class="card-data-description">
-        <el-statistic title="常规净资产" :value="transitionNormalAssets" :precision=2 value-style="font-size: 32px;" />
-        <div class="card-data-text">{{ "分期付款：" + props.data.amortized }}</div>
-        <div class="card-data-text">{{ "信用卡欠款：" + props.data.credit }}</div>
+        <el-statistic title="常规净资产" :value="transitionNormalAssets" :precision="2" value-style="font-size: 32px;" />
+        <div class="card-data-text">{{ `分期付款：${props.data.amortized}` }}</div>
+        <div class="card-data-text">{{ `信用卡欠款：${props.data.credit}` }}</div>
       </div>
     </div>
   </el-col>
@@ -57,11 +57,11 @@ const budgetnew = computed(() => {
         <Calendar style="width: 48px; height: 48px;" />
       </div>
       <div class="card-data-description">
-        <el-statistic title="梦想储钱罐" :value="percentage" :precision=2 value-style="font-size: 32px;">
+        <el-statistic title="梦想储钱罐" :value="percentage" :precision="2" value-style="font-size: 32px;">
           <template #suffix>%</template>
         </el-statistic>
         <div class="card-data-text">下一个梦想：未设置</div>
-        <div class="card-data-text">{{ "已完成：" + dreamprocess }}</div>
+        <div class="card-data-text">{{ `已完成：${dreamprocess}` }}</div>
       </div>
     </div>
   </el-col>
@@ -71,9 +71,9 @@ const budgetnew = computed(() => {
         <CreditCard style="width: 48px; height: 48px;" />
       </div>
       <div class="card-data-description">
-        <el-statistic title="当月收入余额" :value="remaining" :precision=2 value-style="font-size: 32px;" />
-        <div class="card-data-text">{{ "现金流余额：" + props.data.liquid }}</div>
-        <div class="card-data-text">{{ "相对可支配现金余额：" + liquidremain }}</div>
+        <el-statistic title="当月收入余额" :value="remaining" :precision="2" value-style="font-size: 32px;" />
+        <div class="card-data-text">{{ `现金流余额：${props.data.liquid}` }}</div>
+        <div class="card-data-text">{{ `相对可支配现金余额：${liquidremain}` }}</div>
       </div>
     </div>
   </el-col>
@@ -83,8 +83,8 @@ const budgetnew = computed(() => {
         <Coin style="width: 48px; height: 48px;" />
       </div>
       <div class="card-data-description">
-        <el-statistic title="预算占用余额" :value="parseFloat(props.data.budget)" :precision=2 value-style="font-size: 32px;" />
-        <div class="card-data-text">{{ "本月使用预算：" + budgetnew }}</div>
+        <el-statistic title="预算占用余额" :value="parseFloat(props.data.budget)" :precision="2" value-style="font-size: 32px;" />
+        <div class="card-data-text">{{ `本月使用预算：${budgetnew}` }}</div>
       </div>
     </div>
   </el-col>
@@ -99,8 +99,8 @@ const budgetnew = computed(() => {
   overflow: hidden;
   color: #666;
   background: #fff;
-  box-shadow: 4px 4px 40px rgba(0, 0, 0, .05);
-  border-color: rgba(0, 0, 0, .05);
+  box-shadow: 4px 4px 40px rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.05);
   &:hover {
     .card-data-icon-wrapper {
       color: green;

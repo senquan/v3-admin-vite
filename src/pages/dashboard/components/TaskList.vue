@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import TaskItem from './TaskItem.vue'
+import TaskItem from "./TaskItem.vue"
 
 interface Task {
-  id: number;
-  name: string;
+  id: number
+  name: string
 }
 
 const props = defineProps({
@@ -12,7 +12,6 @@ const props = defineProps({
     default: () => []
   }
 })
-
 </script>
 
 <template>
@@ -44,7 +43,11 @@ const props = defineProps({
 
 <style scoped>
 .box-card {
-  font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font:
+    14px "Helvetica Neue",
+    Helvetica,
+    Arial,
+    sans-serif;
   width: 100%;
   height: 100%;
   line-height: 1.4em;

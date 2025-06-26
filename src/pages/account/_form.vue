@@ -1,20 +1,20 @@
 <script lang="ts" setup>
+import { ElMessage } from "element-plus"
 import { createAccount, updateAccount } from "./apis"
-import { ElMessage } from 'element-plus'
 
-const emit = defineEmits(['success', 'close'])
+const emit = defineEmits(["success", "close"])
 
 const formData = reactive({
   id: 0,
   type: 2,
   subtype: 0,
-  name: '',
+  name: "",
   liquidity: 0,
   currency: 1,
-  tagcode: '',
-  remark: '',
+  tagcode: "",
+  remark: "",
   isDefault: false,
-  isHidden: false,
+  isHidden: false
 })
 
 const formRef = ref()
@@ -25,24 +25,24 @@ const liquidity = ref<any>([])
 const currency = ref<any>([])
 
 const rules = {
-  name: [{ required: true, message: '请输入账户名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择账户类型', trigger: 'change' }],
-  liquidity: [{ required: true, message: '请选择流动性', trigger: 'change' }],
-  currency: [{ required: true, message: '请选择货币', trigger: 'change' }]
+  name: [{ required: true, message: "请输入账户名称", trigger: "blur" }],
+  type: [{ required: true, message: "请选择账户类型", trigger: "change" }],
+  liquidity: [{ required: true, message: "请选择流动性", trigger: "change" }],
+  currency: [{ required: true, message: "请选择货币", trigger: "change" }]
 }
 
 const btnSubmit = reactive({
-  loading: false,
+  loading: false
 })
 
 function resetForm() {
   formData.id = 0
   formData.type = 0
-  formData.name = ''
+  formData.name = ""
   formData.subtype = 0
-  formData.tagcode = ''
+  formData.tagcode = ""
   formData.currency = 0
-  formData.remark = ''
+  formData.remark = ""
   formData.isDefault = true
   formData.isHidden = false
 }
@@ -63,9 +63,9 @@ function open(options = {
 
   if (options.editData) {
     isEdit.value = true
-    Object.keys(options.editData).forEach(key => {
+    Object.keys(options.editData).forEach((key) => {
       if (key in formData) {
-        (formData[key as keyof typeof formData] as any) = options.editData?.[key];
+        (formData[key as keyof typeof formData] as any) = options.editData?.[key]
       }
     })
   } else {
@@ -84,7 +84,7 @@ function open(options = {
 
 function close() {
   visible.value = false
-  emit('close')
+  emit("close")
 }
 
 function handleSubmit() {
@@ -96,28 +96,28 @@ function handleSubmit() {
       ? updateAccount(formData.id, formData)
       : createAccount(formData)
 
-    request.then(response => {
+    request.then((response) => {
       btnSubmit.loading = false
       if (response.code === 0) {
         visible.value = false
         ElMessage({
-          message: isEdit.value ? '账户已成功更新！' : '账户已成功创建！',
-          type: 'success',
+          message: isEdit.value ? "账户已成功更新！" : "账户已成功创建！",
+          type: "success",
           offset: 0
         })
-        emit('success')
+        emit("success")
       } else {
         ElMessage({
-          message: response.message || (isEdit.value ? '更新账户失败' : '创建账户失败'),
-          type: 'error',
+          message: response.message || (isEdit.value ? "更新账户失败" : "创建账户失败"),
+          type: "error",
           offset: 0
         })
       }
-    }).catch(error => {
+    }).catch((error) => {
       btnSubmit.loading = false
       ElMessage({
-        message: '系统错误，请稍后重试',
-        type: 'error',
+        message: `系统错误，请稍后重试: ${error}`,
+        type: "error",
         offset: 0
       })
     })
@@ -158,7 +158,8 @@ defineExpose({
                 v-for="tp in types"
                 :key="tp.value"
                 :label="tp.label"
-                :value="tp.value" />
+                :value="tp.value"
+              />
             </el-select>
           </el-form-item>
         </el-col>
@@ -169,7 +170,8 @@ defineExpose({
                 v-for="lq in liquidity"
                 :key="lq.value"
                 :label="lq.label"
-                :value="lq.value" />
+                :value="lq.value"
+              />
             </el-select>
           </el-form-item>
         </el-col>
@@ -183,13 +185,14 @@ defineExpose({
                 v-for="cu in currency"
                 :key="cu.value"
                 :label="cu.label"
-                :value="cu.value" />
+                :value="cu.value"
+              />
             </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="账户标记" prop="tagcode">
-            <el-input v-model="formData.tagcode"  placeholder="请输入账户标记" />
+            <el-input v-model="formData.tagcode" placeholder="请输入账户标记" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -214,7 +217,6 @@ defineExpose({
           </el-form-item>
         </el-col>
       </el-row>
-
     </el-form>
 
     <template #footer>

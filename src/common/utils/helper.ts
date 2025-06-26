@@ -28,9 +28,12 @@ export function getQueryObject(url?: string): Record<string, string> {
 export function getByteLen(val: string): number {
   let len = 0
   for (let i = 0; i < val.length; i++) {
-    if (val[i].match(/[^\x00-\xff]/gi) != null) {
+    const charCode = val.charCodeAt(i)
+    if (charCode > 127) {
+      // 非ASCII字符（如中文、日文等）
       len += 1
     } else {
+      // ASCII字符
       len += 0.5
     }
   }
@@ -60,7 +63,7 @@ export function cleanArray<T>(actual: T[]): T[] {
 export function param(json: Record<string, any>): string {
   if (!json) return ""
   return cleanArray(
-    Object.keys(json).map(key => {
+    Object.keys(json).map((key) => {
       if (json[key] === undefined) return ""
       return `${encodeURIComponent(key)}=${encodeURIComponent(json[key])}`
     })
@@ -79,9 +82,9 @@ export function param2Obj(url: string): Record<string, any> {
   }
   return JSON.parse(
     `{"${decodeURIComponent(search)
-      .replace(/"/g, '\\"')
-      .replace(/&/g, '","')
-      .replace(/=/g, '":"')}"}`
+      .replace(/"/g, "\\\"")
+      .replace(/&/g, "\",\"")
+      .replace(/=/g, "\":\"")}"}`
   )
 }
 
@@ -93,7 +96,7 @@ export function param2Obj(url: string): Record<string, any> {
 export function html2Text(val: string): string {
   const div = document.createElement("div")
   div.innerHTML = val
-  return div.textContent || div.innerText || ""
+  return div.textContent ?? ""
 }
 
 /**
@@ -112,14 +115,13 @@ export function toggleClass(element: HTMLElement, className: string): void {
   if (nameIndex === -1) {
     classString += ` ${className}`
   } else {
-    classString =
-      classString.substring(0, nameIndex) +
-      classString.substring(nameIndex + className.length)
+    classString
+      = classString.substring(0, nameIndex)
+        + classString.substring(nameIndex + className.length)
   }
 
   element.className = classString
 }
-
 
 /**
  * 深拷贝
@@ -129,7 +131,7 @@ export function toggleClass(element: HTMLElement, className: string): void {
  * @returns 拷贝后的对象
  */
 export function deepClone<T>(source: T): T {
-  if (source === null || typeof source !== 'object') {
+  if (source === null || typeof source !== "object") {
     return source
   }
 
@@ -171,13 +173,13 @@ export function createUniqueId(): string {
  */
 export function formatFileSize(size: number): string {
   if (size < 1024) {
-    return size + ' B'
+    return `${size} B`
   } else if (size < 1024 * 1024) {
-    return (size / 1024).toFixed(2) + ' KB'
+    return `${(size / 1024).toFixed(2)} KB`
   } else if (size < 1024 * 1024 * 1024) {
-    return (size / (1024 * 1024)).toFixed(2) + ' MB'
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`
   } else {
-    return (size / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
+    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`
   }
 }
 
@@ -199,21 +201,21 @@ export function isExternal(path: string): boolean {
  * @returns 级联选择器选项
  */
 export function getCascaderOptions(data: any, root = 0, deep = 0, maxdeep = 2) {
-  if (!data || typeof data[root] !== 'object' || deep >= maxdeep) return []
-  let opts: any[] = []
+  if (!data || typeof data[root] !== "object" || deep >= maxdeep) return []
+  const opts: any[] = []
   // 检查data[root]是否为数组
   if (Array.isArray(data[root])) {
     data[root].forEach((item) => {
-      let tmp: {
-        value: any;
-        label: any;
+      const tmp: {
+        value: any
+        label: any
         children?: any[]
       } = {
         value: item.id,
         label: item.name,
         children: []
       }
-      let children = getCascaderOptions(data, item.id, deep + 1, maxdeep)
+      const children = getCascaderOptions(data, item.id, deep + 1, maxdeep)
       if (children.length > 0) tmp.children = children
       else delete tmp.children
       opts.push(tmp)
@@ -222,16 +224,16 @@ export function getCascaderOptions(data: any, root = 0, deep = 0, maxdeep = 2) {
     // 如果是对象，遍历对象的键
     for (const key in data[root]) {
       if (Object.prototype.hasOwnProperty.call(data[root], key)) {
-        let tmp: {
-          value: any;
-          label: any;
+        const tmp: {
+          value: any
+          label: any
           children?: any[]
         } = {
           value: data[root][key].id,
           label: data[root][key].name,
           children: []
         }
-        let children = getCascaderOptions(data, Number(key), deep + 1, maxdeep)
+        const children = getCascaderOptions(data, Number(key), deep + 1, maxdeep)
         if (children.length > 0) tmp.children = children
         else delete tmp.children
         opts.push(tmp)
@@ -239,4 +241,16 @@ export function getCascaderOptions(data: any, root = 0, deep = 0, maxdeep = 2) {
     }
   }
   return opts
+}
+
+export function findCascaderPath(options: any[], targetId: number, path: number[] = []): number[] | null {
+  for (const option of options) {
+    const currentPath = [...path, option.value]
+    if (option.value === targetId) return currentPath
+    if (option.children) {
+      const result = findCascaderPath(option.children, targetId, currentPath)
+      if (result) return result
+    }
+  }
+  return null
 }

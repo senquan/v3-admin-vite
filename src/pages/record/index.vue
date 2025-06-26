@@ -124,7 +124,7 @@ async function fetchAllOptions() {
     };
     templates.value = getCascaderOptions(templateOptData, 0)
     categories.value = getCascaderOptions(categoriesOptData, 0)
-    accounts.value = getCascaderOptions(accountOptData, 0)
+    accounts.value = accountOptData
   } catch (error) {
     console.error("获取选项数据失败:", error)
     ElMessage.error("获取选项数据失败，请稍后重试")

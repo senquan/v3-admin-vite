@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { parseTime } from "@/common/utils/datetime"
+import { findCascaderPath, getCascaderOptions } from "@/common/utils/helper"
 import { Download } from "@element-plus/icons-vue"
 import { fetchList as fetchEventList } from "../event/apis"
 import { fetchList as fetchTags } from "../tag/apis"
@@ -49,6 +50,7 @@ const formVisible = ref({ ...visibleInit })
 const templates = ref<any>([])
 const categories = ref<any>([])
 const accounts = ref<any>([])
+const accountInfo = ref<Map<number, any>>(new Map())
 const visible = ref(false)
 const tagsLoading = ref(false)
 const templateDisabled = ref(false)
@@ -62,8 +64,8 @@ const btnSubmit = reactive({
 })
 
 const tagOptions = ref<any>([])
-const eventOptions = ref<any>([])
 const selectedTags = ref<any>([])
+const eventOptions = ref<any>([])
 const selectedEvents = ref<any>([])
 
 const rules = ref({
@@ -112,7 +114,17 @@ function open(options = {
   // 如果传入了数据，则使用传入的数据
   if (options.templates) templates.value = options.templates
   if (options.categories) categories.value = options.categories
-  if (options.accounts) accounts.value = options.accounts
+  if (options.accounts) {
+    accounts.value = getCascaderOptions(options.accounts, 0)
+    accountInfo.value.clear()
+    options.accounts.forEach((item: any, index: number) => {
+      if (index > 0 && Array.isArray(item)) {
+        item.forEach((i: any) => {
+          accountInfo.value.set(i.id, i)
+        })
+      }
+    })
+  }
   if (options.tags) selectedTags.value = options.tags
   if (options.events) selectedEvents.value = options.events
 
@@ -275,7 +287,6 @@ function handleAccFromChange(value: any) {
         if (result.length > 0) {
           formVisible.value.events = true
           eventOptions.value = result
-          console.log("result: ", result)
         } else {
           formVisible.value.events = false
         }
@@ -286,6 +297,7 @@ function handleAccFromChange(value: any) {
   } else {
     formVisible.value.options = false
   }
+  visibleCurrencyField()
   visibleTagField()
 }
 
@@ -293,6 +305,7 @@ function handleAccToChange(value: any) {
   if (value.length === 0) return
   formData.accountTo = value[value.length - 1]
   formVisible.value.options = value[0] === "3"
+  visibleCurrencyField()
   visibleTagField()
 }
 
@@ -311,6 +324,14 @@ function visibleTagField() {
   }
 }
 
+function visibleCurrencyField() {
+  const accFromInfo = accountInfo.value.get(formData.accountFrom)
+  const accToInfo = accountInfo.value.get(formData.accountTo)
+  const accFromVisible = accFromInfo && accFromInfo.currency !== 1
+  const accToVisible = accToInfo && accToInfo.currency !== 1
+  formVisible.value.amountIn = (accFromVisible || accToVisible) && !(accFromInfo && accToInfo && accFromInfo.currency === accToInfo.currency)
+}
+
 function resetOptions() {
   cascaderOptions.value = {
     template: [],
@@ -318,18 +339,6 @@ function resetOptions() {
     accountFrom: [],
     accountTo: []
   }
-}
-
-function findCascaderPath(options: any[], targetId: number, path: number[] = []): number[] | null {
-  for (const option of options) {
-    const currentPath = [...path, option.value]
-    if (option.value === targetId) return currentPath
-    if (option.children) {
-      const result = findCascaderPath(option.children, targetId, currentPath)
-      if (result) return result
-    }
-  }
-  return null
 }
 
 function setDayEnd() {
@@ -346,6 +355,7 @@ defineExpose({
     v-model="visible"
     title="新增记账"
     width="40%"
+    :close-on-press-escape="false"
     :before-close="close"
   >
     <el-form :model="formData" :rules="rules" label-width="100px">
@@ -400,9 +410,7 @@ defineExpose({
         <el-col :span="12">
           <el-form-item v-if="formVisible.log_time" label="交易时间" prop="logTime">
             <el-date-picker v-model="formData.logTime" type="datetime" placeholder="选择交易时间" class="filter-item" style="width: 88%;" />
-            <el-tooltip content="末刻" placement="right-end" effect="light">
-              <el-button @click="setDayEnd" :icon="Download" circle size="small" style="margin-left: 3px;" />
-            </el-tooltip>
+            <el-button @click="setDayEnd" :icon="Download" circle size="small" style="margin-left: 3px;" />
           </el-form-item>
         </el-col>
         <el-col :span="12">

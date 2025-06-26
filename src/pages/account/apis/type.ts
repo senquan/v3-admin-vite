@@ -7,10 +7,10 @@ export interface Currency {
   updatedAt: string
 }
 
-export interface FilterOptionsData  {
+export interface FilterOptionsData {
   group: number
   name: string
-  remark:  string | null
+  remark: string | null
   tag: string
   value: string
 }
@@ -56,6 +56,7 @@ export interface AccountListOptData {
   id: number
   type: number
   name: string
+  currency: number
 }
 
 export interface AccountListRequestParams {
