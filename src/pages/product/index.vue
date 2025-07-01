@@ -326,6 +326,7 @@ onMounted(() => {
       <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-select v-model="listQuery.color" placeholder="选择颜色" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
         <el-option v-for="item in searchOptions.colors" :key="item.value" :label="item.label" :value="item.value" />
+        <el-option label="默认色" value="default" />
       </el-select>
       <el-cascader v-model="cascaderOptions.serie" placeholder="选择系列" class="filter-item" :options="series" :props="{ expandTrigger: 'hover' }" filterable clearable @clear="handleSeriesClear()" @change="handleSeriesChange" :debounce="500" />
       <el-select v-model="listQuery.images" placeholder="是否有产品图" class="filter-item" style="width: 150px;" :empty-values="['']" @change="handleFilter" value-on-clear="" clearable>

@@ -10,6 +10,14 @@ export function fetchList(params: Ticket.CommonListRequestParams) {
   })
 }
 
+// 获取可指派的用户列表
+export function fetchAssigneeList() {
+  return request<Ticket.AssigneeListResponseData>({
+    url: "/ticket/assignee",
+    method: "get"
+  })
+}
+
 // 获取工单详情
 export function fetchDetail(id: number) {
   return request<Ticket.TicketDetailResponseData>({
@@ -48,7 +56,7 @@ export function deleteTicket(id: number) {
 export function assignTicket(id: number, data: any) {
   return request({
     url: `/ticket${id}/assign`,
-    method: "post",
+    method: "put",
     data
   })
 }
@@ -57,7 +65,7 @@ export function assignTicket(id: number, data: any) {
 export function processTicket(id: number) {
   return request({
     url: `/ticket/${id}/process`,
-    method: "post"
+    method: "put"
   })
 }
 
@@ -65,7 +73,7 @@ export function processTicket(id: number) {
 export function confirmTicket(id: number) {
   return request({
     url: `/ticket/${id}/confirm`,
-    method: "post"
+    method: "put"
   })
 }
 
@@ -73,7 +81,7 @@ export function confirmTicket(id: number) {
 export function closeTicket(id: number) {
   return request({
     url: `/ticket/${id}/close`,
-    method: "post"
+    method: "put"
   })
 }
 
@@ -81,7 +89,7 @@ export function closeTicket(id: number) {
 export function cancelTicket(id: number) {
   return request({
     url: `/ticket/${id}/cancel`,
-    method: "post"
+    method: "put"
   })
 }
 

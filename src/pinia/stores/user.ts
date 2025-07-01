@@ -8,6 +8,7 @@ import { useTagsViewStore } from "./tags-view"
 
 export const useUserStore = defineStore("user", () => {
   const token = ref<string>(getToken() || "")
+  const id = ref<number>(0)
   const roles = ref<string[]>([])
   const platforms = ref<number[]>([])
   const username = ref<string>("")
@@ -25,6 +26,7 @@ export const useUserStore = defineStore("user", () => {
   // 获取用户详情
   const getInfo = async () => {
     const { data } = await getCurrentUserApi()
+    id.value = data.id
     username.value = data.username
     avatar.value = data.avatar
     // 验证返回的 roles 是否为一个非空数组，否则塞入一个没有任何作用的默认角色，防止路由守卫逻辑进入无限循环
@@ -65,7 +67,7 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  return { token, roles, username, avatar, setToken, getInfo, changeRoles, logout, resetToken }
+  return { token, id, roles, username, avatar, setToken, getInfo, changeRoles, logout, resetToken }
 })
 
 /**

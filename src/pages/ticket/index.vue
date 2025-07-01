@@ -1,8 +1,15 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import { request } from "@/http/axios"
+import { useUserStore } from "@/pinia/stores/user"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
-import { addComment, assignTicket, cancelTicket, closeTicket, confirmTicket, createTicket, deleteTicket, fetchDetail, fetchList, processTicket, updateTicket } from "./apis"
+import TicketForm from "./_form.vue"
+import { addComment, assignTicket, closeTicket, confirmTicket, deleteTicket, fetchDetail, fetchList, processTicket } from "./apis"
+
+const userStore = useUserStore()
+const userId = userStore.id
+const isAdmin = userStore.roles.includes("ADMIN")
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -17,29 +24,19 @@ const listQuery = reactive({
 })
 const totalTickets = ref(0)
 const tableData = ref<any>([])
-const dialogVisible = ref(false)
-const dialogTitle = ref("新增工单")
-const isEdit = ref(false)
 const detailDrawer = ref(false)
 const ticketDetail = ref<any>({})
 const activeTab = ref("detail")
 const commentForm = reactive({
   content: "",
-  isInternal: false
+  fileList: [] as string[],
+  isInternal: false,
+  isDone: false
 })
 
-// 工单表单
-const ticketForm = reactive({
-  id: 0,
-  title: "",
-  content: "",
-  ticketType: 1,
-  priority: 2,
-  productId: null,
-  orderId: null,
-  storeName: "",
-  trackId: ""
-})
+const ticketFormRef = ref<any>([])
+const ticketFormVisibility = ref(false)
+const attachmentMap = ref<Record<number, string[]>>({})
 
 // 分配表单
 const assignForm = reactive({
@@ -78,6 +75,7 @@ const statusOptions = ref([
 
 // 客服人员选项
 const staffOptions = ref<any>([])
+const imageList = ref<any>([])
 
 function getTicketType(typeValue: number) {
   return ticketTypeOptions.value.find((type: { value: number }) => type.value === typeValue)
@@ -112,10 +110,14 @@ async function fetchTickets() {
           priority: item.priority,
           status: item.status,
           creator: item.creator?.name || item.creator?.username || "",
-          assignee: item.assignee?.staff?.name || item.assignee?.name || "",
+          assignee: item.assignee?.name || item.assignee?.user?.name || "",
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
           processedAt: item.processedAt,
+          related: item.related,
+          orderId: item.order?.id,
+          orderName: item.order?.name,
+          orderUpdateAt: item.order?.updatedAt,
           closedAt: item.closedAt,
           remark: item.remark
         }
@@ -160,24 +162,21 @@ function handleFilter() {
 }
 
 function handleNew() {
-  resetForm()
-  dialogTitle.value = "新增工单"
-  isEdit.value = false
-  dialogVisible.value = true
+  console.log(ticketFormRef.value)
+  handleEdit(null)
 }
 
-function handleEdit(row: any) {
-  resetForm()
-  ticketForm.id = row.id
-  ticketForm.title = row.title
-  ticketForm.content = row.content
-  ticketForm.ticketType = row.ticketType
-  ticketForm.priority = row.priority
-  ticketForm.productId = row.productId
-  ticketForm.orderId = row.orderId
-  dialogTitle.value = "编辑工单"
-  isEdit.value = true
-  dialogVisible.value = true
+function handleEdit(data: any) {
+  openFrom(data)
+}
+
+function openFrom(data: any) {
+  ticketFormRef.value?.open({
+    id: 0,
+    editData: data ?? null
+  })
+  ticketFormVisibility.value = true
+  console.log(ticketFormVisibility.value)
 }
 
 function handleDetail(row: any) {
@@ -202,38 +201,6 @@ function handleDelete(row: any) {
   })
 }
 
-function resetForm() {
-  ticketForm.id = 0
-  ticketForm.title = ""
-  ticketForm.content = ""
-  ticketForm.ticketType = 1
-  ticketForm.priority = 2
-  ticketForm.productId = null
-  ticketForm.orderId = null
-}
-
-async function handleSubmit() {
-  if (!ticketForm.title || !ticketForm.content) {
-    ElMessage.warning("请填写标题和内容")
-    return
-  }
-
-  try {
-    if (isEdit.value) {
-      await updateTicket(ticketForm.id, ticketForm)
-      ElMessage.success("更新成功")
-    } else {
-      await createTicket(ticketForm)
-      ElMessage.success("创建成功")
-    }
-    dialogVisible.value = false
-    fetchTickets()
-  } catch (error) {
-    console.log(error)
-    ElMessage.error(isEdit.value ? "更新失败" : "创建失败")
-  }
-}
-
 async function loadDetail(id: number) {
   detailDrawer.value = true
   try {
@@ -241,6 +208,16 @@ async function loadDetail(id: number) {
     if (res.data) {
       ticketDetail.value = res.data
       assignForm.assigneeId = res.data.assigneeId || 0
+      // 将附件按ID分组
+      const attachments = res.data.attachments || []
+      attachments.forEach((item: any) => {
+        if (!attachmentMap.value[item.commentId]) {
+          attachmentMap.value[item.commentId] = []
+        }
+        attachmentMap.value[item.commentId].push(item.path)
+      })
+
+      console.log(attachmentMap)
     }
   } catch (error) {
     console.log(error)
@@ -311,17 +288,17 @@ async function handleClose() {
 }
 
 // 取消工单
-async function handleCancel() {
-  try {
-    await cancelTicket(ticketDetail.value.id)
-    ElMessage.success("取消成功")
-    loadDetail(ticketDetail.value.id)
-    fetchTickets()
-  } catch (error) {
-    console.log(error)
-    ElMessage.error("操作失败")
-  }
-}
+// async function handleCancel() {
+//   try {
+//     await cancelTicket(ticketDetail.value.id)
+//     ElMessage.success("取消成功")
+//     loadDetail(ticketDetail.value.id)
+//     fetchTickets()
+//   } catch (error) {
+//     console.log(error)
+//     ElMessage.error("操作失败")
+//   }
+// }
 
 // 添加评论
 async function handleAddComment() {
@@ -330,16 +307,62 @@ async function handleAddComment() {
     return
   }
 
+  commentForm.fileList = imageList.value.map((item: any) => item.response?.data?.url || item.url).filter((item: any) => item)
+
   try {
     await addComment(ticketDetail.value.id, commentForm)
     ElMessage.success("评论添加成功")
     commentForm.content = ""
     commentForm.isInternal = false
+    commentForm.isDone = false
+    commentForm.fileList = []
+    imageList.value = []
     loadDetail(ticketDetail.value.id)
+    fetchTickets()
   } catch (error) {
     console.log(error)
     ElMessage.error("添加评论失败")
   }
+}
+
+function beforeImageUpload(file: any) {
+  const isImage = file.type.startsWith("image/")
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isImage) {
+    ElMessage.error("只能上传图片文件!")
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error("图片大小不能超过 2MB!")
+    return false
+  }
+  return true
+}
+
+function customUploadRequest(options: any) {
+  const { file, onSuccess, onError, onProgress } = options
+  const data = new FormData()
+  data.append("image", file)
+  return request({
+    url: "upload/image",
+    method: "POST",
+    data,
+    headers: {
+      "Content-Type": "multipart/form-data"
+    },
+    onUploadProgress: (progressEvent: any) => {
+      if (progressEvent.total) {
+        const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+        onProgress({ percent })
+      }
+    }
+  }).then((response: any) => {
+    onSuccess(response)
+    return response
+  }).catch((error: any) => {
+    onError(error)
+    return Promise.reject(error)
+  })
 }
 
 // 导出Excel
@@ -533,7 +556,7 @@ onMounted(() => {
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleDetail(row)">详情</el-button>
             <el-button type="warning" size="small" @click="handleEdit(row)" v-if="row.status === 1">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)" v-if="row.status === 1">删除</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row)" v-if="row.creator === userId || isAdmin">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -596,7 +619,7 @@ onMounted(() => {
         <el-tab-pane label="工单操作" name="actions">
           <div class="ticket-actions">
             <!-- 分配工单 -->
-            <div v-if="ticketDetail.status === 1 || !ticketDetail.assigneeId" style="margin-bottom: 20px;">
+            <div v-if="staffOptions.length > 0 && (ticketDetail.status === 1 || !ticketDetail.assigneeId)" style="margin-bottom: 20px;">
               <h4>分配工单</h4>
               <el-form :inline="true">
                 <el-form-item label="处理人">
@@ -621,8 +644,8 @@ onMounted(() => {
               <el-space>
                 <el-button v-if="ticketDetail.status === 1" type="warning" @click="handleProcess">开始处理</el-button>
                 <el-button v-if="ticketDetail.status === 2" type="primary" @click="handleConfirm">待确认</el-button>
-                <el-button v-if="ticketDetail.status === 3" type="success" @click="handleClose">关闭工单</el-button>
-                <el-button v-if="ticketDetail.status < 4" type="danger" @click="handleCancel">取消工单</el-button>
+                <el-button v-if="ticketDetail.status === 3 && ticketDetail.creator === userId" type="success" @click="handleClose">关闭工单</el-button>
+                <!-- <el-button v-if="ticketDetail.status < 4" type="danger" @click="handleCancel">取消工单</el-button> -->
               </el-space>
             </div>
           </div>
@@ -639,6 +662,15 @@ onMounted(() => {
                   <el-tag v-if="comment.isInternal" type="warning" size="small">内部</el-tag>
                 </div>
                 <div class="comment-content">{{ comment.content }}</div>
+                <div class="comment-images" v-if="attachmentMap[comment.id] && attachmentMap[comment.id].length > 0">
+                  <el-image
+                    style="width: 80px; height: 80px"
+                    :src="attachmentMap[comment.id][0]?.replace('uploads', 'uploads/thumb/')"
+                    :preview-src-list="attachmentMap[comment.id]"
+                    :preview-teleported="true"
+                    fit="cover"
+                  />
+                </div>
               </div>
             </div>
             <div v-else class="no-comments">
@@ -647,7 +679,7 @@ onMounted(() => {
 
             <!-- 添加评论 -->
             <div class="add-comment" style="margin-top: 20px;">
-              <h4>添加评论</h4>
+              <h4>添加评论（处理意见或进度）</h4>
               <el-form>
                 <el-form-item>
                   <el-input
@@ -658,7 +690,19 @@ onMounted(() => {
                   />
                 </el-form-item>
                 <el-form-item>
+                  <el-upload
+                    v-model:file-list="imageList"
+                    class="image-uploader"
+                    list-type="picture-card"
+                    :before-upload="beforeImageUpload"
+                    :http-request="customUploadRequest"
+                  >
+                    <el-icon class="image-uploader-icon"><Plus /></el-icon>
+                  </el-upload>
+                </el-form-item>
+                <el-form-item>
                   <el-checkbox v-model="commentForm.isInternal">内部评论</el-checkbox>
+                  <el-checkbox v-model="commentForm.isDone">完成处理</el-checkbox>
                 </el-form-item>
                 <el-form-item>
                   <el-button type="primary" @click="handleAddComment">添加评论</el-button>
@@ -670,65 +714,11 @@ onMounted(() => {
       </el-tabs>
     </el-drawer>
 
-    <!-- 新增/编辑工单对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="ticketForm" label-width="100px">
-        <el-form-item label="标题" required>
-          <el-input v-model="ticketForm.title" placeholder="请输入工单标题" />
-        </el-form-item>
-        <el-form-item label="工单类型" required>
-          <el-select v-model="ticketForm.ticketType" placeholder="请选择工单类型" style="width: 100%;">
-            <el-option
-              v-for="type in ticketTypeOptions"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="优先级">
-          <el-select v-model="ticketForm.priority" placeholder="请选择优先级" style="width: 100%;">
-            <el-option
-              v-for="priority in priorityOptions"
-              :key="priority.value"
-              :label="priority.label"
-              :value="priority.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="产品编号" v-if="ticketForm.ticketType === 3 || ticketForm.ticketType === 6">
-          <el-input v-model="ticketForm.productId" placeholder="相关产品ID（可选）" />
-        </el-form-item>
-        <el-form-item label="订单编号" v-if="ticketForm.ticketType === 1 || ticketForm.ticketType === 2">
-          <el-input v-model="ticketForm.orderId" placeholder="相关订单ID（可选）" />
-        </el-form-item>
-        <el-form-item label="店铺名" v-if="ticketForm.ticketType === 1 || ticketForm.ticketType === 2">
-          <el-input v-model="ticketForm.storeName" placeholder="相关店铺名称" />
-        </el-form-item>
-        <el-form-item label="物流编号" v-if="ticketForm.ticketType === 4">
-          <el-input v-model="ticketForm.trackId" placeholder="相关物流编号" />
-        </el-form-item>
-        <el-form-item label="内容" required>
-          <el-input
-            v-model="ticketForm.content"
-            type="textarea"
-            :rows="5"
-            placeholder="请详细描述问题或需求"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <TicketForm
+      ref="ticketFormRef"
+      @success="fetchTickets"
+      @close="ticketFormVisibility = false"
+    />
   </div>
 </template>
 
@@ -793,6 +783,10 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.comment-images {
+  margin-top: 10px;
+}
+
 .no-comments {
   text-align: center;
   color: #909399;
@@ -802,5 +796,30 @@ onMounted(() => {
 .add-comment {
   border-top: 1px solid #ebeef5;
   padding-top: 20px;
+}
+
+.image-uploader .image-previews {
+  width: 80px;
+  height: 80px;
+  display: block;
+}
+
+.el-icon.image-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+}
+
+:deep(.el-upload--picture-card) {
+  width: 80px;
+  height: 80px;
+}
+:deep(.el-upload-list--picture-card) {
+  --el-upload-list-picture-card-size: 80px;
+}
+:deep(.el-upload-list--picture-card .el-upload-list__item-thumbnail) {
+  object-fit: cover;
 }
 </style>
