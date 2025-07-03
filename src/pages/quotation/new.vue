@@ -9,7 +9,7 @@ import { calculateOrderPrice, initPromotionRules } from "@@/utils/pricing"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotion/apis"
 import PreviewForm from "./_preview.vue"
-import { createOrder, fetchOrder, updateOrder } from "./apis"
+import { changeOrderType, createOrder, fetchOrder, updateOrder } from "./apis"
 
 // 定义表格行的接口
 interface TableRowData {
@@ -886,6 +886,19 @@ function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
   return ""
 }
 
+async function handleChangeType() {
+  const res = await changeOrderType({
+    id: formData.value.id,
+    type: formData.value.type
+  })
+  if (res.code === 0) {
+    formData.value.type = res.data
+    ElMessage.success("变更成功")
+  } else {
+    ElMessage.error("变更失败")
+  }
+}
+
 function orderPreview() {
   if (topAlertVisible.value) {
     ElMessage.warning("系统错误，暂停预览。")
@@ -1223,14 +1236,19 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
 
       <div class="footer-container">
         <el-row :gutter="10">
-          <el-col :span="18">
+          <el-col :span="6">
+            <div class="left-float-button">
+              <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type === 2 ? '工程单' : '普通单' }}</el-button>
+            </div>
+          </el-col>
+          <el-col :span="12">
             <div class="price-summary-table">
               <el-descriptions
                 class="margin-top"
                 :column="2"
                 border
               >
-                <el-descriptions-item align="right">
+                <el-descriptions-item align="right" :label-width="160">
                   <template #label>
                     <div class="cell-item">
                       <el-icon style="margin-right: 5px;"><PriceTag /></el-icon>
@@ -1239,7 +1257,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                   </template>
                   {{ dialyDiscount }}
                 </el-descriptions-item>
-                <el-descriptions-item align="right">
+                <el-descriptions-item align="right" :label-width="160">
                   <template #label>
                     <div class="cell-item">
                       <el-icon style="margin-right: 5px;"><Money /></el-icon>
@@ -1370,8 +1388,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
 }
 
 .price-summary-table {
-  margin: auto;
-  width: 50%;
+  width: 600px;
 }
 
 .price-summary-table table {
@@ -1490,5 +1507,13 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
 
 .el-button + .el-button {
   margin-left: 6px;
+}
+
+.left-float-button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

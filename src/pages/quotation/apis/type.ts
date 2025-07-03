@@ -142,6 +142,7 @@ export interface OrderDetailResponseData {
 export interface OrderActionResponseData {
   code: number
   message: string
+  data?: any
 }
 
 export interface OrderImportResponseData {
@@ -183,4 +184,9 @@ export interface ReturnOrderStatusLogResponseData {
   operation: string
   remark: string | null
   createdAt: number
+}
+
+export interface OrderChangeTypeData {
+  id: number
+  type: number
 }

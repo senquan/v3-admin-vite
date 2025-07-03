@@ -101,3 +101,11 @@ export function fetchOrderStatusLog(id: number) {
     method: "get"
   })
 }
+
+export function changeOrderType(data: Order.OrderChangeTypeData) {
+  return request<Order.OrderActionResponseData>({
+    url: `order/${data.id}/type`,
+    method: "put",
+    data
+  })
+}
