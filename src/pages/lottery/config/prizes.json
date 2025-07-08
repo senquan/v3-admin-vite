@@ -1,0 +1,172 @@
+{
+  "prizes": [
+    {
+      "id": 1,
+      "name": "自由手机时间",
+      "type": "times",
+      "value": 20,
+      "color": "#FF6B6B",
+      "icon": "⏰",
+      "probability": 0.30,
+      "description": "获得20分钟自由手机时间"
+    },
+    {
+      "id": 2,
+      "name": "自由手机时间",
+      "type": "times",
+      "value": 30,
+      "color": "#4ECDC4",
+      "icon": "⏰",
+      "probability": 0.25,
+      "description": "获得30分钟自由手机时间"
+    },
+    {
+      "id": 3,
+      "name": "自由手机时间",
+      "type": "times",
+      "value": 60,
+      "color": "#45B7D1",
+      "icon": "⏰",
+      "probability": 0.15,
+      "description": "获得60分钟自由手机时间"
+    },
+    {
+      "id": 4,
+      "name": "零食礼金",
+      "type": "cash",
+      "value": 10,
+      "color": "#96CEB4",
+      "icon": "💰",
+      "probability": 0.25,
+      "description": "获得10元零食礼金"
+    },
+    {
+      "id": 5,
+      "name": "零食礼金",
+      "type": "cash",
+      "value": 20,
+      "color": "#FFEAA7",
+      "icon": "💰",
+      "probability": 0.15,
+      "description": "获得20元零食礼金"
+    },
+    {
+      "id": 6,
+      "name": "购物礼金",
+      "type": "cash",
+      "value": 10,
+      "color": "#DDA0DD",
+      "icon": "💰",
+      "probability": 0.25,
+      "description": "获得10元购物礼金"
+    },
+    {
+      "id": 7,
+      "name": "购物礼金",
+      "type": "cash",
+      "value": 20,
+      "color": "#74B9FF",
+      "icon": "💰",
+      "probability": 0.15,
+      "description": "获得20元购物礼金"
+    },
+    {
+      "id": 8,
+      "name": "再来一次",
+      "type": "empty",
+      "value": 0,
+      "color": "#B2BEC3",
+      "icon": "😊",
+      "probability": 0.25,
+      "description": "感谢您的参与，再来一次"
+    },
+    {
+      "id": 9,
+      "name": "Pizza大餐",
+      "type": "takeout",
+      "value": 1,
+      "color": "#FF6B6B",
+      "icon": "🍕",
+      "probability": 0.08,
+      "description": "获得和家人一起分享Pizza大餐"
+    },
+    {
+      "id": 10,
+      "name": "奶茶",
+      "type": "takeout",
+      "value": 1,
+      "color": "#4ECDC4",
+      "icon": "🥤",
+      "probability": 0.1,
+      "description": "获得和家人一起奶茶"
+    }
+  ],
+  "settings": {
+    "dailyLimit": 5,
+    "wheelSpeed": 3000,
+    "minSpins": 5,
+    "maxSpins": 8,
+    "animationDuration": 4000,
+    "easeFunction": "cubic-bezier(0.23, 1, 0.32, 1)",
+    "soundEnabled": true,
+    "particleEffect": true,
+    "autoSpin": false,
+    "showProbability": false,
+    "theme": {
+      "primaryColor": "#667eea",
+      "secondaryColor": "#764ba2",
+      "accentColor": "#f093fb",
+      "backgroundColor": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "wheelBorder": "#ffffff",
+      "pointerColor": "#ff6b6b"
+    },
+    "rewards": {
+      "firstTimeBonus": {
+        "enabled": true,
+        "extraSpins": 2,
+        "message": "新用户福利：额外获得2次抽奖机会！"
+      },
+      "consecutiveBonus": {
+        "enabled": true,
+        "days": 7,
+        "extraSpins": 1,
+        "message": "连续签到7天奖励：额外1次抽奖机会！"
+      },
+      "vipBonus": {
+        "enabled": true,
+        "multiplier": 1.5,
+        "message": "VIP用户享受1.5倍中奖概率！"
+      }
+    },
+    "restrictions": {
+      "minLevel": 1,
+      "minPoints": 0,
+      "cooldownMinutes": 60,
+      "maxWinsPerDay": 3,
+      "blacklistEnabled": false
+    },
+    "notifications": {
+      "winSound": "win.mp3",
+      "loseSound": "lose.mp3",
+      "spinSound": "spin.mp3",
+      "showToast": true,
+      "toastDuration": 3000,
+      "confettiEffect": true
+    }
+  },
+  "metadata": {
+    "version": "2.0",
+    "lastUpdated": "2024-01-15",
+    "author": "Lottery System",
+    "description": "抽奖转盘配置文件 - 包含奖品设置、概率分布和系统配置",
+    "totalProbability": 1.0,
+    "expectedValue": 28.5,
+    "notes": [
+      "概率总和必须等于1.0",
+      "奖品ID必须唯一",
+      "颜色使用十六进制格式",
+      "图标支持emoji和字体图标",
+      "声音文件需放在public/sounds目录下"
+    ]
+  }
+}

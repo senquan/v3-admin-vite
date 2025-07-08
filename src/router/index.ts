@@ -160,18 +160,18 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/settings2",
+    path: "/lab",
     meta: {
-      title: "系统设置2",
+      title: "实验室",
       elIcon: "Link"
     },
     children: [
       {
-        path: "https://juejin.cn/post/74451518951215432092",
-        component: () => {},
-        name: "Link12",
+        path: "lottery",
+        component: () => import("@/pages/lottery/index.vue"),
+        name: "Lottery",
         meta: {
-          title: "中文文档2"
+          title: "抽奖转盘"
         }
       },
       {
