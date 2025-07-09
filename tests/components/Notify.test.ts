@@ -24,7 +24,10 @@ describe("list", () => {
       props: {
         data: [
           {
-            title: ""
+            title: "",
+            type: "notification",
+            id: 1,
+            unread: true
           }
         ]
       }
