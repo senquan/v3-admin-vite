@@ -39,10 +39,11 @@ const ticketTypeOptions = ref([
 
 // 优先级选项
 const priorityOptions = ref([
-  { label: "低", value: 1, color: "info" },
-  { label: "中", value: 2, color: "primary" },
-  { label: "高", value: 3, color: "warning" },
-  { label: "紧急", value: 4, color: "danger" }
+  { label: "日常", value: 1, color: "info" },
+  { label: "一般", value: 2, color: "primary" },
+  { label: "紧急", value: 3, color: "warning" },
+  { label: "加急", value: 4, color: "warning" },
+  { label: "特急", value: 5, color: "danger" }
 ])
 
 const visible = ref(false)
@@ -51,6 +52,7 @@ const dialogTitle = ref("新增工单")
 const orderOptions = ref<any>([])
 const searchLoading = ref(false)
 const userOptions = ref<any>([])
+const isSubmitting = ref(false)
 
 function handleTicketTypeChange() {
   if (orderRelatedTicketTypes.includes(formData.ticketType)) {
@@ -59,9 +61,9 @@ function handleTicketTypeChange() {
     formData.productId = ""
   }
   if (highPriorityTicketTypes.includes(formData.ticketType)) {
-    formData.priority = 3
+    formData.priority = 4
   } else {
-    formData.priority = 2
+    formData.priority = 3
   }
 }
 
@@ -199,14 +201,21 @@ function resetForm() {
   formData.orderId = ""
   formData.trackId = ""
   formData.assigneeId = 0
+  formData.storeName = ""
 }
 
 async function handleSubmit() {
+  if (isSubmitting.value) {
+    ElMessage.warning("正在提交中，请勿重复操作")
+    return
+  }
+
   if (!formData.title || !formData.content) {
     ElMessage.warning("请填写标题和内容")
     return
   }
 
+  isSubmitting.value = true
   try {
     if (isEdit.value) {
       await updateTicket(formData.id, formData)
@@ -220,6 +229,8 @@ async function handleSubmit() {
   } catch (error) {
     console.log(error)
     ElMessage.error(isEdit.value ? "更新失败" : "创建失败")
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -320,7 +331,7 @@ defineExpose({
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="isSubmitting" :disabled="isSubmitting">确定</el-button>
       </span>
     </template>
   </el-dialog>

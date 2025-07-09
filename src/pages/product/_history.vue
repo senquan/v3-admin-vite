@@ -153,8 +153,7 @@ async function fetchProductHistory() {
 // 处理价格历史数据
 function processPriceHistory() {
   const history = []
-  console.log(historyData.value)
-  if (historyData.value.priceHistory.length > 0) {
+  if (historyData.value.priceHistory?.length > 0) {
     // 从订单项中获取价格历史
     const priceMap = new Map()
 
@@ -188,18 +187,14 @@ function processPriceHistory() {
 }
 
 function initChart() {
-  console.log("chartRef", chartRef.value)
-  if (chartRef.value) {
+  if (chartRef.value && chartInstance == null) {
     chartInstance = echarts.init(chartRef.value)
-    console.log("initChart", initChart)
     chartInstance.setOption(option.value)
   }
 }
 
 function updateChart() {
-  console.log("updateChart", chartInstance)
   if (chartInstance) {
-    console.log(option.value)
     chartInstance.setOption(option.value)
   }
 }

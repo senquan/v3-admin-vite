@@ -108,7 +108,6 @@ function handleResize() {
 }
 
 function processData() {
-  console.log(props.data)
   if (!props.data || !props.data.months || !props.data.platforms || !props.data.sales) {
     return
   }

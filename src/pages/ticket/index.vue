@@ -58,10 +58,11 @@ const ticketTypeOptions = ref([
 
 // 优先级选项
 const priorityOptions = ref([
-  { label: "低", value: 1, color: "info" },
-  { label: "中", value: 2, color: "primary" },
-  { label: "高", value: 3, color: "warning" },
-  { label: "紧急", value: 4, color: "danger" }
+  { label: "日常", value: 1, color: "info" },
+  { label: "一般", value: 2, color: "primary" },
+  { label: "紧急", value: 3, color: "warning" },
+  { label: "加急", value: 4, color: "warning" },
+  { label: "特急", value: 5, color: "danger" }
 ])
 
 // 状态选项
@@ -76,6 +77,7 @@ const statusOptions = ref([
 // 客服人员选项
 const staffOptions = ref<any>([])
 const imageList = ref<any>([])
+const countdownTimer = ref<NodeJS.Timeout | null>(null)
 
 function getTicketType(typeValue: number) {
   return ticketTypeOptions.value.find((type: { value: number }) => type.value === typeValue)
@@ -95,6 +97,49 @@ function getStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
 }
 
+// 根据优先级获取处理时限（小时）
+function getProcessingTimeLimit(priority: number): number {
+  const timeLimits: Record<number, number> = {
+    5: 2, // 特急：2小时
+    4: 10, // 加急：10小时
+    3: 24, // 紧急：24小时
+    2: 48, // 一般：48小时
+    1: 168 // 日常：168小时
+  }
+  return timeLimits[priority] || 48
+}
+
+// 计算剩余处理时间
+function calculateRemainingTime(updatedAt: string, priority: number): { hours: number, minutes: number, totalMinutes: number } {
+  const updateTime = new Date(updatedAt)
+  const now = new Date()
+  const timeLimitHours = getProcessingTimeLimit(priority)
+  const deadlineTime = new Date(updateTime.getTime() + timeLimitHours * 60 * 60 * 1000)
+
+  const remainingMs = deadlineTime.getTime() - now.getTime()
+  const totalMinutes = Math.max(0, Math.floor(remainingMs / (1000 * 60)))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  return { hours, minutes, totalMinutes }
+}
+
+// 格式化倒计时显示
+function formatCountdown(hours: number, minutes: number): string {
+  return `${Math.floor(hours / 24).toString().padStart(2, "0")}:${Math.floor(hours % 24).toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+}
+
+// 获取倒计时标签类型
+function getCountdownTagType(totalMinutes: number): "danger" | "warning" | "primary" {
+  if (totalMinutes <= 120) { // 2小时内
+    return "danger"
+  } else if (totalMinutes <= 1440) { // 24小时内
+    return "warning"
+  } else {
+    return "primary"
+  }
+}
+
 async function fetchTickets() {
   loading.value = true
   try {
@@ -102,6 +147,7 @@ async function fetchTickets() {
     if (res.data && res.data.tickets) {
       totalTickets.value = res.data.total
       tableData.value = res.data.tickets.map((item: any) => {
+        const remainingTime = calculateRemainingTime(item.updatedAt, item.priority)
         return {
           id: item.id,
           title: item.title,
@@ -119,7 +165,8 @@ async function fetchTickets() {
           orderName: item.order?.name,
           orderUpdateAt: item.order?.updatedAt,
           closedAt: item.closedAt,
-          remark: item.remark
+          remark: item.remark,
+          remainingTime
         }
       })
       // 获取客服人员列表
@@ -162,7 +209,6 @@ function handleFilter() {
 }
 
 function handleNew() {
-  console.log(ticketFormRef.value)
   handleEdit(null)
 }
 
@@ -176,7 +222,6 @@ function openFrom(data: any) {
     editData: data ?? null
   })
   ticketFormVisibility.value = true
-  console.log(ticketFormVisibility.value)
 }
 
 function handleDetail(row: any) {
@@ -425,8 +470,40 @@ async function handleExport() {
   }
 }
 
+// 更新倒计时
+function updateCountdown() {
+  tableData.value.forEach((item: any) => {
+    if (item.status < 3) {
+      item.remainingTime = calculateRemainingTime(item.updatedAt, item.priority)
+    }
+  })
+}
+
+// 启动倒计时定时器
+function startCountdownTimer() {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+  }
+  countdownTimer.value = setInterval(() => {
+    updateCountdown()
+  }, 60000) // 每分钟更新一次
+}
+
+// 停止倒计时定时器
+function stopCountdownTimer() {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
+  }
+}
+
 onMounted(() => {
   fetchTickets()
+  startCountdownTimer()
+})
+
+onUnmounted(() => {
+  stopCountdownTimer()
 })
 </script>
 
@@ -513,7 +590,20 @@ onMounted(() => {
         @filter-change="handleFilterChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="title" min-width="200" title="标题" align="left" />
+        <vxe-column field="title" min-width="200" title="标题" align="left">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.status < 3"
+              :type="getCountdownTagType(row.remainingTime.totalMinutes)"
+              size="small"
+              effect="dark"
+            >
+              {{ formatCountdown(row.remainingTime.hours, row.remainingTime.minutes) }}
+            </el-tag>
+            <span v-else class="text-gray-400">-</span>
+            {{ row.title }}
+          </template>
+        </vxe-column>
         <vxe-column field="ticketType" width="100" title="类型" :filters="ticketTypeOptions">
           <template #default="{ row }">
             <el-tag

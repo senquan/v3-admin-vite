@@ -5,4 +5,7 @@ export interface NotifyItem {
   description?: string
   status?: "primary" | "success" | "info" | "warning" | "danger"
   extra?: string
+  type: "notification" | "message" | "todo"
+  id: number
+  unread: boolean
 }

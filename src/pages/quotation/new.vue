@@ -894,6 +894,8 @@ async function handleChangeType() {
   if (res.code === 0) {
     formData.value.type = res.data
     ElMessage.success("变更成功")
+    const currentRoute = router.currentRoute.value
+    await router.replace({ path: `/redirect${currentRoute.path}`, query: currentRoute.query })
   } else {
     ElMessage.error("变更失败")
   }
@@ -973,6 +975,7 @@ async function initModelCache() {
 }
 
 onMounted(async () => {
+  console.log("onMounted", router.currentRoute.value.query)
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""

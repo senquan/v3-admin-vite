@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import TicketForm from "../../ticket/_form.vue"
+import { fetchTicketList } from "../apis"
 import TicketItem from "./TicketItem.vue"
 
 interface Ticket {
@@ -11,25 +13,41 @@ interface Ticket {
   [key: string]: any
 }
 
-const props = defineProps({
-  data: {
-    type: Array as () => Ticket[],
-    default: () => []
-  }
-})
+const ticketListData = ref<any>([])
 
 // 当前选中的过滤器
 const activeFilter = ref<"all" | "active" | "completed">("all")
 
 const filters = computed(() => ({
-  all: props.data,
-  active: props.data.filter((ticket: Ticket) => ticket.status <= 3),
-  completed: props.data.filter((ticket: Ticket) => ticket.status > 3)
+  all: ticketListData.value,
+  active: ticketListData.value.filter((ticket: Ticket) => ticket.status <= 3),
+  completed: ticketListData.value.filter((ticket: Ticket) => ticket.status > 3)
 }))
 
 // 当前过滤后的列表
 const filteredTickets = computed(() => {
   return filters.value[activeFilter.value] || []
+})
+
+const ticketFormRef = ref<any>([])
+const ticketFormVisibility = ref(false)
+
+function handleNew() {
+  ticketFormRef.value?.open({
+    id: 0,
+    editData: null
+  })
+  ticketFormVisibility.value = true
+}
+
+function fetchList() {
+  fetchTicketList({}).then((res) => {
+    ticketListData.value = res.data.tickets
+  })
+}
+
+onMounted(() => {
+  fetchList()
 })
 </script>
 
@@ -43,7 +61,7 @@ const filteredTickets = computed(() => {
             <span>工单列表</span>
           </div>
           <el-radio-group v-model="activeFilter" size="small">
-            <el-button type="primary" size="small" style="margin-right: 20px; padding: 12px;">新建工单</el-button>
+            <el-button type="primary" size="small" style="margin-right: 20px; padding: 12px;" @click="handleNew">新建工单</el-button>
             <el-radio-button value="all">全部</el-radio-button>
             <el-radio-button value="active">未完成</el-radio-button>
             <el-radio-button value="completed">已完成</el-radio-button>
@@ -63,6 +81,12 @@ const filteredTickets = computed(() => {
         </div>
       </el-scrollbar>
     </el-card>
+
+    <TicketForm
+      ref="ticketFormRef"
+      @success="fetchList"
+      @close="ticketFormVisibility = false"
+    />
   </div>
 </template>
 

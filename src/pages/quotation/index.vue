@@ -12,15 +12,15 @@ const router = useRouter()
 const loading = ref(false)
 const listQuery = reactive({
   type: "",
-  platformIds: [],
+  platformIds: [] as number[],
   username: "",
   keyword: "",
   color: "",
   sort: "+id",
   startDate: "",
   endDate: "",
-  payStatus: [],
-  status: [],
+  payStatus: [] as number[],
+  status: [] as number[],
   page: 1,
   pageSize: 20
 })
@@ -48,19 +48,19 @@ const statusForm = reactive({
 })
 const orderStatusLogs = ref<any>([])
 const statusOptions = ref<any>([
-  { label: "草稿", value: -1, color: "info" },
-  { label: "待支付", value: 0, color: "info" },
-  { label: "已支付", value: 1, color: "info" },
-  { label: "处理中", value: 2, color: "warning" },
-  { label: "已发货", value: 3, color: "primary" },
-  { label: "已签收", value: 4, color: "primary" },
-  { label: "售后中", value: 5, color: "danger" },
-  { label: "已完成", value: 6, color: "success" }
+  { label: "草稿", value: -1, color: "info", checked: false },
+  { label: "待支付", value: 0, color: "info", checked: false },
+  { label: "已支付", value: 1, color: "info", checked: false },
+  { label: "处理中", value: 2, color: "warning", checked: false },
+  { label: "已发货", value: 3, color: "primary", checked: false },
+  { label: "已签收", value: 4, color: "primary", checked: false },
+  { label: "售后中", value: 5, color: "danger", checked: false },
+  { label: "已完成", value: 6, color: "success", checked: false }
 ])
 const payStatusOptions = ref<any>([
-  { label: "未支付", value: 0, color: "info" },
-  { label: "已支付", value: 1, color: "success" },
-  { label: "已退款", value: 2, color: "danger" }
+  { label: "未支付", value: 0, color: "info", checked: false },
+  { label: "已支付", value: 1, color: "success", checked: false },
+  { label: "已退款", value: 2, color: "danger", checked: false }
 ])
 const materialList = ref("")
 const previewFormRef = ref()
@@ -104,12 +104,25 @@ async function fetchOrders() {
         platformOptions.value = res.data.platforms.map((item: any) => {
           return {
             label: item.name,
-            value: item.value,
+            value: Number(item.value),
             icon: item.icon,
-            code: item.remark
+            code: item.remark,
+            checked: listQuery.platformIds ? listQuery.platformIds.includes(Number(item.value)) : false
           }
         })
         otherPlatformOptions.value = platformOptions.value.filter((item: any) => !item.icon)
+
+        statusOptions.value.forEach((option: any) => {
+          option.checked = listQuery.status ? listQuery.status.includes(option.value) : false
+        })
+
+        payStatusOptions.value.forEach((option: any) => {
+          option.checked = listQuery.payStatus ? listQuery.payStatus.includes(option.value) : false
+        })
+
+        // console.log("platformOptions", platformOptions.value)
+        // console.log("statusOptions checked状态", statusOptions.value)
+        // console.log("payStatusOptions checked状态", payStatusOptions.value)
       } else {
         tableData.value = []
       }
@@ -130,13 +143,21 @@ function handleSortChange(column: any) {
 }
 
 function handleFilterChange(filters: any) {
-  console.log(filters)
   if (filters.field === "payStatus") {
     listQuery.payStatus = filters.values
+    payStatusOptions.value.forEach((option: any) => {
+      option.checked = filters.values.includes(option.value)
+    })
   } else if (filters.field === "status") {
     listQuery.status = filters.values
-  } else if (filters.field === "platform") {
+    statusOptions.value.forEach((option: any) => {
+      option.checked = filters.values.includes(option.value)
+    })
+  } else if (filters.field === "platformId") {
     listQuery.platformIds = filters.values
+    platformOptions.value.forEach((option: any) => {
+      option.checked = filters.values.includes(option.value)
+    })
   }
   handleFilter()
 }
@@ -422,12 +443,12 @@ onMounted(() => {
         :data="tableData"
         :loading
         :sort-config="{ remote: true }"
-        :filter-config="{ remote: true }"
+        :filter-config="{ remote: true, showIcon: true, iconNone: 'vxe-icon-funnel', iconMatch: 'vxe-icon-funnel' }"
         @sort-change="handleSortChange"
         @filter-change="handleFilterChange"
       >
         <vxe-column field="id" width="80" title="编号" />
-        <vxe-column field="platform" width="120" title="平台" :filters="platformOptions">
+        <vxe-column field="platformId" width="120" title="平台" :filters="platformOptions" :filter-multiple="true" :filter-method="({ option, row }) => row.platformId === option.value">
           <template #default="{ row }">{{ platformOptions.find((platform: any) => Number(platform.value) === row.platformId)?.label || "" }}</template>
         </vxe-column>
         <vxe-column field="createdAt" title="下单时间" width="180">
@@ -444,7 +465,7 @@ onMounted(() => {
         <vxe-column field="quantity" width="80" title="数量" />
         <vxe-column field="originPrice" width="100" title="日常总价" />
         <vxe-column field="payPrice" width="100" title="到手总价" />
-        <vxe-column field="status" width="100" title="订单状态" :filters="statusOptions">
+        <vxe-column field="status" width="100" title="订单状态" :filters="statusOptions" :filter-multiple="true" :filter-method="({ option, row }) => row.status === option.value">
           <template #default="{ row }">
             <el-tag
               v-if="getMatchedStatus(row.status)"
@@ -454,7 +475,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </vxe-column>
-        <vxe-column field="payStatus" width="100" title="支付状态" :filters="payStatusOptions">
+        <vxe-column field="payStatus" width="100" title="支付状态" :filters="payStatusOptions" :filter-multiple="true" :filter-method="({ option, row }) => row.payStatus === option.value">
           <template #default="{ row }">
             <el-tag
               v-if="getPayStatus(row.payStatus)"

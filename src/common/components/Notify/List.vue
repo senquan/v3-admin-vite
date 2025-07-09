@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { NotifyItem } from "./type"
+import { Document } from "@element-plus/icons-vue"
 
 interface Props {
   data: NotifyItem[]
@@ -23,7 +24,7 @@ const props = defineProps<Props>()
           </div>
         </div>
         <div v-if="item.avatar" class="card-avatar">
-          <img :src="item.avatar" width="34">
+          <Document style="width: 30px; height: 30px;" />
         </div>
       </div>
     </template>
