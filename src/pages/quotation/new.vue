@@ -603,6 +603,7 @@ function submitOrder(status: number, silent: boolean) {
               path: "/quotation/quotation"
             })
           } else {
+            formData.value.id = response.data.id
             ElMessage.success("已自动暂存草稿")
           }
         }
@@ -1341,7 +1342,7 @@ function extractPackageQuantity(text: string): number | null {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
-                  <el-button type="success" @click="orderPreview()">报价预览</el-button>
+                  <el-button type="success" @click="orderPreview()" :loading="isSubmitting" :disabled="isSubmitting">报价预览</el-button>
                   <el-button type="primary" @click="submitOrder(-1, false)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
                   <el-button type="primary" @click="submitOrder(1, false)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
                   <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情 {{ formData.status }}</el-button>
