@@ -16,6 +16,41 @@ export const unreadCounts = reactive({
   todo: 0
 })
 
+// 已弹出的待办事项ID集合，用于防止重复弹窗
+const shownTodoIds = new Set<number>()
+
+// 弹窗回调函数，由外部组件设置
+let todoPopupCallback: ((todoItem: NotifyItem) => void) | null = null
+
+// 设置待办事项弹窗回调
+export function setTodoPopupCallback(callback: (todoItem: NotifyItem) => void) {
+  todoPopupCallback = callback
+}
+
+// 清除已弹出的待办事项记录
+export function clearShownTodos() {
+  shownTodoIds.clear()
+}
+
+// 标记特定待办事项为已弹出
+export function markTodoAsShown(todoId: number) {
+  shownTodoIds.add(todoId)
+}
+
+// 检查并显示新的待办事项弹窗
+function checkAndShowNewTodos(newTodos: NotifyItem[]) {
+  if (!todoPopupCallback) return
+  console.log("todoPopupCallback", todoPopupCallback)
+  console.log("newTodos", newTodos)
+  newTodos.forEach((todo) => {
+    // 只对未读且未弹出过的待办事项显示弹窗
+    if (todo.unread && !shownTodoIds.has(todo.id)) {
+      shownTodoIds.add(todo.id)
+      if (todoPopupCallback !== null) todoPopupCallback(todo)
+    }
+  })
+}
+
 // 转换后端数据格式到前端格式
 function transformNotificationData(backendData: any): NotifyItem {
   return {
@@ -27,7 +62,7 @@ function transformNotificationData(backendData: any): NotifyItem {
     description: backendData.description,
     status: backendData.status,
     extra: backendData.extra,
-    unread: backendData.unread === 0
+    unread: !backendData.isRead
   }
 }
 
@@ -76,8 +111,10 @@ export async function fetchNotifications(params: {
     if (response.code === 0) {
       notifyData.value = []
       messageData.value = []
+      const previousTodoData = [...todoData.value]
       todoData.value = []
       const transformedData = response.data.notifications.map(transformNotificationData)
+      const newTodos: NotifyItem[] = []
 
       for (const item of transformedData) {
         switch (item.type) {
@@ -87,13 +124,26 @@ export async function fetchNotifications(params: {
           case "message":
             messageData.value.push(item)
             break
-          case "todo":
+          case "todo": {
             todoData.value.push(item)
+            // 检查是否为新的待办事项
+            const isNewTodo = !previousTodoData.some(prevTodo => prevTodo.id === item.id)
+            if (isNewTodo) {
+              newTodos.push(item)
+            }
             break
+          }
           default:
             notifyData.value.push(item)
         }
       }
+
+      // 检查并显示新的待办事项弹窗
+      console.log("newTodos", newTodos)
+      if (newTodos.length > 0) {
+        checkAndShowNewTodos(newTodos)
+      }
+
       return response.data
     }
     throw new Error(response.message || "获取通知失败")

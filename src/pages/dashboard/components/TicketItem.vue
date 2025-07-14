@@ -155,9 +155,11 @@ function calculateRemainingTime(updatedAt: string, priority: number): { hours: n
       {{ formatCountdown(remainingTime.hours, remainingTime.minutes) }}
     </el-tag>
     <span v-else class="text-gray-400">-</span>
-    <el-text class="ticket-text" truncated>
-      {{ ticket.title }}
-    </el-text>
+    <div class="ticket-text">
+      <el-text truncated>
+        {{ ticket.title }}
+      </el-text>
+    </div>
     <div class="ticket-date">
       <el-space direction="vertical" style="align-items: end;">
         <el-text class="mx-1" type="primary">{{ ticket.assignee?.staff?.name || ticket.assignee?.username || "" }}</el-text>
@@ -167,7 +169,7 @@ function calculateRemainingTime(updatedAt: string, priority: number): { hours: n
   </div>
 </template>
 
-<style>
+<style scoped>
 .ticket-item {
   display: flex;
   width: 100%;
@@ -178,7 +180,7 @@ function calculateRemainingTime(updatedAt: string, priority: number): { hours: n
 }
 .ticket-text {
   margin-left: 10px;
-  flex: 1;
+  display: flex;
 }
 .ticket-date {
   line-height: 0.6em;

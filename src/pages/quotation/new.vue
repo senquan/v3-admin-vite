@@ -84,7 +84,7 @@ const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
   type: 1,
-  status: 0,
+  status: -1,
   platformId: 0,
   name: "",
   originPrice: 0,
@@ -426,7 +426,7 @@ function calculatePrice(row: any) {
   // const result = calculateOrderPriceV3(products)
   calculatedPrice.value = calculateOrderPrice({ products })
   // console.log("result", result)
-  // console.log(calculatedPrice.value)
+  // console.log("calculatedPrice.value", calculatedPrice.value)
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
     tableData.value.forEach((row: TableRowData) => {
       if (row.id) {
@@ -437,7 +437,7 @@ function calculatePrice(row: any) {
           const flashDiscount = Number((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0).toFixed(2))
           const totalPrice = Number((matchedProduct.unitPrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(2))
           row.finalUnitPrice = Number((totalPrice / matchedProduct.quantity).toFixed(2))
-          row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
+          row.payPrice = Number((totalPrice * (row.quantity / matchedProduct.quantity)).toFixed(2))
         }
       }
     })
@@ -516,7 +516,8 @@ function getSummaries(param: any) {
     if (index === 5) {
       values = data.map((item: Record<string, any>) => {
         if (item.serie.includes("套装") || item.serie.includes("预售")) {
-          return Number(item[column.property]) * 10
+          const q = extractPackageQuantity(item.name) || 10
+          return Number(item[column.property]) * q
         } else if (item.isBonus || item.id === "") {
           return 0
         } else {
@@ -548,7 +549,7 @@ function getSummaries(param: any) {
   return sums
 }
 
-function submitOrder(status: number) {
+function submitOrder(status: number, silent: boolean) {
   // 防重复提交检查
   if (isSubmitting.value) {
     ElMessage.warning("正在提交中，请勿重复操作")
@@ -596,10 +597,14 @@ function submitOrder(status: number) {
             }
           })
         } else {
-          ElMessage.success("暂存草稿成功")
-          router.push({
-            path: "/quotation/quotation"
-          })
+          if (!silent) {
+            ElMessage.success("暂存草稿成功")
+            router.push({
+              path: "/quotation/quotation"
+            })
+          } else {
+            ElMessage.success("已自动暂存草稿")
+          }
         }
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
@@ -914,6 +919,7 @@ function orderPreview() {
     ElMessage.warning("正在加载数据，请稍等。")
     return
   }
+  submitOrder(-1, true)
   previewFormRef.value?.open({
     data: tableData.value,
     type: formData.value?.type || 1,
@@ -975,7 +981,6 @@ async function initModelCache() {
 }
 
 onMounted(async () => {
-  console.log("onMounted", router.currentRoute.value.query)
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
@@ -991,6 +996,7 @@ onMounted(async () => {
         licenseCode.value = order.platform?.remark || ""
         formData.value.name = order.name
         formData.value.type = order.type
+        formData.value.status = order.status
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
@@ -1099,6 +1105,22 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
     )
     handleModelSelect(matchedModel || modelOptions.value[0], row)
   }
+}
+
+/**
+ * 从"x只装"格式的字符串中提取数字
+ * @param text 包含"x只装"格式的字符串，例如："10只装"
+ * @returns 提取的数字，如果没有匹配则返回null
+ */
+function extractPackageQuantity(text: string): number | null {
+  if (!text || typeof text !== "string") {
+    return null
+  }
+  const match = text.match(/(\d+)只装/)
+  if (match && match[1]) {
+    return Number.parseInt(match[1], 10)
+  }
+  return null
 }
 </script>
 
@@ -1320,9 +1342,9 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               <el-form-item>
                 <div class="button-container">
                   <el-button type="success" @click="orderPreview()">报价预览</el-button>
-                  <el-button type="primary" @click="submitOrder(0)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
-                  <el-button type="primary" @click="submitOrder(1)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
-                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
+                  <el-button type="primary" @click="submitOrder(-1, false)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
+                  <el-button type="primary" @click="submitOrder(1, false)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
+                  <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情 {{ formData.status }}</el-button>
                 </div>
               </el-form-item>
               <div class="bonus-item">

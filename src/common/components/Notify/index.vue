@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { NotifyItem } from "./type"
 import { Bell } from "@element-plus/icons-vue"
-import { initNotificationData, markAllAsRead, messageData, notifyData, startAutoRefresh, stopAutoRefresh, todoData, unreadCounts } from "./data"
+import { initNotificationData, markAllAsRead, markBatchAsRead, messageData, notifyData, setTodoPopupCallback, startAutoRefresh, stopAutoRefresh, todoData, unreadCounts } from "./data"
 import List from "./List.vue"
 
 type TabName = "通知" | "消息" | "待办"
@@ -61,6 +61,9 @@ const data = computed<DataItem[]>(() => [
   }
 ])
 
+const showTodoDialog = ref(false)
+const currentTodo = ref<NotifyItem | null>(null)
+
 async function handleReadAll() {
   try {
     await markAllAsRead(activeType.value)
@@ -72,7 +75,30 @@ async function handleReadAll() {
   }
 }
 
+async function handleReadOne() {
+  if (currentTodo.value) {
+    try {
+      await markBatchAsRead([currentTodo.value.id])
+      handleCloseTodoDialog()
+    } catch (error) {
+      console.error("标记已读失败:", error)
+    }
+  }
+}
+
+function handleTodoPopup(todoItem: NotifyItem) {
+  console.log("todoItem", todoItem)
+  currentTodo.value = todoItem
+  showTodoDialog.value = true
+}
+
+function handleCloseTodoDialog() {
+  showTodoDialog.value = false
+  currentTodo.value = null
+}
+
 onMounted(() => {
+  setTodoPopupCallback(handleTodoPopup)
   initNotificationData()
 
   // 启动自动刷新，间隔调整为10秒
@@ -116,6 +142,31 @@ onMounted(() => {
         </div>
       </template>
     </el-popover>
+    <el-dialog
+      v-model="showTodoDialog"
+      title="新的待办事项"
+      width="400px"
+      :before-close="handleCloseTodoDialog"
+    >
+      <div v-if="currentTodo">
+        <div class="todo-content">
+          <div class="todo-avatar" v-if="currentTodo.avatar">
+            <el-avatar :src="currentTodo.avatar" :size="40" />
+          </div>
+          <div class="todo-info">
+            <h4>{{ currentTodo.title }}</h4>
+            <p class="todo-description">{{ currentTodo.description }}</p>
+            <span class="todo-time">{{ currentTodo.datetime }}</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handleCloseTodoDialog">稍后处理</el-button>
+          <el-button type="primary" @click="handleReadOne">标记已读</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

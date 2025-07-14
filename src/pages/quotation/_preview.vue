@@ -123,7 +123,8 @@ function getSummaries(param: any) {
     if (index === 2) {
       values = data.map((item: Record<string, any>) => {
         if (item.serie.includes("套装") || item.serie.includes("预售")) {
-          return Number(item[column.property]) * 10
+          const q = extractPackageQuantity(item.name) || 10
+          return Number(item[column.property]) * q
         } else if (item.isBonus || item.id === "") {
           return 0
         } else {
@@ -155,6 +156,22 @@ function getSummaries(param: any) {
 
 function formatPrice(price: string) {
   return String(Math.floor(Number(price) * 10) / 10)
+}
+
+/**
+ * 从"x只装"格式的字符串中提取数字
+ * @param text 包含"x只装"格式的字符串，例如："10只装"
+ * @returns 提取的数字，如果没有匹配则返回null
+ */
+function extractPackageQuantity(text: string): number | null {
+  if (!text || typeof text !== "string") {
+    return null
+  }
+  const match = text.match(/(\d+)只装/)
+  if (match && match[1]) {
+    return Number.parseInt(match[1], 10)
+  }
+  return null
 }
 </script>
 

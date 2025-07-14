@@ -110,6 +110,9 @@ onMounted(() => {
 :deep(.el-card__header) {
   padding: 10px;
 }
+:deep(.el-card__body) {
+  height: 90%;
+}
 .empty-tip {
   text-align: center;
   color: #909399;

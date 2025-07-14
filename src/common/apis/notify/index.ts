@@ -59,9 +59,7 @@ export function updateReadStatusBatch(params: { ids?: number[], type?: Notify.No
     return request<Notify.NotifyActionResponseData>({
       url: "/notifications/batch/read",
       method: "patch",
-      params: {
-        ids: params.ids
-      }
+      data: { ids: params.ids }
     })
   } else {
     return request<Notify.NotifyActionResponseData>({
