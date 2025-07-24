@@ -246,7 +246,6 @@ function handleMatrixClear() {
 
 function handleMatrixChange(value: any[]) {
   formData.contents_matrix = value.map((item: any) => item[item.length - 1])
-  console.log(formData.contents_matrix)
 }
 
 defineExpose({

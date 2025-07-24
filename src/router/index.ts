@@ -70,7 +70,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "技能中心",
-      elIcon: "DataBoard"
+      svgIcon: "skill"
     },
     children: [
       {
@@ -141,6 +141,30 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "培训记录"
         }
+      },
+      {
+        path: "task",
+        component: () => import("@/pages/training/task/index.vue"),
+        name: "Task",
+        meta: {
+          title: "任务管理"
+        }
+      },
+      {
+        path: "trainer",
+        component: () => import("@/pages/training/trainer/index.vue"),
+        name: "Trainer",
+        meta: {
+          title: "讲师管理"
+        }
+      },
+      {
+        path: "certificate",
+        component: () => import("@/pages/training/certificate/index.vue"),
+        name: "Certificate",
+        meta: {
+          title: "证书管理"
+        }
       }
     ]
   },
@@ -149,7 +173,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "知识库",
-      elIcon: "DataBoard"
+      svgIcon: "knowledge"
     },
     children: [
       {
@@ -175,6 +199,14 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "岗位安全培训矩阵"
         }
+      },
+      {
+        path: "survey",
+        component: () => import("@/pages/knowledge/survey/index.vue"),
+        name: "Survey",
+        meta: {
+          title: "问卷调查"
+        }
       }
     ]
   },
@@ -183,7 +215,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "报表分析",
-      elIcon: "DataBoard"
+      elIcon: "PieChart"
     },
     children: [
       {
@@ -209,7 +241,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "系统设置",
-      elIcon: "DataBoard"
+      elIcon: "SetUp"
     },
     children: [
       {
@@ -229,11 +261,11 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "category",
-        component: () => import("@/pages/setting/category.vue"),
-        name: "Category",
+        path: "tabs",
+        component: () => import("@/pages/setting/tabs.vue"),
+        name: "Tabs",
         meta: {
-          title: "分类管理"
+          title: "分类标签"
         }
       }
     ]

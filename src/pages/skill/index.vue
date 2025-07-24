@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MyTrainingListParams, TrainingRecord, TrainingStats } from "./apis/training"
+import RadarChart from './components/radar.vue'
 import {
   getMyTrainingList,
   getTrainingDetail,
@@ -234,57 +235,68 @@ onMounted(() => {
     <!-- 统计卡片 -->
     <div class="stats-cards">
       <el-row :gutter="20">
-        <el-col :span="6">
-          <el-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon total">
-                <el-icon><Document /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-number">{{ stats.totalTrainings }}</div>
-                <div class="stat-label">总培训次数</div>
-              </div>
-            </div>
-          </el-card>
+        <el-col :span="12">
+          <RadarChart />
         </el-col>
-        <el-col :span="6">
-          <el-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon completed">
-                <el-icon><CircleCheck /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-number">{{ stats.completedTrainings }}</div>
-                <div class="stat-label">已完成培训</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon hours">
-                <el-icon><Clock /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-number">{{ stats.totalHours }}</div>
-                <div class="stat-label">总培训时长(小时)</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon score">
-                <el-icon><Trophy /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-number">{{ stats.averageScore.toFixed(1) }}</div>
-                <div class="stat-label">平均分数</div>
-              </div>
-            </div>
-          </el-card>
+        <el-col :span="12" class="stat-col">
+          <div>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-card class="stat-card">
+                  <div class="stat-content">
+                    <div class="stat-icon total">
+                      <el-icon><Document /></el-icon>
+                    </div>
+                    <div class="stat-info">
+                      <div class="stat-number">{{ stats.totalTrainings }}</div>
+                      <div class="stat-label">总培训次数</div>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="12">
+                <el-card class="stat-card">
+                  <div class="stat-content">
+                    <div class="stat-icon completed">
+                      <el-icon><CircleCheck /></el-icon>
+                    </div>
+                    <div class="stat-info">
+                      <div class="stat-number">{{ stats.completedTrainings }}</div>
+                      <div class="stat-label">已完成培训</div>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 10px;">
+              <el-col :span="12">
+                <el-card class="stat-card">
+                  <div class="stat-content">
+                    <div class="stat-icon hours">
+                      <el-icon><Clock /></el-icon>
+                    </div>
+                    <div class="stat-info">
+                      <div class="stat-number">{{ stats.totalHours }}</div>
+                      <div class="stat-label">总培训时长(小时)</div>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="12">
+                <el-card class="stat-card">
+                  <div class="stat-content">
+                    <div class="stat-icon score">
+                      <el-icon><Trophy /></el-icon>
+                    </div>
+                    <div class="stat-info">
+                      <div class="stat-number">{{ stats.averageScore.toFixed(1) }}</div>
+                      <div class="stat-label">平均分数</div>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
         </el-col>
       </el-row>
     </div>

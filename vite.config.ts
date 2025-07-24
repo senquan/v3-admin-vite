@@ -41,6 +41,11 @@ export default defineConfig(({ mode }) => {
           target: "http://localhost:5003/",
           changeOrigin: true,
           rewrite: path => path
+        },
+        "/uploads": {
+          target: "http://localhost:5003/",
+          changeOrigin: true,
+          rewrite: path => path
         }
       },
       // 是否允许跨域

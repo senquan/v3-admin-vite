@@ -1,8 +1,13 @@
+export interface Trainer {
+  id: number
+  name: string
+}
+
 export interface PlanListData {
   id: number
   name: string
   training_scope: string[]
-  trainer: string | null
+  trainer: Trainer
   training_mode: number
   training_category: number
   planned_participants: number

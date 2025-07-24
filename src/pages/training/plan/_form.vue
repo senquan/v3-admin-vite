@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { fetchList as fetchTrainer } from "../trainer/apis"
 import { createPlan, fetchPlan, updatePlan } from "./apis"
 
 const emit = defineEmits(["success", "close"])
@@ -21,15 +22,17 @@ const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const scopeOptions = ref<any>([])
+const trainerOptions = ref<any>([])
+const searchLoading = ref(false)
 
 const rules = {
   name: [{ required: true, message: "请输入培训计划名称", trigger: "blur" }],
   training_scope: [{ required: true, message: "请选择培训范围", trigger: "blur" }],
   training_mode: [{ required: true, message: "请选择培训模式", trigger: "blur" }],
   training_category: [{ required: true, message: "请选择培训类别", trigger: "blur" }],
-  planned_participants: [{ required: true, min: 1, message: "培训人数不能为 0", trigger: "blur" }],
+  planned_participants: [{ required: true, type: "number" as const, min: 1, message: "培训人数不能为 0", trigger: "blur" }],
   planned_time: [{ required: true, message: "请选择培训预计时间", trigger: "blur" }],
-  training_hours: [{ required: true, min: 1, message: "培训学时不能为 0", trigger: "blur" }],
+  training_hours: [{ required: true, message: "培训学时不能为空", trigger: "blur" }],
   assessment_method: [{ required: true, message: "请选择考核方式", trigger: "blur" }],
   trainer: [{ required: true, message: "请输入教培人员", trigger: "blur" }]
 }
@@ -49,6 +52,7 @@ function resetForm() {
   formData.planned_time = ""
   formData.training_hours = 0
   formData.assessment_method = 0
+  trainerOptions.value = []
 }
 
 function open(options = {
@@ -58,6 +62,7 @@ function open(options = {
   visible.value = true
   isEdit.value = options.id > 0
 
+  resetForm()
   scopeOptions.value = options.scopes
 
   if (isEdit.value) {
@@ -72,6 +77,13 @@ function open(options = {
             }
           }
         })
+        if (data.trainer) {
+          formData.trainer = String(data.trainer.id)
+          trainerOptions.value = [{
+            value: String(data.trainer.id),
+            label: data.trainer.name
+          }]
+        }
       } else {
         ElMessage({
           message: response.message || "获取培训计划详情失败",
@@ -88,9 +100,9 @@ function open(options = {
     })
   } else {
     isEdit.value = false
-    resetForm()
     resetOptions()
   }
+  console.log(formData)
 }
 
 function close() {
@@ -102,6 +114,7 @@ function resetOptions() {
 }
 
 function handleSubmit() {
+  console.log(formData)
   formRef.value.validate((valid: any) => {
     if (!valid) return
     btnSubmit.loading = true
@@ -135,6 +148,22 @@ function handleSubmit() {
         offset: 0
       })
     })
+  })
+}
+
+function handleSearchTrainer(query: string) {
+  if (trainerOptions.value.length > 0 && (!query || query.trim().length < 1)) return
+  searchLoading.value = true
+  fetchTrainer({ keyword: query }).then((response: any) => {
+    if (response.code === 0 && response.data.trainers && response.data.trainers.length > 0) {
+      trainerOptions.value = response.data.trainers.map((trainer: any) => ({
+        value: trainer.id,
+        label: trainer.name
+      }))
+      searchLoading.value = false
+    } else {
+      ElMessage.error(`获取用户列表失败: ${response.message}`)
+    }
   })
 }
 
@@ -184,7 +213,21 @@ defineExpose({
       <el-row>
         <el-col :span="12">
           <el-form-item label="教培人员" prop="trainer">
-            <el-input v-model="formData.trainer" placeholder="请输入教培人员" />
+            <el-select
+              v-model="formData.trainer"
+              filterable
+              remote
+              placeholder="请输入关键词搜索"
+              :remote-method="handleSearchTrainer"
+              :loading="searchLoading"
+            >
+              <el-option
+                v-for="item in trainerOptions"
+                :key="item.value"
+                :value="item.value"
+                :label="item.label"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -210,7 +253,7 @@ defineExpose({
         </el-col>
         <el-col :span="12">
           <el-form-item label="培训人数" prop="planned_participants">
-            <el-input v-model="formData.planned_participants" placeholder="请输入培训人数" />
+            <el-input-number v-model="formData.planned_participants" placeholder="请输入培训人数" :min="1" :max="9999" controls-position="right" style="width: 50%" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -223,7 +266,7 @@ defineExpose({
         </el-col>
         <el-col :span="12">
           <el-form-item label="培训学时" prop="training_hours">
-            <el-input type="number" v-model="formData.training_hours" placeholder="请输入培训学时" />
+            <el-input type="number" v-model="formData.training_hours" placeholder="请输入培训学时" style="width: 50%" />
           </el-form-item>
         </el-col>
       </el-row>
