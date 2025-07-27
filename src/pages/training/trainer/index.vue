@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { FormInstance, UploadProps } from "element-plus"
 import type * as TrainerType from "../../training/trainer/apis/type"
+import defaultAvatarMale from "@@/assets/images/avatar/default_avatar_male.png?url"
+import defaultAvatarFemale from "@@/assets/images/avatar/default_avatar_female.png?url"
 import { getCascaderOptions } from "@/common/utils/helper"
 import { request } from "@/http/axios"
 import { fetchTagListOpt as fetchTags } from "../../setting/apis"
@@ -115,10 +117,10 @@ const gradeOptions = [
 // 默认头像
 const defaultAvatar = [
   {
-    url: "/src/common/assets/images/avatar/default_avatar_male.png"
+    url: defaultAvatarMale
   },
   {
-    url: "/src/common/assets/images/avatar/default_avatar_female.png"
+    url: defaultAvatarFemale
   }
 ]
 
