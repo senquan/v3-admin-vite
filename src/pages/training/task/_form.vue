@@ -357,7 +357,7 @@ onMounted(() => {
               v-model="formData.expected_participants"
               placeholder="预计参与人数"
               :min="0"
-              style="width: 100%"
+              style="width: 50%"
             />
           </el-form-item>
         </el-col>
@@ -401,7 +401,7 @@ onMounted(() => {
           </el-form-item>
         </el-col>
 
-        <el-col :span="12">
+        <el-col :span="24">
           <el-form-item label="标签">
             <el-input
               v-model="formData.tags"
@@ -410,14 +410,14 @@ onMounted(() => {
           </el-form-item>
         </el-col>
 
-        <el-col :span="12">
+        <!-- <el-col :span="12">
           <el-form-item label="附件">
             <el-button type="primary" plain style="width: 100%">
               <el-icon><Plus /></el-icon>
               上传附件
             </el-button>
           </el-form-item>
-        </el-col>
+        </el-col> -->
 
         <el-col :span="12">
           <el-form-item label="备注">

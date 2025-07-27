@@ -82,6 +82,15 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
+        path: "learning/:taskId",
+        component: () => import("@/pages/skill/learning.vue"),
+        name: "skill-learning",
+        meta: {
+          title: "课件学习",
+          hidden: true
+        }
+      },
+      {
         path: "myexam",
         component: () => import("@/pages/skill/myexam.vue"),
         name: "exam-center",

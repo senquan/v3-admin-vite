@@ -358,10 +358,10 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="180" align="center">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
+            <el-button type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>

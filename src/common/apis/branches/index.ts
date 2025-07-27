@@ -8,3 +8,13 @@ export function getBranchList() {
     method: "get"
   })
 }
+
+export function getBranchListOpt() {
+  return request<Branch.BranchListResponseData>({
+    url: "branch/list",
+    method: "get",
+    params: {
+      format: "opt"
+    }
+  })
+}

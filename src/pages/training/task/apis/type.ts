@@ -97,13 +97,13 @@ export interface Task {
   updater?: number
   creatorEntity?: {
     _id: number
-    username: string
-    real_name: string
+    name: string
+    realname: string
   }
   updaterEntity?: {
     _id: number
-    username: string
-    real_name: string
+    name: string
+    realname: string
   }
   taskItems?: TaskItem[]
   taskAssignments?: TaskAssignment[]
@@ -148,6 +148,11 @@ export interface TaskItem {
   courseware?: {
     _id: number
     title: string
+    materials?: {
+      id: number
+      title: string
+      file_path: string
+    }[]
   }
   exam?: {
     _id: number
@@ -285,6 +290,21 @@ export interface TaskListResponse {
     total: number
     page: number
     pageSize: number
+  }
+}
+
+export interface TaskDetailResponseData {
+  code: number
+  message: string
+  data: Task
+}
+
+export interface TaskActionResponseData {
+  code: number
+  message: string
+  data: {
+    task_id: number
+    action: string
   }
 }
 

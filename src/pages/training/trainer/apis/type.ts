@@ -7,6 +7,11 @@ export interface TrainerListData {
   grade: number
   email: string | null
   phone: string | null
+  position: string | null
+  title: string | null
+  idcard: string | null
+  bank: string | null
+  bankcard: string | null
   fee: number | null
   introduction: string | null
   created_at: string
@@ -37,6 +42,11 @@ export interface TrainerCreateData {
   grade: number
   email?: string
   phone?: string
+  position?: string
+  title?: string
+  idcard?: string
+  bank?: string
+  bankcard?: string
   fee?: number | undefined
   introduction?: string
   tag_ids?: number[]

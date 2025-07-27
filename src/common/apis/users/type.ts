@@ -1,7 +1,9 @@
 export type CurrentUserResponseData = ApiResponseData<{ username: string, roles: string[] }>
 
 export interface BranchUserListParams {
-  branchId: number
+  id?: string
+  type?: string
+  keyword?: string
 }
 
 export interface BranchUserListResponseData extends ApiResponseData<BranchUserListData> {

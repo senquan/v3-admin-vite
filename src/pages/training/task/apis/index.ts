@@ -20,7 +20,7 @@ export function getTaskList(params?: Task.TaskQueryParams) {
  * @returns 任务详情
  */
 export function getTaskById(id: number) {
-  return request<Task.Task>({
+  return request<Task.TaskDetailResponseData>({
     url: `task/${id}`,
     method: "get"
   })
@@ -87,6 +87,24 @@ export function publishTask(id: number) {
   return request<Task.TaskActionResponseData>({
     url: `task/${id}/publish`,
     method: "post"
+  })
+}
+
+/**
+ * 分配学员到任务
+ * @param taskId 任务ID
+ * @param data 分配数据
+ * @returns 分配结果
+ */
+export function assignStudentsToTask(taskId: number, data: {
+  userIds?: number[]
+  departmentIds?: number[]
+  reason?: string
+}) {
+  return request<Task.TaskActionResponseData>({
+    url: `task/${taskId}/assign-students`,
+    method: "post",
+    data
   })
 }
 

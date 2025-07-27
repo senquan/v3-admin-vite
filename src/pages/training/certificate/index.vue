@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { FormInstance } from "element-plus"
 import type * as CertificateTemplateType from "./apis/type"
-import { getBranchList } from "@/common/apis/branches"
+import { getBranchListOpt } from "@/common/apis/branches"
 import { getBranchUserList } from "@/common/apis/users"
 import { formatDateTime } from "@/common/utils/datetime"
 import { request } from "@/http/axios"
@@ -21,6 +21,7 @@ const multipleSelection = ref<CertificateTemplateType.CertificateTemplateListDat
 const backgroundImageList = ref<any>([])
 const rightSealList = ref<any>([])
 const leftSealList = ref<any>([])
+const searchUserKeyword = ref("")
 
 // 证书颁发相关数据
 const issueDialogVisible = ref(false)
@@ -28,7 +29,7 @@ const issueLoading = ref(false)
 const departmentList = ref<any[]>([])
 const userList = ref<any[]>([])
 const selectedUsers = ref<any[]>([])
-const selectedDepartmentId = ref<number | null>(null)
+const selectedDepartmentId = ref<string>("")
 const currentTemplateId = ref<number | null>(null)
 const issueFormRef = ref<FormInstance>()
 const issueForm = ref({
@@ -184,12 +185,12 @@ function handleIssue(row: CertificateTemplateType.CertificateTemplateListData) {
   currentTemplateId.value = row.id
   issueDialogVisible.value = true
   loadDepartmentList()
-  loadUserList()
+  loadUserList(1)
 }
 
 // 加载部门列表
 function loadDepartmentList() {
-  return getBranchList()
+  return getBranchListOpt()
     .then((response) => {
       if (response.code === 0) {
         departmentList.value = response.data.branches || []
@@ -203,9 +204,7 @@ function loadDepartmentList() {
     })
 }
 
-// 加载用户列表
-function loadUserList() {
-  const params = selectedDepartmentId.value ? { branchId: selectedDepartmentId.value } : undefined
+function handleSearchUser(params: any) {
   return getBranchUserList(params)
     .then((response) => {
       if (response.code === 0) {
@@ -220,10 +219,16 @@ function loadUserList() {
     })
 }
 
+// 加载用户列表
+function loadUserList(type: number) {
+  const params = selectedDepartmentId.value ? { type: type === 1 ? "inner" : "outer", id: selectedDepartmentId.value } : undefined
+  return handleSearchUser(params)
+}
+
 // 部门变化时重新加载用户列表
-function handleDepartmentChange() {
+function handleDepartmentChange(type: number) {
   selectedUsers.value = []
-  loadUserList()
+  loadUserList(type)
 }
 
 // 确认颁发证书
@@ -266,7 +271,7 @@ function confirmIssue() {
 // 重置颁发表单
 function resetIssueForm() {
   selectedUsers.value = []
-  selectedDepartmentId.value = null
+  selectedDepartmentId.value = ""
   issueForm.value.reason = ""
   issueForm.value.issueDate = new Date().toISOString().split("T")[0]
   issueFormRef.value?.clearValidate()
@@ -500,15 +505,15 @@ onMounted(() => {
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center">
+        <el-table-column label="操作" width="250" align="center">
           <template #default="{ row }">
-            <el-button type="success" size="small" @click="handleIssue(row)">
+            <el-button type="success" @click="handleIssue(row)">
               颁发
             </el-button>
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
+            <el-button type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>
@@ -696,7 +701,6 @@ onMounted(() => {
       v-model="issueDialogVisible"
       title="颁发证书"
       width="80%"
-      height="800px"
       :close-on-click-modal="false"
       @close="handleIssueClose"
     >
@@ -710,21 +714,49 @@ onMounted(() => {
           <el-col :span="8">
             <div class="department-tree">
               <h4>选择部门</h4>
-              <el-tree
-                :data="departmentList"
-                node-key="_id"
-                :props="{ children: 'children', label: 'name' }"
-                @node-click="(data) => {
-                  selectedDepartmentId = data._id
-                  handleDepartmentChange()
-                }"
-                highlight-current
-              />
+              <el-tabs type="border-card" :stretch="true">
+                <el-tab-pane label="本单位">
+                  <el-tree
+                    :data="departmentList"
+                    node-key="_id"
+                    :props="{ children: 'children', label: 'name' }"
+                    @node-click="(data) => {
+                      selectedDepartmentId = data.parentId === 0 ? `branch_${data.id}` : `dept_${data.id}`
+                      handleDepartmentChange(1)
+                    }"
+                    highlight-current
+                  />
+                </el-tab-pane>
+                <el-tab-pane label="外单位">
+                  <el-tree
+                    :data="departmentList"
+                    node-key="_id"
+                    :props="{ children: 'children', label: 'name' }"
+                    @node-click="(data) => {
+                      selectedDepartmentId = data.parentId === 0 ? `branch_${data.id}` : `dept_${data.id}`
+                      handleDepartmentChange(2)
+                    }"
+                    highlight-current
+                  />
+                </el-tab-pane>
+              </el-tabs>
             </div>
           </el-col>
           <el-col :span="16">
             <div class="user-list">
               <h4>选择用户</h4>
+              <el-input
+                v-model="searchUserKeyword"
+                style="width: 100%"
+                placeholder="搜索员工姓名"
+                class="input-with-select"
+              >
+                <template #append>
+                  <el-button @click="handleSearchUser({ keyword: searchUserKeyword })">
+                    <el-icon><Search /></el-icon>
+                  </el-button>
+                </template>
+              </el-input>
               <el-table
                 :data="userList"
                 @selection-change="(selection) => selectedUsers = selection.map((item: any) => item.id)"

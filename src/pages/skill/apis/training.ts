@@ -2,7 +2,7 @@ import { request } from "@/http/axios"
 
 // 培训计划接口
 export interface TrainingPlan {
-  _id: number
+  id: number
   name: string
   training_scope: string[]
   trainer: string | null
@@ -20,7 +20,7 @@ export interface TrainingPlan {
 
 // 培训记录接口
 export interface TrainingRecord {
-  _id: number
+  id: number
   training_plan_id: number
   participants: number[]
   participants_outer: number[]
@@ -38,18 +38,24 @@ export interface TrainingRecord {
 
 // 用户接口
 export interface User {
-  _id: number
-  username: string
+  id: number
   name: string
+  realname?: string
   email?: string
   phone?: string
-  department?: string
-  position?: string
+  branch?: {
+    name: string
+  }
+  joinDate?: string
+  gender?: string
+  oa_id?: string
+  age?: number
+  married?: boolean
 }
 
 // 课件接口
 export interface Courseware {
-  _id: number
+  id: number
   title: string
   description?: string
   file_path: string
@@ -107,13 +113,38 @@ export interface TrainingStats {
   passedExams: number
   averageScore: number
   recentTrainings: TrainingRecord[]
+  certificateCount: number
+}
+
+export interface MyTask {
+  id: number
+  type: number
+  title: string
+  description: string | null
+  trainer: string
+  progress: number
+  duration: number
+  result: boolean
+  assessmentMethod: number
+}
+
+export interface MyCertificate {
+  id: number
+  type: number
+  title: string
+  awardTime: string
 }
 
 // 培训统计响应
 export interface TrainingStatsResponse {
   code: number
   message: string
-  data: TrainingStats
+  data: {
+    stats: TrainingStats
+    profile: User
+    tasks: MyTask[]
+    certificates: MyCertificate[]
+  }
 }
 
 // 获取我的培训列表

@@ -43,7 +43,7 @@ function open(options = {
   formData.trainer = options.data?.trainer
   formData.hours = options.data?.hours
 
-  loadParticipants(options.data?.id).then(res => {
+  loadParticipants(options.data?.id).then((res) => {
     if (res.code === 0) {
       recordData.value = res.data
     } else {

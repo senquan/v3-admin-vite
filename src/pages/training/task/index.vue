@@ -5,11 +5,13 @@ import type {
 } from "./apis/type"
 import { formatDate } from "@/utils/date"
 import { ElMessage, ElMessageBox } from "element-plus"
-import TaskDetailModal from "./_detail.vue"
 import TaskFormModal from "./_form.vue"
+import StudentModal from "./_selectUserModal.vue"
 import {
+  assignStudentsToTask,
   batchDeleteTasks,
   deleteTask as deleteTaskApi,
+  getTaskById,
   getTaskList,
   publishTask as publishTaskApi
 } from "./apis"
@@ -25,9 +27,10 @@ const loading = ref(false)
 const taskList = ref<Task[]>([])
 const selectedRowKeys = ref<number[]>([])
 const formModalVisible = ref(false)
-const detailModalVisible = ref(false)
+const detailDrawerVisible = ref(false)
 const currentTask = ref<Task | null>(null)
 const formMode = ref<"create" | "edit">("create")
+const studentModalRef = ref<InstanceType<typeof StudentModal>>()
 
 // 搜索表单
 const searchForm = reactive<{
@@ -51,6 +54,15 @@ const statistics = reactive({
   inProgress: 0,
   completed: 0
 })
+
+// 任务内容类型选项
+const TaskItemTypeOptions = [
+  { value: 1, label: "文档", color: "primary" },
+  { value: 2, label: "视频", color: "success" },
+  { value: 3, label: "音频", color: "warning" },
+  { value: 4, label: "图片", color: "info" },
+  { value: 5, label: "链接", color: "danger" }
+]
 
 // 获取任务类型标签
 function getTaskTypeLabel(type: number) {
@@ -77,11 +89,11 @@ function getTaskStatusLabel(status: number) {
 // 获取任务状态颜色
 function getTaskStatusColor(status: number): "success" | "warning" | "info" | "primary" | "danger" {
   const colorMap: Record<number, "success" | "warning" | "info" | "primary" | "danger"> = {
-    1: "info", // 草稿
-    2: "primary", // 已发布
-    3: "warning", // 进行中
-    4: "success", // 已完成
-    5: "danger" // 已取消
+    0: "info", // 草稿
+    1: "primary", // 已发布
+    2: "warning", // 进行中
+    3: "success", // 已完成
+    4: "danger" // 已取消
   }
   return colorMap[status] || "info"
 }
@@ -100,6 +112,17 @@ function getTaskPriorityColor(priority: number): "success" | "warning" | "info" 
     4: "danger" // 紧急
   }
   return colorMap[priority] || ""
+}
+
+// 获取任务内容类型标签
+function getTaskItemTypeLabel(type: number) {
+  return TaskItemTypeOptions.find(option => option.value === type)?.label || "未知"
+}
+
+// 获取任务内容类型颜色
+function getTaskItemTypeColor(type: number) {
+  const colors = ["blue", "green", "orange", "red", "purple", "cyan", "magenta"]
+  return colors[type - 1] || "default"
 }
 
 // 加载任务列表
@@ -131,6 +154,23 @@ async function loadTaskList() {
   } catch (error) {
     console.error("加载任务列表失败:", error)
     ElMessage.error("加载任务列表失败")
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载任务详情
+async function loadTaskDetail(taskId: number) {
+  try {
+    loading.value = true
+    const response = await getTaskById(taskId)
+    if (response.code === 0) {
+      currentTask.value = response.data
+      console.log(currentTask.value)
+    }
+  } catch (error) {
+    console.error("加载任务详情失败:", error)
+    ElMessage.error("加载任务详情失败")
   } finally {
     loading.value = false
   }
@@ -184,8 +224,8 @@ function showCreateModal() {
 
 // 查看任务
 function viewTask(task: Task) {
-  currentTask.value = task
-  detailModalVisible.value = true
+  loadTaskDetail(task._id)
+  detailDrawerVisible.value = true
 }
 
 // 编辑任务
@@ -259,6 +299,52 @@ function handleRefresh() {
 function handleFormSuccess() {
   formModalVisible.value = false
   loadTaskList()
+}
+
+// 学员管理成功处理
+async function handleStudentSuccess(data: any) {
+  try {
+    // 获取当前选中的任务ID
+    const taskId = currentTask.value?._id
+    if (!taskId) {
+      ElMessage.error("请先选择要分配学员的任务")
+      return
+    }
+
+    // 准备分配数据
+    const assignData = {
+      userIds: data.ids || [],
+      departmentIds: data.departmentIds || [],
+      reason: data.reason || ""
+    }
+
+    // 检查是否有选中的用户或部门
+    if (assignData.userIds.length === 0 && assignData.departmentIds.length === 0) {
+      ElMessage.warning("请至少选择一个用户或部门")
+      return
+    }
+
+    // 调用分配API
+    const response = await assignStudentsToTask(taskId, assignData)
+
+    if (response.code === 0) {
+      ElMessage.success("学员分配成功")
+      // 刷新任务列表
+      loadTaskDetail(taskId)
+    } else {
+      ElMessage.error(response.message || "学员分配失败")
+    }
+  } catch (error) {
+    console.error("分配学员失败:", error)
+    ElMessage.error("分配学员失败，请稍后重试")
+  }
+}
+
+// 学员管理
+function handleStudents() {
+  studentModalRef.value?.open({
+    assignments: currentTask.value?.taskAssignments || []
+  })
 }
 
 // 组件挂载时加载数据
@@ -413,21 +499,21 @@ onMounted(() => {
 
         <el-table-column prop="type" label="任务类型" width="120">
           <template #default="{ row }">
-            <el-tag :type="getTaskTypeColor(row.type)">
-              {{ getTaskTypeLabel(row.type) }}
+            <el-tag :type="getTaskTypeColor(row.task_type)">
+              {{ getTaskTypeLabel(row.task_type) }}
             </el-tag>
           </template>
         </el-table-column>
 
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getTaskStatusColor(row.status)">
+            <el-tag :type="getTaskStatusColor(row.status)" effect="dark">
               {{ getTaskStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="priority" label="优先级" width="100">
+        <el-table-column prop="priority" label="优先级" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getTaskPriorityColor(row.priority)">
               {{ getTaskPriorityLabel(row.priority) }}
@@ -439,8 +525,9 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="progress-info">
               <el-progress
+                :text-inside="true"
                 :percentage="parseFloat(row.completion_rate || '0')"
-                :stroke-width="6"
+                :stroke-width="18"
               />
               <div class="progress-text">
                 {{ row.completed_assignments || 0 }}/{{ row.total_assignments || 0 }}
@@ -464,24 +551,22 @@ onMounted(() => {
 
         <el-table-column prop="creator" label="创建人" width="120">
           <template #default="{ row }">
-            {{ row.creatorEntity?.real_name || row.creatorEntity?.username || '-' }}
+            {{ row.creatorEntity?.realname || row.creatorEntity?.name || '-' }}
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <el-space>
-              <el-button type="primary" link size="small" @click="viewTask(row)">
-                查看
+              <el-button type="primary" @click="viewTask(row)">
+                详情
               </el-button>
-              <el-button type="primary" link size="small" @click="editTask(row)">
+              <el-button type="primary" @click="editTask(row)">
                 编辑
               </el-button>
               <el-button
                 v-if="row.status === TaskStatus.DRAFT"
                 type="success"
-                link
-                size="small"
                 @click="publishTask(row)"
               >
                 发布
@@ -490,7 +575,7 @@ onMounted(() => {
                 title="确定要删除这个任务吗？"
                 @confirm="deleteTask(row._id)"
               >
-                <el-button type="danger" link size="small">
+                <el-button type="danger">
                   删除
                 </el-button>
               </el-popconfirm>
@@ -522,10 +607,197 @@ onMounted(() => {
     />
 
     <!-- 任务详情弹窗 -->
-    <TaskDetailModal
-      v-model:visible="detailModalVisible"
-      :task="currentTask"
+    <StudentModal
+      ref="studentModalRef"
+      @success="handleStudentSuccess"
     />
+
+    <!-- 任务详情抽屉 -->
+    <el-drawer v-model="detailDrawerVisible" title="任务详情" size="42%" direction="rtl">
+      <el-descriptions
+        title="基本信息"
+        :column="2"
+        border
+        class="detail-section"
+      >
+        <template #extra>
+          <el-button type="primary" @click="handleStudents">学员（已选 {{ currentTask?.total_assignments || 0 }} 人）</el-button>
+        </template>
+        <el-descriptions-item label="任务标题" :span="2">
+          <el-tag
+            :type="getTaskStatusColor(currentTask?.status || 0)"
+            style="margin-right: 8px"
+          >
+            {{ getTaskStatusLabel(currentTask?.status || 0) }}
+          </el-tag>
+          <span class="drawer-task-title">{{ currentTask?.title }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="标签">
+          <span v-if="currentTask?.tags">
+            <el-tag
+              v-for="tag in currentTask?.tags.split(',')"
+              :key="tag"
+              size="small"
+            >
+              {{ tag.trim() }}
+            </el-tag>
+          </span>
+          <span v-else class="text-muted">无</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="任务描述" :span="2">
+          <div class="description-content">
+            {{ currentTask?.description || "无描述" }}
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item label="任务类型">
+          <el-tag :color="getTaskTypeColor(currentTask?.type || 0)">
+            {{ getTaskTypeLabel(currentTask?.type || 0) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="优先级">
+          <el-tag :color="getTaskPriorityColor(currentTask?.priority || 0)">
+            {{ getTaskPriorityLabel(currentTask?.priority || 0) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="开始时间">
+          {{ formatDate(currentTask?.start_time) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="结束时间">
+          {{ formatDate(currentTask?.end_time) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="发布时间">
+          {{ currentTask?.publish_time ? formatDate(currentTask?.publish_time) : "未设置" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="预计参与人数">
+          {{ currentTask?.expected_participants || 0 }} 人
+        </el-descriptions-item>
+        <el-descriptions-item label="允许补交">
+          <el-tag :type="currentTask?.allow_makeup ? 'success' : 'danger'">
+            {{ currentTask?.allow_makeup ? "是" : "否" }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="自动分配">
+          <el-tag :type="currentTask?.auto_assign ? 'success' : 'danger'">
+            {{ currentTask?.auto_assign ? "是" : "否" }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2" v-if="currentTask?.remark">
+          <div class="remarks-content">
+            {{ currentTask?.remark }}
+          </div>
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 进度统计 -->
+      <div class="detail-section">
+        <h3>完成进度</h3>
+        <el-row :gutter="16" class="progress-stats">
+          <el-col :span="6">
+            <el-statistic
+              title="总参与人数"
+              :value="currentTask?.total_assignments || 0"
+            />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic
+              title="已完成人数"
+              :value="currentTask?.completed_assignments || 0"
+            />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic
+              title="进行中人数"
+              :value="currentTask?.in_progress_assignments || 0"
+            />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic
+              title="完成率"
+              :value="parseFloat(currentTask?.completion_rate || '0')"
+              suffix="%"
+            />
+          </el-col>
+        </el-row>
+
+        <div class="progress-chart">
+          <el-progress
+            :text-inside="true"
+            :percentage="parseFloat(currentTask?.completion_rate || '0')"
+            :stroke-width="18"
+            status="success"
+          />
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>任务内容</h3>
+        <vxe-table
+          :data="currentTask?.taskItems || []"
+          empty-text="暂无任务内容"
+          style="width: 100%"
+        >
+          <vxe-column field="sort_order" title="序号" width="80" />
+          <vxe-column field="title" title="项目标题" align="left" />
+          <vxe-column title="类型" width="80">
+            <template #default="row">
+              <el-tag :color="getTaskItemTypeColor(Number(row.type))">
+                {{ getTaskItemTypeLabel(Number(row.type)) }}
+              </el-tag>
+            </template>
+          </vxe-column>
+          <vxe-column title="必须完成" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.is_required ? 'danger' : 'info'">
+                {{ row.is_required ? "必须" : "可选" }}
+              </el-tag>
+            </template>
+          </vxe-column>
+          <vxe-column title="权重" width="80">
+            <template #default="{ row }">
+              {{ row.weight || 0 }}%
+            </template>
+          </vxe-column>
+          <vxe-column title="关联内容" width="120">
+            <template #default="{ row }">
+              <span v-if="row.courseware_id" class="related-item">
+                <el-icon><Document /></el-icon> 课件
+              </span>
+              <span v-else-if="row.exam_id" class="related-item">
+                <el-icon><Edit /></el-icon> 考试
+              </span>
+              <span v-else-if="row.external_url" class="related-item">
+                <el-icon><Link /></el-icon> 外部链接
+              </span>
+              <span v-else class="text-muted">无</span>
+            </template>
+          </vxe-column>
+        </vxe-table>
+      </div>
+
+      <!-- 创建信息 -->
+      <el-descriptions
+        title="创建信息"
+        :column="2"
+        border
+        class="detail-section"
+      >
+        <el-descriptions-item label="创建人" width="25%">
+          {{ currentTask?.creatorEntity?.realname || currentTask?.creatorEntity?.name || "未知" }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="创建时间">
+          {{ formatDate(currentTask?.created_time) }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="更新人">
+          {{ currentTask?.updaterEntity?.realname || currentTask?.updaterEntity?.name || "未知" }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="更新时间">
+          {{ formatDate(currentTask?.updated_time) }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-drawer>
   </div>
 </template>
 
@@ -598,6 +870,12 @@ onMounted(() => {
   gap: 4px;
 }
 
+.drawer-task-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
 .title-link {
   font-weight: 500;
   color: #1890ff;
@@ -643,6 +921,10 @@ onMounted(() => {
   background: #f5f5f5;
 }
 
+:deep(.el-statistic) {
+  text-align: center;
+}
+
 :deep(.el-statistic__head) {
   font-size: 12px;
   color: #8c8c8c;
@@ -658,5 +940,26 @@ onMounted(() => {
   justify-content: flex-end;
   padding: 16px 24px;
   background: white;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section h3 {
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+.progress-chart {
+  margin-top: 8px;
 }
 </style>

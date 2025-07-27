@@ -15,7 +15,9 @@ export function getBranchUserList(params?: Users.BranchUserListParams) {
     url: "user/list",
     method: "get",
     params: {
-      id: `branch_${params?.branchId || 0}`
+      type: params?.type,
+      id: params?.id,
+      keyword: params?.keyword
     }
   })
 }

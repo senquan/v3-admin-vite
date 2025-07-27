@@ -20,6 +20,7 @@ const userOptions = ref<TrainerType.UserListData[]>([])
 const tagOptions = ref<TrainerType.TagListData[]>([])
 const searchLoading = ref(false)
 const selectedTags = ref<string[]>([])
+const selectedSearchTags = ref<string[]>([])
 const selectedDefaultAvatar = ref<string>("")
 // 头像上传相关
 const avatarUrl = ref("")
@@ -45,6 +46,11 @@ const formData = reactive<TrainerType.TrainerCreateData>({
   grade: 1,
   email: "",
   phone: "",
+  position: "",
+  title: "",
+  idcard: "",
+  bank: "",
+  bankcard: "",
   fee: undefined,
   introduction: "",
   tag_ids: []
@@ -213,9 +219,21 @@ function handleEdit(row: TrainerType.TrainerListData) {
         formData.grade = data.grade
         formData.email = data.email || ""
         formData.phone = data.phone || ""
+        formData.position = data.position || ""
+        formData.title = data.title || ""
+        formData.idcard = data.idcard || ""
+        formData.bank = data.bank || ""
+        formData.bankcard = data.bankcard || ""
         formData.fee = data.fee || undefined
         formData.introduction = data.introduction || ""
-        formData.tag_ids = data.tags?.map(tag => tag.id) || []
+        formData.tag_ids = []
+        selectedTags.value = []
+        data.tags?.forEach((tag: any) => {
+          if (tag.id) {
+            formData.tag_ids?.push(tag.id)
+            selectedTags.value.push(tag.id)
+          }
+        })
         if (formData.avatar !== "") {
           avatarUrl.value = formData.avatar
         }
@@ -349,6 +367,11 @@ function resetForm() {
   formData.grade = 1
   formData.email = ""
   formData.phone = ""
+  formData.position = ""
+  formData.title = ""
+  formData.idcard = ""
+  formData.bank = ""
+  formData.bankcard = ""
   formData.fee = undefined
   formData.introduction = ""
   formData.tag_ids = []
@@ -530,7 +553,7 @@ onMounted(() => {
         />
       </el-select> -->
       <el-cascader
-        v-model="selectedTags"
+        v-model="selectedSearchTags"
         multiple
         placeholder="请选择标签"
         filterable
@@ -606,10 +629,10 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="220" align="center">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
+            <el-button type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>
@@ -643,125 +666,208 @@ onMounted(() => {
         :rules="rules"
         label-width="100px"
       >
-        <el-form-item label="讲师类型：" prop="type">
-          <el-radio-group v-model="formData.type">
-            <el-radio :label="1">内部讲师</el-radio>
-            <el-radio :label="2">外部讲师</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="formData.type === 1" label="讲师姓名：" prop="user_id">
-          <el-select
-            v-model="formData.user_id"
-            filterable
-            remote
-            placeholder="请输入讲师姓名"
-            :remote-method="handelSearchUser"
-            :loading="searchLoading"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="user in userOptions"
-              :key="user.id"
-              :label="user.realname ? `${user.realname}` : `${user.name}`"
-              :value="user.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="formData.type === 2" label="讲师姓名：" prop="name">
-          <el-input
-            v-model="formData.name"
-            placeholder="请输入讲师姓名"
-            maxlength="50"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="标签：" prop="tag_ids">
-          <el-cascader
-            v-model="selectedTags"
-            multiple
-            placeholder="请选择标签"
-            filterable
-            clearable
-            :options="tagOptions"
-            :props="{ expandTrigger: 'hover', multiple: true, checkStrictly: true }"
-            :debounce="500"
-            @change="(value: any) => handleTagsChange(value as number[])"
-            @clear="handleTagsClear()"
-            class="filter-item"
-            style="width: 100%;"
-          />
-        </el-form-item>
-        <el-form-item v-if="formData.type === 2" label="邮箱：" prop="email">
-          <el-input
-            v-model="formData.email"
-            placeholder="请输入邮箱地址"
-            maxlength="100"
-          />
-        </el-form-item>
-        <el-form-item v-if="formData.type === 2" label="电话：" prop="phone">
-          <el-input
-            v-model="formData.phone"
-            placeholder="请输入电话号码"
-            maxlength="20"
-          />
-        </el-form-item>
-        <el-form-item label="讲师头像：" prop="avatar">
-          <el-avatar
-            v-for="(item, index) in defaultAvatar"
-            :key="index"
-            :data-index="index"
-            :src="item.url"
-            :size="100"
-            shape="circle"
-            class="avatar"
-            @click="handleAvatarClick(index, item.url)"
-          />
-          <el-upload
-            class="avatar-uploader"
-            :show-file-list="false"
-            :http-request="customUploadRequest"
-            :on-success="handleAvatarSuccess"
-            :on-error="handleAvatarError"
-            accept="image/*"
-          >
-            <el-avatar
-              v-if="avatarUrl"
-              :src="avatarUrl"
-              :size="100"
-              fit="cover"
-              class="uploaded-avatar"
-              v-loading="avatarLoading"
-            />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="讲师级别：" prop="grade">
-          <el-select v-model="formData.grade" placeholder="请选择级别" style="width: 160px">
-            <el-option
-              v-for="item in gradeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="讲师课酬：" prop="fee">
-          <el-input
-            v-model="formData.fee"
-            placeholder="请输入课酬"
-            style="width: 160px"
-          /><span style="margin-left: 10px;">元</span>
-        </el-form-item>
-        <el-form-item label="讲师介绍：" prop="introduction">
-          <el-input
-            v-model="formData.introduction"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入讲师介绍"
-            maxlength="1000"
-            show-word-limit
-          />
-        </el-form-item>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="讲师类型：" prop="type">
+              <el-radio-group v-model="formData.type">
+                <el-radio :label="1">内部讲师</el-radio>
+                <el-radio :label="2">外部讲师</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item v-if="formData.type === 1" label="讲师姓名：" prop="user_id">
+              <el-select
+                v-model="formData.user_id"
+                filterable
+                remote
+                placeholder="请输入讲师姓名"
+                :remote-method="handelSearchUser"
+                :loading="searchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="user in userOptions"
+                  :key="user.id"
+                  :label="user.realname ? `${user.realname}` : `${user.name}`"
+                  :value="user.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="formData.type === 2" label="讲师姓名：" prop="name">
+              <el-input
+                v-model="formData.name"
+                placeholder="请输入讲师姓名"
+                maxlength="50"
+                show-word-limit
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="标签：" prop="tag_ids">
+              <el-cascader
+                v-model="selectedTags"
+                multiple
+                placeholder="请选择标签"
+                filterable
+                clearable
+                :options="tagOptions"
+                :props="{ expandTrigger: 'hover', multiple: true, checkStrictly: true }"
+                :debounce="500"
+                @change="(value: any) => handleTagsChange(value as number[])"
+                @clear="handleTagsClear()"
+                class="filter-item"
+                style="width: 100%;"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="formData.type === 2">
+          <el-col :span="12">
+            <el-form-item label="邮箱：" prop="email">
+              <el-input
+                v-model="formData.email"
+                placeholder="请输入邮箱地址"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="电话：" prop="phone">
+              <el-input
+                v-model="formData.phone"
+                placeholder="请输入电话号码"
+                maxlength="20"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="formData.type === 2">
+          <el-col :span="12">
+            <el-form-item label="职位" prop="position">
+              <el-input
+                v-model="formData.position"
+                placeholder="请输入职位"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="职称：" prop="title">
+              <el-input
+                v-model="formData.title"
+                placeholder="请输入职称"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="formData.type === 2">
+          <el-col :span="12">
+            <el-form-item label="银行卡号：" prop="bankcard">
+              <el-input
+                v-model="formData.bankcard"
+                placeholder="请输入银行卡号"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="开户行：" prop="bank">
+              <el-input
+                v-model="formData.bank"
+                placeholder="请输入开户行"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="formData.type === 2">
+          <el-col :span="24">
+            <el-form-item label="身份证号码：" prop="idcard">
+              <el-input
+                v-model="formData.idcard"
+                placeholder="请输入身份证号码"
+                maxlength="100"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="讲师头像：" prop="avatar">
+              <el-avatar
+                v-for="(item, index) in defaultAvatar"
+                :key="index"
+                :data-index="index"
+                :src="item.url"
+                :size="100"
+                shape="circle"
+                class="avatar"
+                @click="handleAvatarClick(index, item.url)"
+              />
+              <el-upload
+                class="avatar-uploader"
+                :show-file-list="false"
+                :http-request="customUploadRequest"
+                :on-success="handleAvatarSuccess"
+                :on-error="handleAvatarError"
+                accept="image/*"
+              >
+                <el-avatar
+                  v-if="avatarUrl"
+                  :src="avatarUrl"
+                  :size="100"
+                  fit="cover"
+                  class="uploaded-avatar"
+                  v-loading="avatarLoading"
+                />
+                <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+              </el-upload>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="讲师级别：" prop="grade">
+              <el-select v-model="formData.grade" placeholder="请选择级别" style="width: 160px">
+                <el-option
+                  v-for="item in gradeOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="讲师课酬：" prop="fee">
+              <el-input
+                v-model="formData.fee"
+                placeholder="请输入课酬"
+                style="width: 160px"
+              /><span style="margin-left: 10px;">元</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="讲师介绍：" prop="introduction">
+              <el-input
+                v-model="formData.introduction"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入讲师介绍"
+                maxlength="1000"
+                show-word-limit
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
