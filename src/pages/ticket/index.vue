@@ -642,11 +642,11 @@ onUnmounted(() => {
         <vxe-column field="updatedAt" title="更新时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
         </vxe-column>
-        <vxe-column field="actions" title="操作" width="200">
+        <vxe-column field="actions" title="操作" width="250">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleDetail(row)">详情</el-button>
-            <el-button type="warning" size="small" @click="handleEdit(row)" v-if="row.status === 1">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)" v-if="row.creator === userId || isAdmin">删除</el-button>
+            <el-button type="primary" @click="handleDetail(row)">详情</el-button>
+            <el-button type="warning" @click="handleEdit(row)" v-if="row.status === 1">编辑</el-button>
+            <el-button type="danger" @click="handleDelete(row)" v-if="row.creator === userId || isAdmin">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>

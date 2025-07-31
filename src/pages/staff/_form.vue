@@ -25,6 +25,7 @@ const formRef = ref()
 const visible = ref(false)
 const isEdit = ref(false)
 const userOptions = ref<any>([])
+const departmentOptions = ref<any>([])
 const searchLoading = ref(false)
 
 const rules = {
@@ -39,6 +40,7 @@ const btnSubmit = reactive({
 
 function open(options = {
   id: 0,
+  department: [],
   editData: null
 }) {
   visible.value = true
@@ -50,9 +52,11 @@ function open(options = {
         (formData.value as any)[key] = (options.editData as any)[key]
       }
     })
+    console.log(formData.value)
   } else {
     isEdit.value = false
   }
+  departmentOptions.value = options.department
   if (formData.value.userId) {
     userOptions.value = [{
       value: formData.value.userId,
@@ -194,7 +198,14 @@ defineExpose({
       <el-row>
         <el-col :span="12">
           <el-form-item label="部门" prop="department">
-            <el-input v-model="formData.department" placeholder="请输入部门" />
+            <el-select v-model="formData.department" placeholder="请选择部门" clearable :empty-value="[0]" :value-on-clear="0">
+              <el-option
+                v-for="item in departmentOptions"
+                :key="item.value"
+                :value="item.value"
+                :label="item.label"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">

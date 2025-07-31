@@ -607,6 +607,7 @@ onMounted(() => {
           <svg-icon name="preserve-color/platform-taobao" v-if="item.icon === 'taobao'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
           <svg-icon name="preserve-color/platform-xianyu" v-if="item.icon === 'xianyu'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
           <svg-icon name="preserve-color/platform-pdd" v-if="item.icon === 'pdd'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
+          <svg-icon name="preserve-color/platform-xiaohongshu" v-if="item.icon === 'xiaohongshu'" @click="navto(item.value, item.code)" class="platform-icon" style="width: 5em; height: 5em;" />
           <el-text />
         </el-tooltip>
         <el-select v-model="selectedPlatform" v-if="otherPlatformOptions.length > 0" placeholder="请选择其他平台类型" style="width: 100%; margin-top: 20px;" @change="platformSelection">

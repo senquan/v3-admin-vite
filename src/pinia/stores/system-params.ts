@@ -1,11 +1,13 @@
 import type { SettingsListData } from "@/pages/settings/apis/type"
-import { fetchList } from "@/pages/settings/apis"
+import { fetchDictList, fetchList as fetchParamList } from "@/pages/settings/apis"
 import { pinia } from "@/pinia"
 import { defineStore } from "pinia"
 
 export const useSystemParamsStore = defineStore("systemParams", () => {
   // 存储所有系统参数
   const params = ref<SettingsListData[]>([])
+  // 存储系统字典
+  const dicts = ref<any[]>([])
   // 加载状态
   const loading = ref(false)
   // 是否已加载
@@ -15,27 +17,43 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
 
   // 加载系统参数
   const loadParams = async () => {
-    if (loading.value) return
-
-    loading.value = true
-    error.value = null
-
     try {
-      const res = await fetchList({
+      const res = await fetchParamList({
         page: 1,
         pageSize: 100 // 获取足够多的系统参数
       })
 
       if (res.code === 0 && res.data) {
         params.value = res.data.settings
-        loaded.value = true
       } else {
         error.value = res.message || "加载系统参数失败"
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : "加载系统参数失败"
-    } finally {
-      loading.value = false
+    }
+  }
+
+  // 加载系统字典
+  const loadDicts = async () => {
+    try {
+      const res = await fetchDictList({
+        page: 1,
+        pageSize: 100 // 获取足够多的系统字典
+      })
+
+      if (res.code === 0 && res.data) {
+        dicts.value = res.data.dicts || []
+        dicts.value = dicts.value.reduce((acc, item) => {
+          acc[item.group] = acc[item.group] || []
+          acc[item.group].push(item)
+          return acc
+        }, {})
+        console.log("dicts", dicts.value)
+      } else {
+        error.value = res.message || "加载系统字典失败"
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "加载系统字典失败"
     }
   }
 
@@ -70,22 +88,66 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
     return value ? value.split(",").map(item => Number(item)) : []
   }
 
-  const refreshParams = () => {
-    loadParams()
+  // 获取字典值
+  const getDictValue = (key: string): any => {
+    const dict = dicts.value.find(item => item.key === key)
+    return dict ? dict.value : null
+  }
+
+  // 获取字典列表
+  const getArrayDict = (group: number): any[] => {
+    if (dicts.value[0].some((item: any) => item.value === String(group))) {
+      const idx = dicts.value[0].find((item: any) => item.value === String(group))?.id as number
+      return dicts.value[idx] || []
+    }
+    return []
+  }
+
+  // 刷新所有数据
+  const refreshParams = async () => {
+    if (loading.value) return
+
+    try {
+      error.value = null
+      loading.value = true
+
+      await Promise.all([
+        loadParams(),
+        loadDicts()
+      ])
+
+      loaded.value = true
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "刷新数据失败"
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 初始化数据
+  const initData = async () => {
+    if (!loaded.value) {
+      await refreshParams()
+    }
   }
 
   return {
     params,
+    dicts,
     loading,
     loaded,
     error,
     loadParams,
+    loadDicts,
     refreshParams,
+    initData,
     getParam,
     getNumberParam,
     getBooleanParam,
     getArrayParam,
-    getNumberArrayParam
+    getNumberArrayParam,
+    getDictValue,
+    getArrayDict
   }
 })
 

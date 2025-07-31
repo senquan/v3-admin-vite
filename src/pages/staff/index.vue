@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import StaffForm from "./_form.vue"
 import RoleForm from "./_role.vue"
 import { deleteStaff, fetchList } from "./apis"
@@ -20,6 +21,7 @@ const formVisibility = ref(false)
 const roleFormRef = ref<any>([])
 const roleFormVisibility = ref(false)
 const rolesData = ref<any>([])
+const departmentOptions = ref<any>([])
 
 async function fetchStaffs() {
   loading.value = true
@@ -81,6 +83,7 @@ function handleEdit(data: any) {
 function openFrom(data: any) {
   staffFormRef.value?.open({
     id: 0,
+    department: departmentOptions.value,
     editData: data ?? null
   })
   formVisibility.value = true
@@ -129,8 +132,29 @@ function handleDelete(id: number) {
   })
 }
 
+function initOptions() {
+  const store = useSystemParamsStore()
+  departmentOptions.value = store.getArrayDict(4)?.map((item: any) => {
+    return {
+      label: item.name,
+      value: Number(item.value)
+    }
+  })
+  departmentOptions.value.unshift({
+    label: "请选择部门",
+    value: 0
+  })
+}
+
+function getDepartmentLabel(value: number) {
+  if (value === 0) return ""
+  const department = departmentOptions.value.find((item: any) => item.value === value)
+  return department?.label || ""
+}
+
 onMounted(() => {
   fetchStaffs()
+  initOptions()
 })
 </script>
 
@@ -163,8 +187,12 @@ onMounted(() => {
           </template>
         </vxe-column>
         <vxe-column field="phone" width="120" title="联系电话" />
-        <vxe-column field="role" width="80" title="员工" />
-        <vxe-column field="department" width="80" title="部门" />
+        <vxe-column field="role" width="200" title="角色" />
+        <vxe-column field="department" width="80" title="部门">
+          <template #default="{ row }">
+            {{ getDepartmentLabel(row.department) }}
+          </template>
+        </vxe-column>
         <vxe-column field="position" width="80" title="职位" />
         <vxe-column field="status" width="80" title="状态">
           <template #default="{ row }">

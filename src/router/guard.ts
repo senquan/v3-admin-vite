@@ -35,7 +35,7 @@ export function registerNavigationGuard(router: Router) {
     try {
       await userStore.getInfo()
       const systemParamsStore = useSystemParamsStore()
-      systemParamsStore.loadParams()
+      systemParamsStore.initData()
       const permissionStore = usePermissionStore()
       // 生成可访问的 Routes
       routerConfig.dynamic ? await permissionStore.generateRoutes() : permissionStore.setAllRoutes()
