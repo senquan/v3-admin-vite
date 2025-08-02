@@ -47,7 +47,7 @@ function open(options = {
     platformBackgroundColor.value = "#a30c1a"
   } else if (options.platformId === 3 || options.platformId === 4) {
     platformBackgroundColor.value = "#3d7fff"
-  } else if (options.platformId === 9) {
+  } else if (options.platformId === 7) {
     platformBackgroundColor.value = "#e53953"
   }
 }
@@ -312,7 +312,7 @@ function extractPackageQuantity(text: string): number | null {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <div v-if="(platform === 1 || platform === 9) && type === 1">
+            <div v-if="(platform === 1 || platform === 7) && type === 1">
               <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
