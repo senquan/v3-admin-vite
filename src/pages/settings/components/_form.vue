@@ -11,7 +11,8 @@ const formData = reactive({
   group: 0,
   value: "",
   icon: "",
-  remark: ""
+  remark: "",
+  tagIds: []
 })
 
 const formRef = ref()
@@ -99,6 +100,10 @@ function handleSubmit() {
   if (!formRef.value) {
     ElMessage.error("表单未正确初始化")
     return
+  }
+
+  if (formData.group === 1) {
+    formData.tagIds = selectedTags.value
   }
 
   formRef.value.validate((valid: any) => {
