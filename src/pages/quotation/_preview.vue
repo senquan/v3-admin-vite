@@ -48,7 +48,7 @@ function open(options = {
   } else if (options.platformId === 3 || options.platformId === 4) {
     platformBackgroundColor.value = "#3d7fff"
   } else if (options.platformId === 9) {
-    platformBackgroundColor.value = "#e53935"
+    platformBackgroundColor.value = "#e53953"
   }
 }
 
