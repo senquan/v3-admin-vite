@@ -312,7 +312,7 @@ function extractPackageQuantity(text: string): number | null {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <div v-if="platform === 1 && type === 1">
+            <div v-if="(platform === 1 || platform === 9) && type === 1">
               <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
