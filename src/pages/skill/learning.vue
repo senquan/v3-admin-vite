@@ -531,7 +531,6 @@ watch(() => route.params.id, () => {
                 fit="contain"
                 :preview-src-list="currentImageList"
               />
-              <div>11111111{{ currentMaterial?.file_path }}</div>
             </div>
 
             <!-- 其他类型内容 -->

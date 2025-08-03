@@ -177,3 +177,64 @@ export function regenerateExam(id: number, settings?: Partial<ExamSettings>) {
     data: { settings }
   })
 }
+
+// 提交考试答案接口参数
+export interface SubmitExamParams {
+  answers: {
+    questionId: number
+    userAnswer: string
+  }[]
+}
+
+// 提交考试答案响应
+export interface SubmitExamResponse {
+  code: number
+  message: string
+  data: {
+    examId: number
+    recordId: number
+    totalScore: number
+    correctCount: number
+    totalCount: number
+    isPassed: boolean
+  }
+}
+
+// 获取考试结果响应
+export interface ExamResultResponse {
+  code: number
+  message: string
+  data: {
+    exam: Exam
+    examRecord: any
+    questions: any[]
+    statistics: {
+      totalQuestions: number
+      correctCount: number
+      incorrectCount: number
+      pendingCount: number
+      score: number
+      maxScore: number
+      isPassed: boolean
+      passScore: number
+      typeStats: Record<string, any>
+    }
+  }
+}
+
+// 提交考试答案
+export function submitExam(id: number, data: SubmitExamParams) {
+  return request<SubmitExamResponse>({
+    url: `exam/${id}/submit`,
+    method: "post",
+    data
+  })
+}
+
+// 获取考试结果
+export function getExamResult(id: number) {
+  return request<ExamResultResponse>({
+    url: `exam/${id}/result`,
+    method: "get"
+  })
+}

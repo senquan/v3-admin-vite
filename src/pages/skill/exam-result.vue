@@ -1,11 +1,197 @@
+<script setup lang="ts">
+import type { Exam, ExamQuestion } from "./apis/exam"
+import { Check, Close, Minus } from "@element-plus/icons-vue"
+import { ElMessage } from "element-plus"
+import { useRoute, useRouter } from "vue-router"
+import { getExamResult } from "./apis/exam"
+
+const route = useRoute()
+const router = useRouter()
+
+// 考试数据
+const exam = ref<Exam | null>(null)
+const questions = ref<ExamQuestion[]>([])
+const userAnswers = ref<string[]>([])
+const score = ref(0)
+const correctCount = ref(0)
+const totalQuestions = ref(0)
+const usedTime = ref(0)
+const showDetails = ref(true)
+
+// 计算属性
+const incorrectCount = computed(() => {
+  return totalQuestions.value - correctCount.value - unansweredCount.value
+})
+
+const unansweredCount = computed(() => {
+  return userAnswers.value.filter(answer => !answer || !answer.trim()).length
+})
+
+const accuracyRate = computed(() => {
+  if (totalQuestions.value === 0) return 0
+  return Math.round((correctCount.value / totalQuestions.value) * 100)
+})
+
+const scoreClass = computed(() => {
+  if (score.value >= (exam.value?.pass_score || 60)) {
+    return "pass"
+  }
+  return "fail"
+})
+
+const statusClass = computed(() => {
+  return scoreClass.value
+})
+
+const scoreStatus = computed(() => {
+  if (score.value >= (exam.value?.pass_score || 60)) {
+    return "合格"
+  }
+  return "不合格"
+})
+
+// 获取题目类型名称
+function getQuestionTypeName(type?: string): string {
+  const typeMap: Record<string, string> = {
+    single_choice: "单选",
+    multiple_choice: "多选",
+    true_false: "判断",
+    fill_blank: "填空",
+    short_answer: "简答"
+  }
+  return typeMap[type || ""] || "未知"
+}
+
+// 检查题目是否正确
+function isQuestionCorrect(index: number): boolean {
+  const userAnswer = userAnswers.value[index]
+  const correctAnswer = questions.value[index]?.questionEntity?.answer
+
+  if (!userAnswer || !correctAnswer) return false
+
+  // 对于多选题，需要比较排序后的答案
+  if (questions.value[index]?.questionEntity?.question_type === "multiple_choice") {
+    const userSorted = userAnswer.split(",").sort().join(",")
+    const correctSorted = correctAnswer.split(",").sort().join(",")
+    return userSorted === correctSorted
+  }
+
+  return userAnswer === correctAnswer
+}
+
+// 获取题目结果样式类
+function getQuestionResultClass(index: number): string {
+  if (isQuestionCorrect(index)) return "correct"
+  if (userAnswers.value[index]) return "incorrect"
+  return "unanswered"
+}
+
+// 格式化答案显示
+function formatAnswer(answer: string, options?: any[]): string {
+  if (!answer) return ""
+
+  if (!options) return answer
+
+  // 如果是选择题，将字母答案转换为具体内容
+  const letters = answer.split(",").map(a => a.trim())
+  const contents = letters.map((letter) => {
+    const index = letter.charCodeAt(0) - 65 // A=0, B=1, C=2...
+    if (index >= 0 && index < options.length) {
+      const option = options[index]
+      return `${letter}. ${option.content || option}`
+    }
+    return letter
+  })
+
+  return contents.join("; ")
+}
+
+// 切换详情显示
+function toggleDetails() {
+  showDetails.value = !showDetails.value
+}
+
+// 返回主页
+function returnToMain() {
+  router.push("/skill")
+}
+
+// 再答一次
+// function reviewAnswers() {
+//   router.push({
+//     name: "ExamTaking",
+//     params: {
+//       examId: route.params.examId
+//     }
+//   })
+// }
+
+// // 查看答案
+// function viewAnswers() {
+//   showDetails.value = true
+//   // 滚动到详情区域
+//   setTimeout(() => {
+//     const detailsElement = document.querySelector(".result-details")
+//     if (detailsElement) {
+//       detailsElement.scrollIntoView({ behavior: "smooth" })
+//     }
+//   }, 100)
+// }
+
+// 加载考试数据和结果
+async function loadExamResult() {
+  try {
+    const examId = Number(route.params.examId)
+    if (!examId) {
+      ElMessage.error("考试ID无效")
+      return
+    }
+
+    // 从接口获取考试结果
+    const response = await getExamResult(examId)
+    if (response.code === 0) {
+      // 设置考试信息
+      exam.value = response.data.exam
+      questions.value = response.data.exam.examQuestions || []
+
+      // 设置统计数据
+      const stats = response.data.statistics
+      score.value = stats.score
+      correctCount.value = stats.correctCount
+      totalQuestions.value = stats.totalQuestions
+
+      // 设置用户答案
+      userAnswers.value = response.data.questions.map(q => q.userAnswer || "")
+
+      // 计算用时（如果后端返回了用时数据，应该使用后端数据）
+      if (response.data.examRecord && response.data.examRecord.used_time) {
+        usedTime.value = response.data.examRecord.used_time
+      } else {
+        // 如果没有用时数据，保留原来的模拟逻辑
+        usedTime.value = Math.floor(Math.random() * 30) + 10
+      }
+    } else {
+      ElMessage.error(response.message || "获取考试结果失败")
+    }
+  } catch (error) {
+    console.error("加载考试结果失败:", error)
+    ElMessage.error("加载考试结果失败")
+  }
+}
+
+onMounted(() => {
+  loadExamResult()
+})
+</script>
+
 <template>
   <div class="exam-result-container">
     <!-- 结果头部 -->
     <div class="result-header">
       <div class="header-buttons">
         <el-button @click="returnToMain" type="primary">返回主页</el-button>
-        <el-button @click="reviewAnswers" type="info">再答一次</el-button>
-        <el-button @click="viewAnswers" type="success">查看答案</el-button>
+        <!-- <el-button @click="reviewAnswers" type="info">再答一次</el-button>
+        <el-button @click="viewAnswers" type="success">查看答案</el-button> -->
       </div>
     </div>
 
@@ -35,7 +221,7 @@
         <template #header>
           <div class="card-header">
             <span>答题详情</span>
-            <el-button @click="toggleDetails" type="text">{{ showDetails ? '收起' : '展开' }}</el-button>
+            <el-button @click="toggleDetails" type="text">{{ showDetails ? "收起" : "展开" }}</el-button>
           </div>
         </template>
 
@@ -85,14 +271,14 @@
               <div class="answer-comparison" v-if="question.questionEntity?.options">
                 <div class="answer-row">
                   <span class="answer-label">您的答案：</span>
-                  <span class="user-answer" :class="{ 'correct': isQuestionCorrect(index), 'incorrect': userAnswers[index] && !isQuestionCorrect(index) }">
-                    {{ formatAnswer(userAnswers[index], question.questionEntity?.options) || '未作答' }}
+                  <span class="user-answer" :class="{ correct: isQuestionCorrect(index), incorrect: userAnswers[index] && !isQuestionCorrect(index) }">
+                    {{ formatAnswer(userAnswers[index]) || "未作答" }}
                   </span>
                 </div>
                 <div class="answer-row">
                   <span class="answer-label">正确答案：</span>
                   <span class="correct-answer">
-                    {{ formatAnswer(question.questionEntity?.answer || '', question.questionEntity?.options) }}
+                    {{ formatAnswer(question.questionEntity?.answer || "", question.questionEntity?.options) }}
                   </span>
                 </div>
               </div>
@@ -100,8 +286,8 @@
               <div class="answer-comparison" v-else>
                 <div class="answer-row">
                   <span class="answer-label">您的答案：</span>
-                  <span class="user-answer" :class="{ 'correct': isQuestionCorrect(index), 'incorrect': userAnswers[index] && !isQuestionCorrect(index) }">
-                    {{ userAnswers[index] || '未作答' }}
+                  <span class="user-answer" :class="{ correct: isQuestionCorrect(index), incorrect: userAnswers[index] && !isQuestionCorrect(index) }">
+                    {{ userAnswers[index] || "未作答" }}
                   </span>
                 </div>
                 <div class="answer-row">
@@ -121,188 +307,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Check, Close, Minus } from '@element-plus/icons-vue'
-import { getExamDetail } from './apis/exam'
-import type { Exam, ExamQuestion } from './apis/exam'
-
-const route = useRoute()
-const router = useRouter()
-
-// 考试数据
-const exam = ref<Exam | null>(null)
-const questions = ref<ExamQuestion[]>([])
-const userAnswers = ref<string[]>([])
-const score = ref(0)
-const correctCount = ref(0)
-const totalQuestions = ref(0)
-const usedTime = ref(0)
-const showDetails = ref(true)
-
-// 计算属性
-const incorrectCount = computed(() => {
-  return totalQuestions.value - correctCount.value - unansweredCount.value
-})
-
-const unansweredCount = computed(() => {
-  return userAnswers.value.filter(answer => !answer || !answer.trim()).length
-})
-
-const accuracyRate = computed(() => {
-  if (totalQuestions.value === 0) return 0
-  return Math.round((correctCount.value / totalQuestions.value) * 100)
-})
-
-const scoreClass = computed(() => {
-  if (score.value >= (exam.value?.pass_score || 60)) {
-    return 'pass'
-  }
-  return 'fail'
-})
-
-const statusClass = computed(() => {
-  return scoreClass.value
-})
-
-const scoreStatus = computed(() => {
-  if (score.value >= (exam.value?.pass_score || 60)) {
-    return '合格'
-  }
-  return '不合格'
-})
-
-// 获取题目类型名称
-function getQuestionTypeName(type?: string): string {
-  const typeMap: Record<string, string> = {
-    'single_choice': '单选',
-    'multiple_choice': '多选',
-    'true_false': '判断',
-    'fill_blank': '填空',
-    'short_answer': '简答'
-  }
-  return typeMap[type || ''] || '未知'
-}
-
-// 检查题目是否正确
-function isQuestionCorrect(index: number): boolean {
-  const userAnswer = userAnswers.value[index]
-  const correctAnswer = questions.value[index]?.questionEntity?.answer
-
-  if (!userAnswer || !correctAnswer) return false
-
-  // 对于多选题，需要比较排序后的答案
-  if (questions.value[index]?.questionEntity?.question_type === 'multiple_choice') {
-    const userSorted = userAnswer.split(',').sort().join(',')
-    const correctSorted = correctAnswer.split(',').sort().join(',')
-    return userSorted === correctSorted
-  }
-
-  return userAnswer === correctAnswer
-}
-
-// 获取题目结果样式类
-function getQuestionResultClass(index: number): string {
-  if (isQuestionCorrect(index)) return 'correct'
-  if (userAnswers.value[index]) return 'incorrect'
-  return 'unanswered'
-}
-
-// 格式化答案显示
-function formatAnswer(answer: string, options?: any[]): string {
-  if (!answer) return ''
-
-  if (!options) return answer
-
-  // 如果是选择题，将字母答案转换为具体内容
-  const letters = answer.split(',').map(a => a.trim())
-  const contents = letters.map(letter => {
-    const index = letter.charCodeAt(0) - 65 // A=0, B=1, C=2...
-    if (index >= 0 && index < options.length) {
-      const option = options[index]
-      return `${letter}. ${option.content || option}`
-    }
-    return letter
-  })
-
-  return contents.join('; ')
-}
-
-// 切换详情显示
-function toggleDetails() {
-  showDetails.value = !showDetails.value
-}
-
-// 返回主页
-function returnToMain() {
-  router.push('/skill')
-}
-
-// 再答一次
-function reviewAnswers() {
-  router.push({
-    name: 'ExamTaking',
-    params: {
-      examId: route.params.examId
-    }
-  })
-}
-
-// 查看答案
-function viewAnswers() {
-  showDetails.value = true
-  // 滚动到详情区域
-  setTimeout(() => {
-    const detailsElement = document.querySelector('.result-details')
-    if (detailsElement) {
-      detailsElement.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, 100)
-}
-
-// 加载考试数据和结果
-async function loadExamResult() {
-  try {
-    // 从路由参数获取结果数据
-    score.value = Number(route.query.score) || 0
-    correctCount.value = Number(route.query.correctCount) || 0
-    totalQuestions.value = Number(route.query.totalQuestions) || 0
-
-    if (route.query.answers) {
-      try {
-        userAnswers.value = JSON.parse(route.query.answers as string)
-      } catch (e) {
-        console.error('解析用户答案失败:', e)
-        userAnswers.value = []
-      }
-    }
-
-    // 加载考试详情
-    const examId = Number(route.params.examId)
-    if (examId) {
-      const response = await getExamDetail(examId)
-      if (response.code === 200) {
-        exam.value = response.data.exam
-        questions.value = response.data.exam.examQuestions || []
-      }
-    }
-
-    // 模拟用时（实际应该从考试开始时间计算）
-    usedTime.value = Math.floor(Math.random() * 30) + 10
-
-  } catch (error) {
-    console.error('加载考试结果失败:', error)
-    ElMessage.error('加载考试结果失败')
-  }
-}
-
-onMounted(() => {
-  loadExamResult()
-})
-</script>
 
 <style scoped>
 .exam-result-container {

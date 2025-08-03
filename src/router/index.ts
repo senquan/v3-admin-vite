@@ -51,23 +51,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   {
     path: "/",
     component: Layouts,
-    redirect: "/dashboard",
-    children: [
-      {
-        path: "dashboard",
-        component: () => import("@/pages/dashboard/index.vue"),
-        name: "Dashboard",
-        meta: {
-          title: "首页",
-          svgIcon: "dashboard",
-          affix: true
-        }
-      }
-    ]
-  },
-  {
-    path: "/skill",
-    component: Layouts,
+    redirect: "/skill",
     meta: {
       title: "技能中心",
       svgIcon: "skill"
@@ -208,13 +192,24 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "岗位安全培训矩阵"
         }
-      },
+      }
+    ]
+  },
+  {
+    path: "/survey",
+    component: Layouts,
+    meta: {
+      title: "问卷调查",
+      elIcon: "EditPen"
+    },
+    children: [
       {
         path: "survey",
         component: () => import("@/pages/knowledge/survey/index.vue"),
         name: "Survey",
         meta: {
-          title: "问卷调查"
+          title: "问卷调查",
+          elIcon: "EditPen"
         }
       }
     ]

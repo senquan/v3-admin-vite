@@ -1,3 +1,203 @@
+<script setup lang="ts">
+import type { Exam, ExamQuestion, SubmitExamParams } from "./apis/exam"
+import { useRoute, useRouter } from "vue-router"
+import { getExamDetail, submitExam as submitExamApi } from "./apis/exam"
+
+const route = useRoute()
+const router = useRouter()
+
+// 考试数据
+const exam = ref<Exam | null>(null)
+const questions = ref<ExamQuestion[]>([])
+const currentQuestionIndex = ref(0)
+const userAnswers = ref<string[]>([])
+
+// 对话框状态
+const answerSheetVisible = ref(false)
+const submitDialogVisible = ref(false)
+// 当前题目
+const currentQuestion = computed(() => {
+  if (questions.value.length === 0) return null
+  return questions.value[currentQuestionIndex.value]?.questionEntity
+})
+
+// 是否为选择题
+const isChoiceQuestion = computed(() => {
+  if (!currentQuestion.value) return false
+  return ["单选", "多选"].includes(currentQuestion.value.question_type)
+})
+
+// 已答题数量
+const answeredCount = computed(() => {
+  return userAnswers.value.filter(answer => answer && answer.trim()).length
+})
+
+// 获取选项标签
+function getOptionLabel(index: number): string {
+  return String.fromCharCode(65 + index) // A, B, C, D...
+}
+
+// 检查选项是否被选中
+function isOptionSelected(label: string): boolean {
+  const answer = userAnswers.value[currentQuestionIndex.value]
+  if (!answer) return false
+
+  if (currentQuestion.value?.question_type === "多选") {
+    return answer.split(",").includes(label)
+  }
+  return answer === label
+}
+
+// 选择选项
+function selectOption(label: string) {
+  const questionType = currentQuestion.value?.question_type
+
+  if (questionType === "多选") {
+    // 多选题处理
+    let currentAnswers = userAnswers.value[currentQuestionIndex.value]?.split(",").filter(a => a) || []
+
+    if (currentAnswers.includes(label)) {
+      currentAnswers = currentAnswers.filter(a => a !== label)
+    } else {
+      currentAnswers.push(label)
+    }
+
+    userAnswers.value[currentQuestionIndex.value] = currentAnswers.sort().join(",")
+  } else {
+    // 单选题和判断题处理
+    userAnswers.value[currentQuestionIndex.value] = label
+  }
+}
+
+// 导航函数
+function goToPreviousQuestion() {
+  if (currentQuestionIndex.value > 0) {
+    currentQuestionIndex.value--
+  }
+}
+
+function goToNextQuestion() {
+  if (currentQuestionIndex.value < questions.value.length - 1) {
+    currentQuestionIndex.value++
+  }
+}
+
+function goToFirstQuestion() {
+  currentQuestionIndex.value = 0
+}
+
+function goToQuestion(index: number) {
+  currentQuestionIndex.value = index
+  answerSheetVisible.value = false
+}
+
+// 显示答题卡
+function showAnswerSheet() {
+  answerSheetVisible.value = true
+}
+
+// 提交考试
+function submitExam() {
+  submitDialogVisible.value = true
+}
+
+// 确认提交
+async function confirmSubmit() {
+  submitDialogVisible.value = false
+
+  try {
+    // 准备提交数据
+    const answers = questions.value.map((question, index) => {
+      return {
+        questionId: question.questionEntity?._id || 0,
+        userAnswer: userAnswers.value[index] || ""
+      }
+    })
+
+    // 调用提交API
+    const examId = Number(route.params.examId)
+    const response = await submitExamApi(examId, { answers })
+
+    if (response.code === 0) {
+      // 提交成功，跳转到结果页面
+      router.push({
+        name: "ExamResult",
+        params: {
+          examId: examId.toString()
+        }
+      })
+    } else {
+      ElMessage.error(response.message || "提交失败")
+    }
+  } catch (error) {
+    console.error("提交考试失败:", error)
+    ElMessage.error("提交考试失败，请稍后重试")
+  }
+}
+
+// 返回主页
+function returnToMain() {
+  ElMessageBox.confirm("确定要返回主页吗？当前答题进度将丢失。", "确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => {
+    router.push("/skill/myexam")
+  })
+}
+
+// 格式化日期
+function formatDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}年${month}月${day}日`
+}
+
+// 获取星期
+function getDayOfWeek(): string {
+  const days = ["日", "一", "二", "三", "四", "五", "六"]
+  return days[new Date().getDay()]
+}
+
+// 加载考试数据
+async function loadExamData() {
+  try {
+    const examId = Number(route.params.examId)
+    if (!examId) {
+      ElMessage.error("考试ID无效")
+      router.push("/skill/myexam")
+      return
+    }
+
+    const response = await getExamDetail(examId)
+    if (response.code === 0) {
+      exam.value = response.data.exam
+      questions.value = response.data.exam.examQuestions || []
+
+      // 初始化答案数组
+      userAnswers.value = Array.from({ length: questions.value.length }, () => "")
+
+      if (questions.value.length === 0) {
+        ElMessage.warning("该考试暂无题目")
+        router.push("/skill/myexam")
+      }
+    } else {
+      ElMessage.error(response.message || "加载考试失败")
+      router.push("/skill/myexam")
+    }
+  } catch (error) {
+    console.error("加载考试数据失败:", error)
+    ElMessage.error("加载考试数据失败")
+    router.push("/skill/myexam")
+  }
+}
+
+onMounted(() => {
+  loadExamData()
+})
+</script>
+
 <template>
   <div class="exam-taking-container">
     <!-- 考试头部信息 -->
@@ -48,8 +248,9 @@
       <div class="question-header">
         <span class="question-number">题目{{ currentQuestionIndex + 1 }}</span>
         <div class="question-info">
-          <span class="correct-answer"></span>
+          <!-- <span class="correct-answer"></span> -->
         </div>
+        <span class="question-type">题型：{{ currentQuestion.question_type }}</span>
       </div>
 
       <div class="question-text">
@@ -62,7 +263,7 @@
           v-for="(option, index) in currentQuestion.options"
           :key="index"
           class="option-item"
-          :class="{ 'selected': isOptionSelected(getOptionLabel(index)) }"
+          :class="{ selected: isOptionSelected(getOptionLabel(index)) }"
           @click="selectOption(getOptionLabel(index))"
         >
           <span class="option-label">{{ getOptionLabel(index) }}</span>
@@ -74,7 +275,7 @@
       <div class="question-options" v-else-if="currentQuestion.question_type === '判断'">
         <div
           class="option-item"
-          :class="{ 'selected': userAnswers[currentQuestionIndex] === '正确' }"
+          :class="{ selected: userAnswers[currentQuestionIndex] === '正确' }"
           @click="selectOption('正确')"
         >
           <span class="option-label">A</span>
@@ -82,7 +283,7 @@
         </div>
         <div
           class="option-item"
-          :class="{ 'selected': userAnswers[currentQuestionIndex] === '错误' }"
+          :class="{ selected: userAnswers[currentQuestionIndex] === '错误' }"
           @click="selectOption('错误')"
         >
           <span class="option-label">B</span>
@@ -110,8 +311,8 @@
             :key="index"
             class="sheet-item"
             :class="{
-              'answered': userAnswers[index],
-              'current': index === currentQuestionIndex
+              answered: userAnswers[index],
+              current: index === currentQuestionIndex,
             }"
             @click="goToQuestion(index)"
           >
@@ -135,205 +336,6 @@
     </el-dialog>
   </div>
 </template>
-
-<script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
-import { getExamDetail } from './apis/exam'
-import type { Exam, ExamQuestion } from './apis/exam'
-
-const route = useRoute()
-const router = useRouter()
-
-// 考试数据
-const exam = ref<Exam | null>(null)
-const questions = ref<ExamQuestion[]>([])
-const currentQuestionIndex = ref(0)
-const userAnswers = ref<string[]>([])
-
-// 对话框状态
-const answerSheetVisible = ref(false)
-const submitDialogVisible = ref(false)
-// 当前题目
-const currentQuestion = computed(() => {
-  if (questions.value.length === 0) return null
-  return questions.value[currentQuestionIndex.value]?.questionEntity
-})
-
-// 是否为选择题
-const isChoiceQuestion = computed(() => {
-  if (!currentQuestion.value) return false
-  return ['单选', '多选'].includes(currentQuestion.value.question_type)
-})
-
-// 已答题数量
-const answeredCount = computed(() => {
-  return userAnswers.value.filter(answer => answer && answer.trim()).length
-})
-
-// 获取选项标签
-function getOptionLabel(index: number): string {
-  return String.fromCharCode(65 + index) // A, B, C, D...
-}
-
-// 检查选项是否被选中
-function isOptionSelected(label: string): boolean {
-  const answer = userAnswers.value[currentQuestionIndex.value]
-  if (!answer) return false
-
-  if (currentQuestion.value?.question_type === '多选') {
-    return answer.split(',').includes(label)
-  }
-  return answer === label
-}
-
-// 选择选项
-function selectOption(label: string) {
-  const questionType = currentQuestion.value?.question_type
-
-  if (questionType === '多选') {
-    // 多选题处理
-    let currentAnswers = userAnswers.value[currentQuestionIndex.value]?.split(',').filter(a => a) || []
-
-    if (currentAnswers.includes(label)) {
-      currentAnswers = currentAnswers.filter(a => a !== label)
-    } else {
-      currentAnswers.push(label)
-    }
-
-    userAnswers.value[currentQuestionIndex.value] = currentAnswers.sort().join(',')
-  } else {
-    // 单选题和判断题处理
-    userAnswers.value[currentQuestionIndex.value] = label
-  }
-}
-
-// 导航函数
-function goToPreviousQuestion() {
-  if (currentQuestionIndex.value > 0) {
-    currentQuestionIndex.value--
-  }
-}
-
-function goToNextQuestion() {
-  if (currentQuestionIndex.value < questions.value.length - 1) {
-    currentQuestionIndex.value++
-  }
-}
-
-function goToFirstQuestion() {
-  currentQuestionIndex.value = 0
-}
-
-function goToQuestion(index: number) {
-  currentQuestionIndex.value = index
-  answerSheetVisible.value = false
-}
-
-// 显示答题卡
-function showAnswerSheet() {
-  answerSheetVisible.value = true
-}
-
-// 提交考试
-function submitExam() {
-  submitDialogVisible.value = true
-}
-
-// 确认提交
-function confirmSubmit() {
-  submitDialogVisible.value = false
-
-  // 计算得分
-  let score = 0
-  let correctCount = 0
-
-  questions.value.forEach((question, index) => {
-    const userAnswer = userAnswers.value[index]
-    const correctAnswer = question.questionEntity?.answer
-
-    if (userAnswer && correctAnswer && userAnswer === correctAnswer) {
-      score += question.question_score
-      correctCount++
-    }
-  })
-
-  // 跳转到结果页面
-  router.push({
-    name: 'ExamResult',
-    params: {
-      examId: route.params.examId
-    },
-    query: {
-      score: score.toString(),
-      correctCount: correctCount.toString(),
-      totalQuestions: questions.value.length.toString(),
-      answers: JSON.stringify(userAnswers.value)
-    }
-  })
-}
-
-// 返回主页
-function returnToMain() {
-  ElMessageBox.confirm('确定要返回主页吗？当前答题进度将丢失。', '确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    router.push('/skill/myexam')
-  })
-}
-
-// 格式化日期
-function formatDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}年${month}月${day}日`
-}
-
-// 获取星期
-function getDayOfWeek(): string {
-  const days = ['日', '一', '二', '三', '四', '五', '六']
-  return days[new Date().getDay()]
-}
-
-// 加载考试数据
-async function loadExamData() {
-  try {
-    const examId = Number(route.params.examId)
-    if (!examId) {
-      ElMessage.error('考试ID无效')
-      router.push('/skill/myexam')
-      return
-    }
-
-    const response = await getExamDetail(examId)
-    if (response.code === 0) {
-      exam.value = response.data.exam
-      questions.value = response.data.exam.examQuestions || []
-
-      // 初始化答案数组
-      userAnswers.value = new Array(questions.value.length).fill('')
-
-      if (questions.value.length === 0) {
-        ElMessage.warning('该考试暂无题目')
-        router.push('/skill/myexam')
-      }
-    } else {
-      ElMessage.error(response.message || '加载考试失败')
-      router.push('/skill/myexam')
-    }
-  } catch (error) {
-    console.error('加载考试数据失败:', error)
-    ElMessage.error('加载考试数据失败')
-    router.push('/skill/myexam')
-  }
-}
-
-onMounted(() => {
-  loadExamData()
-})
-</script>
 
 <style scoped>
 .exam-taking-container {
