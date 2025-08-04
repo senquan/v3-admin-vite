@@ -124,8 +124,8 @@ defineExpose({
       <el-table-column property="id" label="序号" width="60" align="center" />
       <el-table-column property="name" label="姓名" width="120" align="center" />
       <el-table-column property="gender" label="性别" width="60" align="center">
-        <template #default>
-          {{ recordData.gender === true ? "男" : (recordData.gender === false ? "女" : "未知") }}
+        <template #default="scope">
+          {{ scope.row.gender === true ? "男" : (scope.row.gender === false ? "女" : "未知") }}
         </template>
       </el-table-column>
       <el-table-column property="age" label="年龄" width="60" align="center" />
