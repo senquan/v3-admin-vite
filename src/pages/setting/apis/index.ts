@@ -9,11 +9,12 @@ export function fetchCategoryList(params: Tags.CommonListRequestParams) {
   })
 }
 
-export function fetchCategoryListOpt() {
+export function fetchCategoryListOpt(type: number) {
   return request<Tags.CategoryListResponseData>({
     url: "category/list",
     method: "get",
     params: {
+      type,
       format: "opt"
     }
   })

@@ -3,6 +3,7 @@ import { getCascaderOptions } from "@/common/utils/helper"
 import { request } from "@/http/axios"
 import { fetchCategoryListOpt } from "../../setting/apis"
 import { fetchList as fetchCoursewares } from "./../../knowledge/courseware/apis"
+import { fetchList as fetchCertificates } from "./../../training/certificate/apis"
 import { createRecord, fetchStaff } from "./apis"
 
 const emit = defineEmits(["success", "close"])
@@ -14,7 +15,8 @@ const formData = reactive({
   contents: "",
   contents_select: [] as { name: string, url: string }[],
   contents_matrix: [] as number[],
-  coursewares: []
+  coursewares: [],
+  certificates: []
 })
 
 const formRef = ref()
@@ -33,6 +35,7 @@ const dicts = ref({
 const fileList = ref([])
 const searchLoading = ref(false)
 const coursewareOptions = ref<any>([])
+const certificateOptions = ref<any>([])
 const cascaderOptions = ref({
   matrix: [] as number[]
 })
@@ -54,6 +57,7 @@ function resetForm() {
   formData.contents_select = []
   formData.contents_matrix = []
   formData.coursewares = []
+  formData.certificates = []
   fileList.value = []
   scopeOptions.value = []
   handleMatrixClear()
@@ -110,7 +114,7 @@ function loadParticipants(node: any, resolve: any, type: string = "inner") {
 
 function loadMatrix() {
   if (matrix.value.length > 0) return
-  fetchCategoryListOpt().then((res) => {
+  fetchCategoryListOpt(0).then((res) => {
     const categoryOptData: Array<any> = []
     if (res.data) {
       for (const item of res.data.categories) {
@@ -231,10 +235,23 @@ function handleSearchCoursewares(value: string) {
   fetchCoursewares({ keyword: value }).then((response) => {
     if (response.code === 0) {
       coursewareOptions.value = response.data.coursewares
-      console.log(coursewareOptions.value)
       searchLoading.value = false
     } else {
       ElMessage.error(`获取课件列表失败: ${response.message}`)
+    }
+  })
+}
+
+function handleSearchCertificates(value: string) {
+  if (value === "" && certificateOptions.value.length > 0) return
+  searchLoading.value = true
+  fetchCertificates({ keyword: value }).then((response) => {
+    if (response.code === 0) {
+      certificateOptions.value = response.data.templates
+      searchLoading.value = false
+      console.log(certificateOptions.value)
+    } else {
+      ElMessage.error(`获取考核证书列表失败: ${response.message}`)
     }
   })
 }
@@ -353,7 +370,7 @@ defineExpose({
               filterable
               remote
               default-first-option
-              placeholder="请输入或选择标签"
+              placeholder="请输入或选择课件"
               :remote-method="handleSearchCoursewares"
               :loading="searchLoading"
               style="width: 380px"
@@ -365,6 +382,33 @@ defineExpose({
                 :value="co.id"
               >
                 <span>{{ co.title }}</span>
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="考核证书" prop="certificates">
+            <el-select
+              v-model="formData.certificates"
+              multiple
+              filterable
+              remote
+              default-first-option
+              placeholder="请输入或选择考核证书"
+              :remote-method="handleSearchCertificates"
+              :loading="searchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="co in certificateOptions"
+                :key="co.id"
+                :label="co.name"
+                :value="co.id"
+              >
+                <span>{{ co.name }}</span>
               </el-option>
             </el-select>
           </el-form-item>

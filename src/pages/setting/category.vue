@@ -5,6 +5,7 @@ import { deleteCategory, fetchCategoryList } from "./apis"
 const loading = ref(false)
 const listQuery = reactive({
   keyword: "",
+  type: 0,
   page: 1,
   pageSize: 20
 })
@@ -24,6 +25,7 @@ function fetchList() {
 }
 
 function handleFilter() {
+  listQuery.page = 1
   fetchList()
 }
 
@@ -39,8 +41,9 @@ function openFrom(data: any) {
   formVisibility.value = true
   nextTick(() => {
     if (data) data.parentId = data.parent_id ?? 0
+    console.log(data)
     categoryFormRef.value?.open({
-      id: 0,
+      type: listQuery.type,
       editData: data ?? null
     })
   })
@@ -86,6 +89,10 @@ defineExpose({
   <div class="main-container">
     <div class="filter-container">
       <el-input v-model="listQuery.keyword" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" />
+      <el-select v-model="listQuery.type" placeholder="分类类型" class="filter-item" style="width: 150px;" @change="handleFilter">
+        <el-option label="标准分类" :value="0" />
+        <el-option label="题库分类" :value="1" />
+      </el-select>
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增分类</el-button>
     </div>

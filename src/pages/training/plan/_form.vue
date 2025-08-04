@@ -102,7 +102,6 @@ function open(options = {
     isEdit.value = false
     resetOptions()
   }
-  console.log(formData)
 }
 
 function close() {
@@ -114,7 +113,6 @@ function resetOptions() {
 }
 
 function handleSubmit() {
-  console.log(formData)
   formRef.value.validate((valid: any) => {
     if (!valid) return
     btnSubmit.loading = true

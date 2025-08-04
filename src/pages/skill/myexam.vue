@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import type { Exam, ExamListParams, GenerateExamParams } from "./apis/exam"
-import { generateExam, getExamDetail, getMyExamList, regenerateExam, updateExamSettings } from "./apis/exam"
+import { generateExam, getMyExamList } from "./apis/exam"
 
 const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
 const generateLoading = ref(false)
-const settingsLoading = ref(false)
 const tableData = ref<Exam[]>([])
 const generateDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
-const settingsDialogVisible = ref(false)
 const currentExam = ref<Exam | null>(null)
 const generateFormRef = ref()
-const settingsFormRef = ref()
 const totalExams = ref(0)
 
 // 搜索表单
@@ -30,6 +27,7 @@ const totalPages = computed(() => Math.ceil(totalExams.value / Number(listQuery.
 
 // 生成考试表单
 const generateForm = reactive<GenerateExamParams>({
+  recordId: 0,
   title: "",
   description: "",
   examType: 1,
@@ -42,15 +40,9 @@ const generateForm = reactive<GenerateExamParams>({
     fairness: 5,
     questionCount: 20,
     questionTypes: ["single_choice", "multiple_choice"],
-    categories: [1]
+    categories: [1],
+    duration: 60
   }
-})
-
-// 设置表单
-const settingsForm = reactive({
-  totalScore: 100,
-  level: 2,
-  examCategory: 1
 })
 
 // 表单验证规则
@@ -61,12 +53,6 @@ const generateRules = {
   "settings.questionCount": [{ required: true, message: "请输入题目数量", trigger: "blur" }],
   "settings.level": [{ required: true, message: "请选择难度级别", trigger: "change" }],
   "settings.examCategory": [{ required: true, message: "请选择考试分类", trigger: "change" }]
-}
-
-const settingsRules = {
-  totalScore: [{ required: true, message: "请输入总分", trigger: "blur" }],
-  level: [{ required: true, message: "请选择难度级别", trigger: "change" }],
-  examCategory: [{ required: true, message: "请选择考试分类", trigger: "change" }]
 }
 
 // 获取考试列表
@@ -169,18 +155,18 @@ async function handleGenerateExam() {
 }
 
 // 查看详情
-async function handleViewDetail(exam: Exam) {
-  try {
-    const response = await getExamDetail(exam._id!)
-    if (response.code === 200) {
-      currentExam.value = response.data.exam
-      detailDialogVisible.value = true
-    }
-  } catch (error) {
-    console.error("获取考试详情失败:", error)
-    ElMessage.error("获取考试详情失败")
-  }
-}
+// async function handleViewDetail(exam: Exam) {
+//   try {
+//     const response = await getExamDetail(exam._id!)
+//     if (response.code === 200) {
+//       currentExam.value = response.data.exam
+//       detailDialogVisible.value = true
+//     }
+//   } catch (error) {
+//     console.error("获取考试详情失败:", error)
+//     ElMessage.error("获取考试详情失败")
+//   }
+// }
 
 // 开始考试
 function handleStartExam(exam: Exam) {
@@ -209,57 +195,6 @@ function handleStartExam(exam: Exam) {
   }).catch(() => {
     // 用户取消
   })
-}
-
-// 编辑设置
-function handleEditSettings(exam: Exam) {
-  currentExam.value = exam
-  settingsForm.totalScore = exam.total_score
-  settingsForm.level = exam.level
-  settingsForm.examCategory = exam.category_id
-  settingsDialogVisible.value = true
-}
-
-// 更新设置
-async function handleUpdateSettings() {
-  try {
-    await settingsFormRef.value.validate()
-    settingsLoading.value = true
-
-    const response = await updateExamSettings(currentExam.value!._id!, settingsForm)
-    if (response.code === 200) {
-      ElMessage.success("设置更新成功")
-      settingsDialogVisible.value = false
-      fetchExamList()
-    }
-  } catch (error) {
-    console.error("更新设置失败:", error)
-    ElMessage.error("更新设置失败")
-  } finally {
-    settingsLoading.value = false
-  }
-}
-
-// 重新生成考试
-async function handleRegenerateExam(exam: Exam) {
-  try {
-    await ElMessageBox.confirm("确认重新生成此考试的题目？原有题目将被替换。", "提示", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning"
-    })
-
-    const response = await regenerateExam(exam._id!)
-    if (response.code === 200) {
-      ElMessage.success("考试重新生成成功")
-      fetchExamList()
-    }
-  } catch (error) {
-    if (error !== "cancel") {
-      console.error("重新生成考试失败:", error)
-      ElMessage.error("重新生成考试失败")
-    }
-  }
 }
 
 // 获取考试类型名称
@@ -474,19 +409,13 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="400" align="center" fixed="right">
+        <el-table-column label="操作" width="180" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" @click="handleViewDetail(row)">
+            <!-- <el-button type="primary" @click="handleViewDetail(row)">
               查看详情
-            </el-button>
+            </el-button> -->
             <el-button type="success" @click="handleStartExam(row)">
               开始考试
-            </el-button>
-            <el-button type="warning" @click="handleEditSettings(row)">
-              编辑设置
-            </el-button>
-            <el-button type="info" @click="handleRegenerateExam(row)">
-              重新生成
             </el-button>
           </template>
         </el-table-column>
@@ -654,39 +583,6 @@ onMounted(() => {
           </el-table>
         </div>
       </div>
-    </el-dialog>
-
-    <!-- 编辑设置对话框 -->
-    <el-dialog v-model="settingsDialogVisible" title="编辑考试设置" width="600px">
-      <el-form :model="settingsForm" :rules="settingsRules" ref="settingsFormRef" label-width="120px">
-        <el-form-item label="总分" prop="totalScore">
-          <el-input-number v-model="settingsForm.totalScore" :min="1" :max="1000" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="难度级别" prop="level">
-          <el-select v-model="settingsForm.level" placeholder="请选择难度" style="width: 100%">
-            <el-option label="简单" :value="1" />
-            <el-option label="中等" :value="2" />
-            <el-option label="困难" :value="3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="考试分类" prop="examCategory">
-          <el-select v-model="settingsForm.examCategory" placeholder="请选择分类" style="width: 100%">
-            <el-option label="技能考试" :value="1" />
-            <el-option label="安全考试" :value="2" />
-            <el-option label="管理考试" :value="3" />
-            <el-option label="其他考试" :value="4" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="settingsDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleUpdateSettings" :loading="settingsLoading">
-            保存设置
-          </el-button>
-        </div>
-      </template>
     </el-dialog>
   </div>
 </template>

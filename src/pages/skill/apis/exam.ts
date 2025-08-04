@@ -11,6 +11,8 @@ export interface ExamSettings {
   questionCount: number // 题目数量
   questionTypes: string[] // 题目类型
   categories: number[] // 知识分类
+  passScore: number // 及格分数
+  duration: number // 考试时长
 }
 
 // 考试信息接口
@@ -108,9 +110,15 @@ export interface ExamDetailResponse {
   }
 }
 
+export interface ExamActionResponse {
+  code: number
+  message: string
+}
+
 // 生成考试参数
 export interface GenerateExamParams {
-  title: string
+  recordId: number
+  title?: string
   description?: string
   examType?: number
   settings?: Partial<ExamSettings>
@@ -154,7 +162,7 @@ export function getExamDetail(id: number) {
 // 生成考试
 export function generateExam(data: GenerateExamParams) {
   return request<GenerateExamResponse>({
-    url: "exam/generate",
+    url: `exam/generate/${data.recordId}`,
     method: "post",
     data
   })
@@ -236,5 +244,32 @@ export function getExamResult(id: number) {
   return request<ExamResultResponse>({
     url: `exam/${id}/result`,
     method: "get"
+  })
+}
+
+// 发布试卷
+export function publishExam(id: number) {
+  return request<ExamDetailResponse>({
+    url: `exam/${id}/publish`,
+    method: "put"
+  })
+}
+
+// 考试列表查询参数
+export interface ScoreReportData {
+  exam_record_id: number
+  paper_path: {
+    name: string,
+    url: string
+  }[]
+  score: number
+}
+
+// 上报成绩
+export function reportScore(data: ScoreReportData) {
+  return request<ExamActionResponse>({
+    url: `exam/${data.exam_record_id}/report`,
+    method: "post",
+    data
   })
 }

@@ -6,10 +6,11 @@ import type {
   QuestionListParams,
   QuestionOption
 } from "./apis/type"
+import { findCascaderPath, getCascaderOptions } from "@/common/utils/helper"
 import { ElMessage, ElMessageBox } from "element-plus"
+import { fetchCategoryListOpt } from "../../setting/apis"
 import QuestionImport from "./_import.vue"
 import {
-  batchDeleteQuestions,
   createQuestion,
   deleteQuestion,
   getQuestionDetail,
@@ -68,6 +69,8 @@ const optionDialogTitle = ref("")
 const isEditOption = ref(false)
 const currentOptionIndex = ref<number | null>(null)
 const questionImportRef = ref<any>([])
+const categoryOptions = ref<number[]>([])
+const categories = ref<any>([])
 
 // 表单验证规则
 const questionRules = reactive<FormRules<CreateQuestionParams>>({
@@ -194,7 +197,7 @@ function handleEdit(row: Question) {
   getQuestionDetail(row._id!)
     .then((res) => {
       if (res.data) {
-        const question = res.data
+        const question = res.data.question
         Object.assign(questionForm, {
           category_id: question.category_id,
           training_category: question.training_category,
@@ -212,6 +215,7 @@ function handleEdit(row: Question) {
           options: question.options || []
         })
         dialogVisible.value = true
+        categoryOptions.value = findCascaderPath(categories.value, questionForm.category_id || 0) || [questionForm.category_id || 0]
       } else {
         ElMessage.error(res.message || "获取题目详情失败")
       }
@@ -363,13 +367,49 @@ function handleDeleteOption(index: number) {
   questionForm.options!.splice(index, 1)
 }
 
+function handleCategoryChange(value: any) {
+  if (!value || value.length === 0) return
+  questionForm.category_id = value[value.length - 1]
+}
+
+function handleSearchCategoryChange(value: any) {
+  if (!value || value.length === 0) return
+  searchForm.category_id = value[value.length - 1]
+  handleFilter()
+}
+
+function handleSearchCategoryClear() {
+  searchForm.category_id = undefined
+  handleFilter()
+}
+
 function importSuccess() {
   handleFilter()
+}
+
+function fetchCategories() {
+  fetchCategoryListOpt(1).then((res) => {
+    if (res.code === 0) {
+      const categoriesOptData: Array<any> = []
+      if (res.data && res.data.categories) {
+        for (const item of res.data.categories) {
+          if (categoriesOptData[item.parentId || 0] === undefined) {
+            categoriesOptData[item.parentId || 0] = []
+          }
+          categoriesOptData[item.parentId || 0].push(item)
+        }
+      }
+      categories.value = getCascaderOptions(categoriesOptData, 0)
+    } else {
+      ElMessage.error(res.message || "获取分类列表失败")
+    }
+  })
 }
 
 // 组件挂载时获取数据
 onMounted(() => {
   fetchQuestionList()
+  fetchCategories()
 })
 </script>
 
@@ -415,6 +455,19 @@ onMounted(() => {
           :value="item.value"
         />
       </el-select>
+      <el-cascader
+        v-model="categoryOptions"
+        placeholder="请选择分类"
+        class="filter-item"
+        :options="categories"
+        :props="{ expandTrigger: 'hover' }"
+        filterable
+        clearable
+        @clear="handleSearchCategoryClear"
+        @change="handleSearchCategoryChange"
+        :debounce="500"
+        style="margin-right: 10px;"
+      />
       <el-button type="primary" @click="handleFilter"><i class="ep-search" /> 搜索</el-button>
       <el-button type="primary" @click="handleAdd"><i class="ep-plus" /> 新增题目</el-button>
       <!-- <el-button type="danger" :disabled="multipleSelection.length === 0" @click="handleBatchDelete"><i class="ep-delete" /> 批量删除</el-button> -->.
@@ -500,7 +553,7 @@ onMounted(() => {
         label-width="100px"
       >
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="题目类型" prop="question_type">
               <el-select v-model="questionForm.question_type" style="width: 100%">
                 <el-option
@@ -512,16 +565,17 @@ onMounted(() => {
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="难度等级" prop="difficulty">
-              <el-select v-model="questionForm.difficulty" style="width: 100%">
-                <el-option
-                  v-for="item in difficultyOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+          <el-col :span="16">
+            <el-form-item label="分类" prop="parent_id">
+              <el-cascader
+                v-model="categoryOptions"
+                placeholder="选择类目"
+                :options="categories"
+                :props="{ expandTrigger: 'hover' }"
+                @change="handleCategoryChange"
+                filterable
+                :debounce="800"
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -571,13 +625,29 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item label="状态">
-          <el-switch
-            v-model="questionForm.status"
-            active-text="启用"
-            inactive-text="禁用"
-          />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="难度等级" prop="difficulty">
+              <el-select v-model="questionForm.difficulty" style="width: 100%">
+                <el-option
+                  v-for="item in difficultyOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-switch
+                v-model="questionForm.status"
+                active-text="启用"
+                inactive-text="禁用"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
         <!-- 选项管理 -->
         <el-form-item v-if="hasOptions" label="选项管理">

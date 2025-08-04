@@ -40,13 +40,6 @@ export function fetchDetail(id: number) {
   })
 }
 
-export function generateExam(id: number) {
-  return request<Record.RecordActionResponseData>({
-    url: `exam/generate/${id}`,
-    method: "post"
-  })
-}
-
 export function loadParticipants(id: number) {
   return request<Record.RecordParticipantListResponseData>({
     url: `record/${id}/participants`,

@@ -8,6 +8,7 @@ const emit = defineEmits(["success", "close"])
 const formData = reactive({
   category: {
     id: 0,
+    type: 0,
     ref: "",
     name: "",
     parentId: 0,
@@ -34,11 +35,12 @@ const btnSubmit = reactive({
 })
 
 function open(options = {
-  id: 0,
+  type: 0,
   editData: {} as any
 }) {
   formTypeName.value = "分类"
   visible.value = true
+  resetForm()
   if (options.editData) {
     isEdit.value = true
     if (options.editData) {
@@ -51,20 +53,24 @@ function open(options = {
       formData.category.id = options.editData?._id
     }
   } else {
-    resetForm()
     isEdit.value = false
   }
+  formData.category.type = options.type || 0
   loadCategories()
 }
 
 function handleCategoryChange(value: any) {
-  if (value.length === 0) return
-  formData.category.parentId = value[value.length - 1]
+  if (!value || value.length === 0) {
+    formData.category.parentId = 0
+  } else {
+    formData.category.parentId = value[value.length - 1]
+  }
 }
 
 function resetForm() {
   formData.category = {
     id: 0,
+    type: 0,
     ref: "",
     name: "",
     parentId: 0,
@@ -76,7 +82,7 @@ function resetForm() {
 
 function loadCategories() {
   if (categories.value.length > 0) return
-  fetchCategoryListOpt().then((res) => {
+  fetchCategoryListOpt(formData.category.type).then((res) => {
     const categoryOptData: Array<any> = []
     if (res.data) {
       for (const item of res.data.categories) {
@@ -169,7 +175,16 @@ defineExpose({
       <el-row>
         <el-col :span="24">
           <el-form-item label="上级分类" prop="parent_id">
-            <el-cascader v-model="cascaderOptions.category" placeholder="选择类目" :options="categories" :props="{ expandTrigger: 'hover', checkStrictly: true }" @change="handleCategoryChange" filterable :debounce="500" />
+            <el-cascader
+              v-model="cascaderOptions.category"
+              placeholder="选择类目"
+              :options="categories"
+              :props="{ expandTrigger: 'hover', checkStrictly: true }"
+              @change="handleCategoryChange"
+              filterable
+              clearable
+              :debounce="500"
+            />
           </el-form-item>
         </el-col>
       </el-row>

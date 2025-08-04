@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { request } from "@/http/axios"
 import { loadParticipants } from "./apis"
+import { reportScore } from "../../skill/apis/exam"
 
 const emit = defineEmits(["success", "close"])
 
@@ -17,10 +19,16 @@ const categoryOptions = ref([
   { label: "安全技术培训", value: 3 },
   { label: "三级教育", value: 4 }
 ])
-const formRef = ref()
 const visible = ref(false)
 const recordData = ref<any>([])
-
+const scoreReportDialogVisible = ref(false)
+const fileList = ref([])
+const scoreFormRef = ref()
+const scoreForm = reactive({
+  exam_record_id: 0,
+  paper_path: [] as { name: string, url: string }[],
+  score: 0
+})
 const btnSubmit = reactive({
   loading: false
 })
@@ -59,10 +67,80 @@ function close() {
   emit("close")
 }
 
+function resetScoreForm() {
+  fileList.value = []
+  scoreForm.score = 0
+}
+
+function handleReport(row: any) {
+  scoreForm.exam_record_id = row.examRecordId
+  resetScoreForm()
+  scoreReportDialogVisible.value = true
+}
+
 function handleSubmit() {
-  formRef.value.validate((valid: any) => {
+  scoreFormRef.value.validate((valid: any) => {
     if (!valid) return
     btnSubmit.loading = true
+    scoreForm.paper_path = fileList.value.map((item: any) => {
+      return {
+        name: item.name,
+        url: item.response.data.url
+      }
+    }).filter((item: any) => item.url !== "")
+    reportScore(scoreForm).then((response) => {
+      btnSubmit.loading = false
+      if (response.code === 0) {
+        visible.value = false
+        ElMessage({
+          message: "成绩成功上报！",
+          type: "success",
+          offset: 0
+        })
+        emit("success")
+      } else {
+        ElMessage({
+          message: response.message || "创建培训记录失败",
+          type: "error",
+          offset: 0
+        })
+      }
+    }).catch(() => {
+      ElMessage({
+        message: "系统错误，请稍后重试",
+        type: "error",
+        offset: 0
+      })
+    }).finally(() => {
+      btnSubmit.loading = false
+      scoreReportDialogVisible.value = false
+    })
+  })
+}
+
+function customUploadRequest(options: any) {
+  const { file, onSuccess, onError, onProgress } = options
+  const data = new FormData()
+  data.append("file", file)
+  return request({
+    url: "upload/file",
+    method: "POST",
+    data,
+    headers: {
+      "Content-Type": "multipart/form-data"
+    },
+    onUploadProgress: (progressEvent: any) => {
+      if (progressEvent.total) {
+        const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+        onProgress({ percent })
+      }
+    }
+  }).then((response: any) => {
+    onSuccess(response)
+    return response
+  }).catch((error: any) => {
+    onError(error)
+    return Promise.reject(error)
   })
 }
 
@@ -136,19 +214,52 @@ defineExpose({
           {{ formData.hours }}
         </template>
       </el-table-column>
-      <el-table-column property="passed" label="是否合格" width="80" />
+      <el-table-column property="passed" label="是否合格" width="80" align="center">
+        <template #default="scope">
+          {{ scope.row.passed ? "合格" : "不合格" }}
+        </template>
+      </el-table-column>
       <el-table-column property="score" label="成绩" width="60" />
-      <el-table-column label="操作" width="200" align="center">
-        <template #default>
-          <el-button type="primary" size="small">试卷上传</el-button>
-          <el-button type="primary" size="small">试卷预览</el-button>
+      <el-table-column label="操作" width="180" align="center">
+        <template #default="scope">
+          <el-button type="primary" size="small" @click="handleReport(scope.row)">成绩上报</el-button>
         </template>
       </el-table-column>
     </el-table>
+  </el-dialog>
+
+  <!-- 成绩上报对话框 -->
+  <el-dialog v-model="scoreReportDialogVisible" title="编辑考卷设置" width="600px">
+    <el-form :model="scoreForm" ref="scoreFormRef" label-width="120px">
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="线下考卷" prop="categories">
+            <el-upload
+              v-model:file-list="fileList"
+              class="uploader"
+              :http-request="customUploadRequest"
+              style="width: 380px; margin-top: 20px;"
+            >
+              <el-button type="primary">上传考卷</el-button>
+            </el-upload>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="成绩" prop="score">
+            <el-input v-model="scoreForm.score" style="width: 50%" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+    </el-form>
+
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="close">取消</el-button>
-        <el-button type="primary" :loading="btnSubmit.loading" @click="handleSubmit">提交</el-button>
+        <el-button @click="scoreReportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">
+          提交成绩
+        </el-button>
       </div>
     </template>
   </el-dialog>
