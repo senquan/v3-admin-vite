@@ -148,6 +148,15 @@ function getTrainingCategory(value: number) {
   return categoryOptions.value.find(item => item.value === value)?.label || "其他"
 }
 
+function handleExamView(row: any) {
+  if (row.paperUrl) {
+    const paper = JSON.parse(row.paperUrl)
+    if (paper && paper.length > 0) {
+      window.open(paper[0].url)
+    }
+  }
+}
+
 defineExpose({
   open
 })
@@ -223,6 +232,7 @@ defineExpose({
       <el-table-column label="操作" width="180" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="handleReport(scope.row)">成绩上报</el-button>
+          <el-button v-if="scope.row.score" type="primary" size="small" @click="handleExamView(scope.row)">考卷查看</el-button>
         </template>
       </el-table-column>
     </el-table>

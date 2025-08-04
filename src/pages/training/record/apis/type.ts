@@ -30,8 +30,10 @@ export interface ParticipantListData {
   organization: string
   idcard: string
   hours: number
+  examRecordId: number
   passed: boolean
   score: number
+  paperUrl: string
 }
 
 export interface UploadFile {
