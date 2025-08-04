@@ -77,7 +77,7 @@ function close() {
 
 function loadCategories() {
   if (categories.value.length > 0) return
-  fetchCategoryListOpt().then((res) => {
+  fetchCategoryListOpt(0).then((res) => {
     const categoryOptData: Array<any> = []
     if (res.data) {
       for (const item of res.data.categories) {
