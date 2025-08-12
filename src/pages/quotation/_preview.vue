@@ -12,6 +12,8 @@ const platform = ref(0)
 const license = ref("")
 const platformBackgroundColor = ref("#4b8f88")
 const type = ref(1)
+const perkSum = ref(0)
+const otherSum = ref(0)
 
 const btnSubmit = reactive({
   loading: false
@@ -50,6 +52,18 @@ function open(options = {
   } else if (options.platformId === 7) {
     platformBackgroundColor.value = "#e53953"
   }
+
+  // 遍历 orderData.value
+  orderData.value.forEach((item: any) => {
+    console.log(item.payPrice)
+    console.log(item.serie)
+    if (item.serie && (item.serie?.indexOf("G70") !== -1 || item.serie?.indexOf("G60") !== -1)) {
+      perkSum.value += item.payPrice
+    } else {
+      otherSum.value += item.payPrice
+    }
+  })
+  console.log(perkSum.value, otherSum.value)
 }
 
 function close() {
@@ -255,7 +269,7 @@ function extractPackageQuantity(text: string): number | null {
             <div class="price-summary-table">
               <el-descriptions
                 class="margin-top"
-                :column="3"
+                :column="perkSum > 0 ? 4 : 3"
                 border
               >
                 <el-descriptions-item align="right" label-width="150">
@@ -273,6 +287,14 @@ function extractPackageQuantity(text: string): number | null {
                     </div>
                   </template>
                   {{ formatPrice(summaryData.promotionDiscount) }}
+                </el-descriptions-item>
+                <el-descriptions-item v-if="perkSum > 0" align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      G70G60活动价
+                    </div>
+                  </template>
+                  {{ formatPrice(String(perkSum)) }}
                 </el-descriptions-item>
                 <el-descriptions-item :rowspan="2" align="right">
                   <template #label>
@@ -297,6 +319,14 @@ function extractPackageQuantity(text: string): number | null {
                     </div>
                   </template>
                   {{ formatPrice(summaryData.promotionPrice) }}
+                </el-descriptions-item>
+                <el-descriptions-item v-if="perkSum > 0" align="right">
+                  <template #label>
+                    <div class="cell-item">
+                      配件活动价
+                    </div>
+                  </template>
+                  {{ formatPrice(String(otherSum)) }}
                 </el-descriptions-item>
               </el-descriptions>
             </div>
@@ -392,7 +422,7 @@ function extractPackageQuantity(text: string): number | null {
 }
 .price-summary-table {
   margin: auto;
-  width: 920px;
+  width: 980px;
   margin-bottom: 10px;
 }
 
