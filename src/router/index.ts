@@ -161,6 +161,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   },
   {
     path: "/lab",
+    component: Layouts,
     meta: {
       title: "实验室",
       elIcon: "Link"
