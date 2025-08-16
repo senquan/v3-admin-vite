@@ -28,6 +28,7 @@ export interface RecordDetailData {
 }
 
 export interface RecordListRequestParams {
+  id?: number
   format?: string
   type?: number
   keyword?: string
@@ -69,9 +70,9 @@ export interface RecordCreateRequestBody {
   categoryId?: number
   accountFrom: number
   accountTo?: number
-  templateId: number,
+  templateId: number
   tags?: number[]
-  events?: number[],
+  events?: number[]
   options?: any
 }
 

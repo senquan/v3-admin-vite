@@ -30,8 +30,8 @@ export function parseTime(time: Date | string | number, cFormat?: string): strin
   if (typeof time === "object") {
     date = time as Date
   } else {
-    if (typeof time === "string" && /^[0-9]+$/.test(time)) {
-      time = parseInt(time)
+    if (typeof time === "string" && /^\d+$/.test(time)) {
+      time = Number.parseInt(time)
     }
 
     if (typeof time === "number" && time.toString().length === 10) {
@@ -51,8 +51,8 @@ export function parseTime(time: Date | string | number, cFormat?: string): strin
     a: date.getDay()
   }
 
-  const timeStr = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
-    let value = formatObj[key]
+  const timeStr = format.replace(/\{([ymdhisa])+\}/g, (result, key) => {
+    const value = formatObj[key]
     // 注意: getDay() 返回 0 表示周日
     if (key === "a") {
       return ["日", "一", "二", "三", "四", "五", "六"][value]
@@ -110,8 +110,8 @@ export function getPrevMonth(timestr?: string, num: number = -1): [string, strin
   if (timestr) {
     const ma = timestr.match(/(\d{4})-(\d+)-(\d+)/)
     if (ma) {
-      year = parseInt(ma[1])
-      month = parseInt(ma[2])
+      year = Number.parseInt(ma[1])
+      month = Number.parseInt(ma[2])
     } else {
       const d = new Date()
       year = d.getFullYear()
@@ -139,7 +139,7 @@ export function getPrevMonth(timestr?: string, num: number = -1): [string, strin
   }
 
   // 获取月份的最后一天
-  const start = new Date(y, m - 1, 1)
+  const _start = new Date(y, m - 1, 1)
   const end = new Date(y, m, 0)
   const days = end.getDate()
 
@@ -153,8 +153,8 @@ export function getPrevMonth(timestr?: string, num: number = -1): [string, strin
  * @param timestr 时间字符串，格式为 yyyy-mm-dd
  * @returns 是否是过去的月份
  */
-export function isPastMonth(timestr?: string, num: number = -1): boolean {
-  let targetDate: Date, compareDate: Date
+export function isPastMonth(timestr?: string, _num: number = -1): boolean {
+  let targetDate: Date
 
   if (timestr) {
     targetDate = new Date(timestr)
@@ -162,8 +162,8 @@ export function isPastMonth(timestr?: string, num: number = -1): boolean {
     return false
   }
 
-  const now = new Date();
-  compareDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  const now = new Date()
+  const compareDate = new Date(now.getFullYear(), now.getMonth(), 1)
   return targetDate < compareDate
 }
 
@@ -178,11 +178,11 @@ export function getDateDiff(start: string, end: string, format: string): number 
   if (!start) {
     start = parseTime(new Date(), "{y}/{m}/{d}") || ""
   } else {
-    start = start.replace(/\-/g, "/")
+    start = start.replace(/-/g, "/")
   }
 
-  if (end.indexOf("T") < 0) {
-    end = end.replace(/\-/g, "/")
+  if (!end.includes("T")) {
+    end = end.replace(/-/g, "/")
   }
   format = format.toLowerCase()
 

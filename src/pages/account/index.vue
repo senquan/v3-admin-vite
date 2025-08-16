@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { fetchList, deleteAccount } from "./apis"
-import AccountForm from './_form.vue'
+import { useRouter } from "vue-router"
+import AccountForm from "./_form.vue"
+import { deleteAccount, fetchList } from "./apis"
 
+const router = useRouter()
 const loading = ref(false)
 const listQuery = reactive({
   type: "",
@@ -15,27 +17,27 @@ const listQuery = reactive({
 })
 const totalRecords = ref(0)
 const baseLiquidityOptions = [
-  { value: -1, label: '短期可用' },
-  { value: -2, label: '远期可用' }
+  { value: -1, label: "短期可用" },
+  { value: -2, label: "远期可用" }
 ]
 const liquidities = ref<any>([])
 const searchOptions = reactive({
-  type: <any> [],
-  liquidity: <any> [],
-  currency: <any> []
+  type: [] as any[],
+  liquidity: [] as any[],
+  currency: [] as any[]
 })
 const tableData = ref<any>([])
 const accountFormRef = ref<any>([])
-const formVisibility = ref(false);
+const formVisibility = ref(false)
 
-const fetchAccounts = async () => {
+async function fetchAccounts() {
   loading.value = true
   try {
     fetchList(listQuery).then((res) => {
       // 处理后端返回的数据，转换为前端需要的格式
       if (res.data && res.data.accounts) {
         totalRecords.value = res.data.total
-        tableData.value = res.data.accounts.map(item => {
+        tableData.value = res.data.accounts.map((item) => {
           // 返回处理后的数据
           return {
             id: item.id,
@@ -65,7 +67,7 @@ const fetchAccounts = async () => {
         searchOptions.liquidity = [...baseLiquidityOptions, ...liquidities.value]
         searchOptions.currency = res.data.currencies.map(item => ({
           value: item.id,
-          label: item.name + ' - ' + item.code
+          label: `${item.name} - ${item.code}`
         }))
       } else {
         tableData.value = []
@@ -80,22 +82,22 @@ const fetchAccounts = async () => {
   }
 }
 
-const handleSortChange = (column: any) => {
+function handleSortChange(column: any) {
   const { field, order } = column
-  listQuery.sort = (order === 'desc' ? '-' : '+') + field
+  listQuery.sort = (order === "desc" ? "-" : "+") + field
   handleFilter()
 }
 
 // 搜索方法
-const handleFilter = () => {
+function handleFilter() {
   fetchAccounts()
 }
 
-const handleNew = () => {
+function handleNew() {
   openFrom(null)
 }
 
-const handleEdit = (row: any) => {
+function handleEdit(row: any) {
   const newRow = JSON.parse(JSON.stringify(row))
   newRow.currency = row.currencyId
   newRow.liquidity = row.liquidityId
@@ -103,34 +105,43 @@ const handleEdit = (row: any) => {
   openFrom(newRow)
 }
 
-const handleDelete = (id: number) => {
-  ElMessageBox.prompt('请输入"确认删除账户"以继续操作', '删除确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+function handleHistory(row: any) {
+  router.push({
+    path: "/record",
+    query: {
+      id: row.id
+    }
+  })
+}
+
+function handleDelete(id: number) {
+  ElMessageBox.prompt("请输入\"确认删除账户\"以继续操作", "删除确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
     inputPattern: /^确认删除账户$/,
-    inputErrorMessage: '请输入"确认删除账户"',
-    type: 'warning'
+    inputErrorMessage: "请输入\"确认删除账户\"",
+    type: "warning"
   }).then(({ value }) => {
-    if (value === '确认删除账户') {
+    if (value === "确认删除账户") {
       deleteAccount(id).then(() => {
-        ElMessage.success('删除成功')
+        ElMessage.success("删除成功")
         fetchAccounts()
       }).catch(() => {
         ElMessage({
-          type: 'warning',
-          message: '删除失败'
+          type: "warning",
+          message: "删除失败"
         })
       })
     }
   }).catch(() => {
     ElMessage({
-      type: 'info',
-      message: '已取消删除'
+      type: "info",
+      message: "已取消删除"
     })
   })
 }
 
-const openFrom = (data: any) => {
+function openFrom(data: any) {
   accountFormRef.value?.open({
     types: searchOptions.type,
     liquidity: liquidities.value,
@@ -148,7 +159,7 @@ onMounted(() => {
 <template>
   <div class="main-container">
     <div class="filter-container">
-      <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter.native="handleFilter" @clear="handleFilter" clearable/>
+      <el-input v-model="listQuery.keyword" empty-text="暂无数据" placeholder="关键字" class="filter-item" style="width: 200px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-select v-model="listQuery.type" placeholder="账户类型" class="filter-item" style="width: 150px;" @change="handleFilter" clearable>
         <el-option v-for="item in searchOptions.type" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
@@ -182,8 +193,9 @@ onMounted(() => {
         <vxe-column field="liquidity" title="流动性" width="150" sortable />
         <vxe-column field="balance" title="余额" width="120" sortable />
         <vxe-column field="currency" title="货币" width="80" />
-        <vxe-column field="actions" title="操作" width="180">
+        <vxe-column field="actions" title="操作" width="250">
           <template #default="data">
+            <el-button type="success" @click="handleHistory(data.row)">明细</el-button>
             <el-button type="primary" @click="handleEdit(data.row)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>

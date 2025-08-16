@@ -5,7 +5,7 @@ import { Download } from "@element-plus/icons-vue"
 import { fetchList as fetchEventList } from "../event/apis"
 import { fetchList as fetchTags } from "../tag/apis"
 import { fetchDetail as fetchTemplateDetail } from "../template/apis"
-import { createRecord, fetchDetail, updateRecord } from "./apis"
+import { createRecord, fetchDetail, fetchList as fetchRecordList, updateRecord } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
@@ -204,6 +204,30 @@ function handleSearchTags(value: string) {
   })
 }
 
+function querySearchAsync(queryString: string, cb: any) {
+  if (queryString === "" || queryString.length < 2) {
+    cb([])
+    return
+  }
+  fetchRecordList({ keyword: queryString, startDate: "1970-01-01" }).then((response) => {
+    if (response.code === 0) {
+      const resutl = response.data.records.map((item: any) => ({
+        value: `${item.content}: ${item.remark}`,
+        title: item.content,
+        remark: item.remark
+      }))
+      cb(resutl)
+    } else {
+      ElMessage.error(`获取标签列表失败: ${response.message}`)
+    }
+  })
+}
+
+function handleRemarkSelect(item: Record<string, any>) {
+  formData.remark = item.remark
+  formData.title = item.title
+}
+
 // 在handleSubmit中处理标签数据
 function handleSubmit() {
   formData.tags = selectedTags.value
@@ -390,7 +414,12 @@ defineExpose({
       </el-form-item>
 
       <el-form-item v-if="formVisible.remark" label="备注" prop="remark">
-        <el-input type="text" v-model="formData.remark" placeholder="请输入备注" autocomplete="on" />
+        <el-autocomplete
+          v-model="formData.remark"
+          placeholder="请输入备注"
+          :fetch-suggestions="querySearchAsync"
+          @select="handleRemarkSelect"
+        />
       </el-form-item>
 
       <el-row>

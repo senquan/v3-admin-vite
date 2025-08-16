@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { getPrevMonth, isPastMonth, parseTime } from "@/common/utils/datetime"
 import { getCascaderOptions } from "@/common/utils/helper"
+import { useRouter } from "vue-router"
 import { fetchListOpt as fetchAccounts } from "../account/apis"
 import { fetchListOpt as fetchCategories } from "../category/apis"
 import { fetchListOpt as fetchTemplates } from "../template/apis"
@@ -20,8 +21,11 @@ interface Record {
   type?: number
   header: boolean
 }
+
+const router = useRouter()
 const loading = ref(false)
 const listQuery = reactive({
+  id: 0,
   keyword: "",
   startDate: "",
   endDate: "",
@@ -39,6 +43,7 @@ const categories = ref<any>([])
 const accounts = ref<any>([])
 
 async function fetchRecords() {
+  listQuery.id = Number(router.currentRoute.value.query.id || 0)
   loading.value = true
   try {
     fetchList(listQuery).then((res) => {
