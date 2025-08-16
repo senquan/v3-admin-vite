@@ -1,13 +1,12 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
-import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotion/apis/type"
+import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotionv3/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { copyTextToClipboard } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-// import { calculateOrderPriceV3 as calculateOrderPrice, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
-import { calculateOrderPrice, initPromotionRules } from "@@/utils/pricing"
+import { calculateOrderPriceV3 as calculateOrderPrice, getUsedBonusPointV3 as getUsedBonusPoint, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
-import { fetchPromotionRules } from "../promotion/apis"
+import { fetchPromotionRules } from "../promotionv3/apis"
 import PreviewForm from "./_preview.vue"
 import { changeOrderType, createOrder, fetchOrder, updateOrder } from "./apis"
 
@@ -78,13 +77,19 @@ const tableData = ref<TableRowData[]>([
 // 添加型号选项数据
 const modelOptions = ref<any>([{ value: "", label: "" }])
 const searchLoading = ref(false)
-const calculatedPrice = ref<any>({})
+const calculatedPrice = ref<any>({
+  totalBasePrice: 0,
+  totalPayPrice: 0,
+  resultMap: new Map<number, any>(),
+  usedBonusPoint: 0
+})
+const ruleCache = ref<Map<number, any>>(new Map())
 const rulesInitialized = ref(false)
 const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
   type: 1,
-  status: -1,
+  status: 0,
   platformId: 0,
   name: "",
   originPrice: 0,
@@ -119,19 +124,19 @@ const copiedValue = ref("")
 const materialList = ref("")
 
 const dialyDiscount = computed(() => {
-  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_DAILY)?.discount || 0
+  return Number(calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_DAILY)?.totalDiscountAmount.toFixed(2) || 0)
 })
 const dailyPrice = computed(() => {
   return Number((calculatedPrice.value?.totalBasePrice - dialyDiscount.value).toFixed(2))
 })
 const promotionDiscount = computed(() => {
-  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_PROMOTION)?.discount || 0
+  return Number(calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_PROMOTION)?.totalDiscountAmount.toFixed(2) || 0)
 })
 const promotionPrice = computed(() => {
   return Number((calculatedPrice.value?.totalBasePrice - promotionDiscount.value).toFixed(2))
 })
 const flashDiscount = computed(() => {
-  return calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_FLASH)?.discount || 0
+  return Number(calculatedPrice.value?.resultMap?.get(PROMOTION_TYPE_FLASH)?.totalDiscountAmount.toFixed(2) || 0)
 })
 const flashPrice = computed(() => {
   return Number((Math.min(dailyPrice.value, promotionPrice.value) - flashDiscount.value).toFixed(2))
@@ -423,22 +428,25 @@ function calculatePrice(row: any) {
     return
   }
 
-  // const result = calculateOrderPriceV3(products)
-  calculatedPrice.value = calculateOrderPrice({ products })
-  // console.log("result", result)
-  // console.log("calculatedPrice.value", calculatedPrice.value)
+  // calculatedPrice.value = calculateOrderPrice({ products })
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_DAILY, calculateOrderPrice(products, PROMOTION_TYPE_DAILY))
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_PROMOTION, calculateOrderPrice(products, PROMOTION_TYPE_PROMOTION))
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_FLASH, calculateOrderPrice(products, PROMOTION_TYPE_FLASH))
+  calculatedPrice.value.totalBasePrice = calculatedPrice.value.resultMap.get(PROMOTION_TYPE_DAILY)?.originalTotalPrice || 0
+  calculatedPrice.value.usedBonusPoint = getUsedBonusPoint()
+  console.log("calculatedPrice", calculatedPrice.value)
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
     tableData.value.forEach((row: TableRowData) => {
       if (row.id) {
-        const matchedProduct = calculatedPrice.value?.products.find((p: any) => p.id === Number(row.id))
-        if (matchedProduct) {
-          // 非零最小值
-          const maxDiscount = Math.max(matchedProduct.priceMap.get(PROMOTION_TYPE_DAILY)?.discount || 0, matchedProduct.priceMap.get(PROMOTION_TYPE_PROMOTION)?.discount || 0)
-          const flashDiscount = Number((matchedProduct.priceMap.get(PROMOTION_TYPE_FLASH)?.discount || 0).toFixed(2))
-          const totalPrice = Number((matchedProduct.unitPrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(2))
-          row.finalUnitPrice = Number((totalPrice / matchedProduct.quantity).toFixed(2))
-          row.payPrice = Number((totalPrice * (row.quantity / matchedProduct.quantity)).toFixed(2))
-        }
+        const dailyPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_DAILY)?.products.find((p: any) => p.id === Number(row.id))
+        const promotionPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_PROMOTION)?.products.find((p: any) => p.id === Number(row.id))
+        const flashPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_FLASH)?.products.find((p: any) => p.id === Number(row.id))
+        // 非零最小值
+        const maxDiscount = Math.max(dailyPromotion?.totalDiscount || 0, promotionPromotion?.totalDiscount || 0)
+        const flashDiscount = Number((flashPromotion?.totalDiscount || 0).toFixed(2))
+        const totalPrice = Number((row.basePrice * row.quantity - maxDiscount - flashDiscount).toFixed(2))
+        row.finalUnitPrice = Number((totalPrice / row.quantity).toFixed(2))
+        row.payPrice = Number((row.finalUnitPrice * row.quantity).toFixed(2))
       }
     })
     formData.value.matchLogs = calculatedPrice.value.resultMap
@@ -461,14 +469,16 @@ function priceDetail(id: number) {
   if (matchLogsObj instanceof Map) {
     // 使用 Map 的 forEach 方法遍历
     matchLogsObj.forEach((value, type) => {
-      const productLogs = value.matchLogs.get(Number(id))
-      if (!productLogs) return
+      const productLogs = value.discountApplications.filter((p: any) => p.productId === Number(id))
+      if (!productLogs || productLogs.length === 0) return
+      let stepPrice = productLogs[0].originalPrice
       productLogs.forEach((log: any) => {
+        stepPrice -= log.discountAmount
         priceDetailData.value.push({
-          message: `${typeNames[type]}: ${log.name}`,
-          value: `${Number(log.value).toFixed(4)}`,
-          amount: `${Number(log.discount).toFixed(2)}`,
-          step: `${Number(log.pirce).toFixed(2)}`
+          message: `${typeNames[type]}: ${log.ruleName}`,
+          value: `${Number(log.discountValue || 0).toFixed(2)}`,
+          amount: `${Number(log.discountAmount).toFixed(2)}`,
+          step: `${Number(stepPrice).toFixed(2)}`
         })
       })
     })
@@ -516,8 +526,7 @@ function getSummaries(param: any) {
     if (index === 5) {
       values = data.map((item: Record<string, any>) => {
         if (item.serie.includes("套装") || item.serie.includes("预售")) {
-          const q = extractPackageQuantity(item.name) || 10
-          return Number(item[column.property]) * q
+          return Number(item[column.property]) * 10
         } else if (item.isBonus || item.id === "") {
           return 0
         } else {
@@ -549,7 +558,7 @@ function getSummaries(param: any) {
   return sums
 }
 
-function submitOrder(status: number, silent: boolean) {
+function submitOrder(status: number) {
   // 防重复提交检查
   if (isSubmitting.value) {
     ElMessage.warning("正在提交中，请勿重复操作")
@@ -597,15 +606,10 @@ function submitOrder(status: number, silent: boolean) {
             }
           })
         } else {
-          if (!silent) {
-            ElMessage.success("暂存草稿成功")
-            router.push({
-              path: "/quotation/quotation"
-            })
-          } else {
-            formData.value.id = response.data.id
-            ElMessage.success("已自动暂存草稿")
-          }
+          ElMessage.success("暂存草稿成功")
+          router.push({
+            path: "/quotation/quotation"
+          })
         }
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
@@ -900,8 +904,6 @@ async function handleChangeType() {
   if (res.code === 0) {
     formData.value.type = res.data
     ElMessage.success("变更成功")
-    const currentRoute = router.currentRoute.value
-    await router.replace({ path: `/redirect${currentRoute.path}`, query: currentRoute.query })
   } else {
     ElMessage.error("变更失败")
   }
@@ -920,7 +922,6 @@ function orderPreview() {
     ElMessage.warning("正在加载数据，请稍等。")
     return
   }
-  submitOrder(-1, true)
   previewFormRef.value?.open({
     data: tableData.value,
     type: formData.value?.type || 1,
@@ -997,11 +998,10 @@ onMounted(async () => {
         licenseCode.value = order.platform?.remark || ""
         formData.value.name = order.name
         formData.value.type = order.type
-        formData.value.status = order.status
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
-          product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
+          product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
           productCache.value.set(product.id, product)
           const images = product.imageUrls?.split(",") || []
           return {
@@ -1055,13 +1055,14 @@ async function initRules() {
       if (response.code === 0) {
         const roles = response.data.promotions.flatMap((promotion: PromotionListData) => {
           return promotion.rules.map((rule: RulesWithPromotionType) => ({
-            ...rule,
+            ...rule.contents,
             promotionType: promotion.type,
             discountName: response.data.types.find((type: TypeListData) => type.value === String(rule.type))?.name || ""
           }))
         })
         initPromotionRules(roles)
         if (roles.length > 0) {
+          ruleCache.value = new Map(roles.map((rule: any) => [rule.id, rule]))
           rulesInitialized.value = true
           topAlertVisible.value = false
         } else {
@@ -1106,22 +1107,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
     )
     handleModelSelect(matchedModel || modelOptions.value[0], row)
   }
-}
-
-/**
- * 从"x只装"格式的字符串中提取数字
- * @param text 包含"x只装"格式的字符串，例如："10只装"
- * @returns 提取的数字，如果没有匹配则返回null
- */
-function extractPackageQuantity(text: string): number | null {
-  if (!text || typeof text !== "string") {
-    return null
-  }
-  const match = text.match(/(\d+)只装/)
-  if (match && match[1]) {
-    return Number.parseInt(match[1], 10)
-  }
-  return null
 }
 </script>
 
@@ -1264,7 +1249,7 @@ function extractPackageQuantity(text: string): number | null {
         <el-row :gutter="10">
           <el-col :span="6">
             <div class="left-float-button">
-              <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type === 2 ? "普通单" : "工程单" }}</el-button>
+              <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type === 2 ? '工程单' : '普通单' }}</el-button>
             </div>
           </el-col>
           <el-col :span="12">
@@ -1342,10 +1327,10 @@ function extractPackageQuantity(text: string): number | null {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
-                  <el-button type="success" @click="orderPreview()" :loading="isSubmitting" :disabled="isSubmitting">报价预览</el-button>
-                  <el-button type="primary" @click="submitOrder(-1, false)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
-                  <el-button type="primary" @click="submitOrder(1, false)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
-                  <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情 {{ formData.status }}</el-button>
+                  <el-button type="success" @click="orderPreview()">报价预览</el-button>
+                  <el-button type="primary" @click="submitOrder(0)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
+                  <el-button type="primary" @click="submitOrder(1)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
+                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
                 </div>
               </el-form-item>
               <div class="bonus-item">

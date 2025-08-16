@@ -53,17 +53,15 @@ function open(options = {
     platformBackgroundColor.value = "#e53953"
   }
 
-  // 遍历 orderData.value
+  perkSum.value = 0
+  otherSum.value = 0
   orderData.value.forEach((item: any) => {
-    console.log(item.payPrice)
-    console.log(item.serie)
     if (item.serie && (item.serie?.indexOf("G70") !== -1 || item.serie?.indexOf("G60") !== -1)) {
-      perkSum.value += item.payPrice
+      perkSum.value += Number(item.payPrice)
     } else {
-      otherSum.value += item.payPrice
+      otherSum.value += Number(item.payPrice)
     }
   })
-  console.log(perkSum.value, otherSum.value)
 }
 
 function close() {
@@ -266,7 +264,7 @@ function extractPackageQuantity(text: string): number | null {
       <div class="footer-container">
         <el-row :gutter="10">
           <el-col :span="24">
-            <div class="price-summary-table">
+            <div class="price-summary-table" :class="perkSum > 0 ? 'with-perk' : ''">
               <el-descriptions
                 class="margin-top"
                 :column="perkSum > 0 ? 4 : 3"
@@ -294,7 +292,7 @@ function extractPackageQuantity(text: string): number | null {
                       G70G60活动价
                     </div>
                   </template>
-                  {{ formatPrice(String(perkSum)) }}
+                  {{ formatPrice(perkSum.toFixed(2)) }}
                 </el-descriptions-item>
                 <el-descriptions-item :rowspan="2" align="right">
                   <template #label>
@@ -326,7 +324,7 @@ function extractPackageQuantity(text: string): number | null {
                       配件活动价
                     </div>
                   </template>
-                  {{ formatPrice(String(otherSum)) }}
+                  {{ formatPrice(otherSum.toFixed(2)) }}
                 </el-descriptions-item>
               </el-descriptions>
             </div>
@@ -422,8 +420,11 @@ function extractPackageQuantity(text: string): number | null {
 }
 .price-summary-table {
   margin: auto;
-  width: 980px;
+  width: 920px;
   margin-bottom: 10px;
+}
+.price-summary-table.with-perk {
+  width: 95%;
 }
 
 .price-summary-table table {

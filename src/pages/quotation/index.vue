@@ -67,6 +67,7 @@ const previewFormRef = ref()
 const previewFormVisible = ref(false)
 const systemParamsStore = useSystemParamsStore()
 const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
+const orderVersion = ref(1)
 
 function getMatchedStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
@@ -167,6 +168,11 @@ function handleFilter() {
   fetchOrders()
 }
 
+function handleNewV3() {
+  orderVersion.value = 3
+  newDialogVisibility.value = true
+}
+
 function handleNew() {
   newDialogVisibility.value = true
 }
@@ -182,7 +188,11 @@ function platformSelection() {
 
 function navto(platform: string, code: string) {
   newDialogVisibility.value = false
-  router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
+  if (orderVersion.value === 3) {
+    router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=${listQuery.type}`)
+  } else {
+    router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
+  }
 }
 
 function handleReturn(id: number) {
@@ -435,6 +445,7 @@ onMounted(() => {
       <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
       <el-button type="primary" @click="handleNew">新增订单</el-button>
+      <el-button type="primary" @click="handleNewV3">新增订单(新版)</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
