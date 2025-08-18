@@ -1,4 +1,4 @@
-import type { AppRouteRecordRaw, Permission } from "@/types/permission"
+import type { AppRouteRecordRaw, Permission, RouteMeta } from "@/types/permission"
 import type { RouteRecordRaw } from "vue-router"
 import { pinia } from "@/pinia"
 import { constantRoutes, dynamicRoutes } from "@/router"
@@ -32,15 +32,20 @@ function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRa
   permissions.forEach((permission) => {
     if (permission.type === 1 && permission.status === 1) { // 只处理菜单类型且启用的权限
       const componentPath = modules[`../../${permission.component}`]
+      const meta: RouteMeta = {
+        title: permission.title,
+        hidden: Boolean(permission.hidden)
+      }
+      if (permission.icon?.startsWith("elIcon:")) {
+        meta.elIcon = permission.icon.replace("elIcon:", "")
+      } else {
+        meta.svgIcon = permission.icon
+      }
       const route: AppRouteRecordRaw = {
         path: permission.path || "",
         component: permission.component ? componentPath : () => import("@/layouts/index.vue"),
         redirect: permission.redirect,
-        meta: {
-          title: permission.title,
-          svgIcon: permission.icon,
-          hidden: Boolean(permission.hidden)
-        }
+        meta
       }
       // 处理子路由
       if (permission.children && permission.children.length > 0) {

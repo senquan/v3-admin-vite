@@ -28,7 +28,7 @@ export interface Permission {
 // 路由元数据
 export interface RouteMeta {
   title?: string
-  icon?: string
+  elIcon?: string
   svgIcon?: string
   roles?: string[]
   permissions?: string[]

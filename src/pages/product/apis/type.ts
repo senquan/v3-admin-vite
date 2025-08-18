@@ -1,3 +1,5 @@
+import type { FileInfo } from "../../gallery/apis/type"
+
 export interface Series {
   id: number
   name: string
@@ -59,7 +61,7 @@ export interface ProductCreateData {
   basePrice: number
   projectPrice: number
   factoryPrice: number
-  imageFiles: string[]
+  imageFiles: FileInfo[]
   remark: string
   tags: number[]
 }

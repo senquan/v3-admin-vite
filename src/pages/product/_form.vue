@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { FileInfo } from "../gallery/apis/type"
 import { findCascaderPath } from "@/common/utils/helper"
 import { request } from "@/http/axios"
 import { fetchTagsList } from "../tags/apis"
@@ -21,7 +22,7 @@ const formData = reactive({
   basePrice: 0,
   projectPrice: 0,
   factoryPrice: 0,
-  imageFiles: [] as string[],
+  imageFiles: [] as FileInfo[],
   remark: "",
   tags: []
 })
@@ -195,7 +196,16 @@ function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     formData.tags = selectedTags.value
-    formData.imageFiles = imageList.value.map((item: any) => item.response?.data?.url || item.url).filter((item: any) => item)
+    formData.imageFiles = imageList.value.map((item: any) => {
+      return {
+        url: item.response?.data?.url || item.url,
+        size: item.size,
+        name: item.name,
+        type: item.response?.data?.type || item.type || "application/octet-stream",
+        height: item.response?.data?.height || 0,
+        width: item.response?.data?.width || 0
+      }
+    })
     if (cascaderOptions.value.serie && cascaderOptions.value.serie.length > 0) {
       formData.serie = cascaderOptions.value.serie[cascaderOptions.value.serie.length - 1]
     }
@@ -266,6 +276,7 @@ function customUploadRequest(options: any) {
     }
   }).then((response: any) => {
     onSuccess(response)
+    console.log("imageList", imageList.value)
     return response
   }).catch((error: any) => {
     onError(error)
