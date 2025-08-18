@@ -271,6 +271,7 @@ function getRowIdentity() {
 
 function loadDetail(id: number) {
   detailDrawer.value = true
+  resetReturnForm()
   fetchOrder(id).then((res: any) => {
     if (res.data) {
       returnForm.orderId = id
@@ -280,6 +281,7 @@ function loadDetail(id: number) {
           materialList.value += `<${item.product.materialId}*${item.quantity}>`
         }
         res.data.items.forEach((item: any) => {
+          item.returnDiscount = item.product.basePrice > 0 ? Math.round((item.unitPrice / item.product.basePrice) * 10000) / 10000 : 0
           item.returnQuantity = 0
           item.refund = 0
         })
@@ -319,6 +321,7 @@ function handleSubmitReturn() {
     amount += item.refund
     return {
       orderItemId: item.id,
+      discount: item.returnDiscount,
       quantity: item.returnQuantity,
       refund: item.refund
     }
@@ -430,6 +433,54 @@ async function handleExport() {
   }
 }
 
+function getSummaries(param: any) {
+  const { columns, data } = param
+  const sums: (string | VNode)[] = []
+  columns.forEach((column: { property: string }, index: number) => {
+    if (index === 0) {
+      sums[index] = h("div", [
+        "总计"
+      ])
+      return
+    }
+    const values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    if (index === 2 || index === 6 || index === 7) {
+      if (!values.every((value: number) => Number.isNaN(value))) {
+        sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
+          const value = Number(curr)
+          if (!Number.isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)}`).toFixed(index === 2 || index === 6 ? 0 : 2)
+      }
+      if (index === 6) {
+        returnForm.total = Number(sums[index])
+      }
+      if (index === 7) {
+        returnForm.amount = Number(sums[index])
+      }
+    } else {
+      sums[index] = ""
+    }
+  })
+  return sums
+}
+
+function getRefundValue(row: any) {
+  return Math.round(row.product.basePrice * row.returnDiscount * row.returnQuantity * 100) / 100
+}
+
+function resetReturnForm() {
+  returnForm.orderId = 0
+  returnForm.returns = [] as any[]
+  returnForm.total = 0
+  returnForm.amount = 0
+  returnForm.reason = ""
+  returnForm.remark = ""
+}
+
 onMounted(() => {
   listQuery.type = router.currentRoute.value.path === "/quotation/quotation/project" ? "2" : "1"
   fetchOrders()
@@ -520,7 +571,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="detailDrawer" title="订单详情" size="38%" direction="rtl">
+    <el-drawer v-model="detailDrawer" title="订单详情" size="42%" direction="rtl">
       <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
         <el-tab-pane label="物料详情" name="materia">
           <div>
@@ -537,7 +588,7 @@ onMounted(() => {
             <el-alert v-if="orderDetail.status === 4" title="不拆包装、不影响二次销售" type="error" effect="dark" :closable="false" />
           </div>
           <el-form v-if="orderDetail.status === 4">
-            <el-table :data="orderDetail.items">
+            <el-table :data="orderDetail.items" show-summary :summary-method="getSummaries">
               <el-table-column label="条形码" width="130" align="center">
                 <template #default="scope">
                   <el-text truncated>{{ scope.row.product.barCode }}</el-text>
@@ -548,8 +599,15 @@ onMounted(() => {
                   <el-text truncated>{{ scope.row.product.name }}</el-text>
                 </template>
               </el-table-column>
+              <el-table-column prop="quantity" width="80" label="数量" align="center" />
+              <el-table-column prop="product.basePrice" width="80" label="原单价" align="center" />
               <el-table-column prop="unitPrice" label="到手单价" width="80" align="center" />
-              <el-table-column prop="quantity" width="100" label="退回数量">
+              <el-table-column prop="returnDiscount" width="90" label="折扣" align="center">
+                <template #default="scope">
+                  <el-input v-model="scope.row.returnDiscount" :disabled="scope.row.returnDiscount === 0" style="width: 100%;" @change="scope.row.refund = getRefundValue(scope.row)" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="returnQuantity" width="100" label="退回数量" align="center">
                 <template #default="scope">
                   <el-input-number
                     v-model="scope.row.returnQuantity"
@@ -558,7 +616,7 @@ onMounted(() => {
                     :precision="0"
                     :max="scope.row.quantity"
                     style="width: 100%;"
-                    @change="scope.row.refund = scope.row.unitPrice * scope.row.returnQuantity"
+                    @change="scope.row.refund = getRefundValue(scope.row)"
                   />
                 </template>
               </el-table-column>
