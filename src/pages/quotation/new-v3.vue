@@ -88,7 +88,7 @@ const rulesInitialized = ref(false)
 const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
-  type: 1,
+  type: 3,
   status: 0,
   platformId: 0,
   name: "",
@@ -149,7 +149,7 @@ const bonusLeft = computed(() => {
 })
 
 const project = computed(() => {
-  return formData.value.type === 1 ? "" : "工程"
+  return formData.value.type === 2 ? "工程" : ""
 })
 
 const priceDetailVisible = ref(false)
@@ -986,7 +986,7 @@ onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
-  formData.value.type = Number(router.currentRoute.value.query.type) || 1
+  formData.value.type = Number(router.currentRoute.value.query.type) || 3
   if (orderId.value > 0) {
     // 获取订单详情
     loading.value = true

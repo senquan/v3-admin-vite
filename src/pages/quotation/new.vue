@@ -144,7 +144,7 @@ const bonusLeft = computed(() => {
 })
 
 const project = computed(() => {
-  return formData.value.type === 1 ? "" : "工程"
+  return formData.value.type === 2 ? "工程" : ""
 })
 
 const priceDetailVisible = ref(false)

@@ -86,6 +86,7 @@ async function fetchOrders() {
         tableData.value = res.data.orders.map((item: any) => {
           return {
             id: item.id,
+            type: item.type,
             name: item.name,
             platformId: item.platformId,
             authCode: item.authCode,
@@ -189,7 +190,7 @@ function platformSelection() {
 function navto(platform: string, code: string) {
   newDialogVisibility.value = false
   if (orderVersion.value === 3) {
-    router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=${listQuery.type}`)
+    router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=3`)
   } else {
     router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
   }
@@ -205,8 +206,12 @@ function handleDetail(id: number) {
   activeTab.value = "materia"
 }
 
-function handleEdit(id: number) {
-  router.push(`/quotation/new?id=${id}`)
+function handleEdit(id: number, type: number) {
+  if (type === 3) {
+    router.push(`/quotation/new-v3?id=${id}`)
+  } else {
+    router.push(`/quotation/new?id=${id}`)
+  }
 }
 
 function handlePreview(id: number) {
@@ -520,6 +525,7 @@ onMounted(() => {
           <template #default="data">
             <span style="margin-right: 8px;">{{ data.row.name }}</span>
             <el-tag v-if="data.row.remark">{{ data.row.remark }}</el-tag>
+            <el-tag v-if="data.row.type === 3" type="danger" effect="dark" round>v3</el-tag>
           </template>
         </vxe-column>
         <vxe-column field="user" width="120" title="制单人" />
@@ -550,7 +556,7 @@ onMounted(() => {
         <vxe-column field="actions" title="操作" width="260">
           <template #default="data">
             <el-button type="success" @click="handlePreview(data.row.id)">报价预览</el-button>
-            <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id)">继续报价</el-button>
+            <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id, data.row.type)">继续报价</el-button>
             <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button>
             <el-button type="primary" v-if="data.row.status > -1" @click="handleReturn(data.row.id)">售后</el-button>
           </template>
