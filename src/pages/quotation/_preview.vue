@@ -56,7 +56,13 @@ function open(options = {
   perkSum.value = 0
   otherSum.value = 0
   orderData.value.forEach((item: any) => {
-    if (item.serie && (item.serie?.indexOf("G70") !== -1 || item.serie?.indexOf("G60") !== -1)) {
+    if (item.serie && (
+      item.serie?.indexOf("G70") > -1
+      || item.serie?.indexOf("G60") > -1
+      || item.serie?.indexOf("G12") > -1
+      || item.serie?.indexOf("G39") > -1
+      || item.serie?.indexOf("无边") > -1
+    )) {
       perkSum.value += Number(item.payPrice)
     } else {
       otherSum.value += Number(item.payPrice)
@@ -289,7 +295,7 @@ function extractPackageQuantity(text: string): number | null {
                 <el-descriptions-item v-if="perkSum > 0" align="right">
                   <template #label>
                     <div class="cell-item">
-                      G70G60活动价
+                      国补活动价
                     </div>
                   </template>
                   {{ formatPrice(perkSum.toFixed(2)) }}

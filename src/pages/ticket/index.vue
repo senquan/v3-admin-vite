@@ -688,7 +688,7 @@ onUnmounted(() => {
                   {{ getStatus(ticketDetail.status)?.label }}
                 </el-tag>
               </el-descriptions-item>
-              <el-descriptions-item label="创建人">{{ ticketDetail.creator?.name || ticketDetail.creator?.username }}</el-descriptions-item>
+              <el-descriptions-item label="创建人">{{ ticketDetail.creator?.staff?.name || ticketDetail.creator?.name || ticketDetail.creator?.username }}</el-descriptions-item>
               <el-descriptions-item label="处理人">{{ ticketDetail.assignee?.staff?.name || ticketDetail.assignee?.name || '未分配' }}</el-descriptions-item>
               <el-descriptions-item label="创建时间">{{ formatDateTime(ticketDetail.createdAt) }}</el-descriptions-item>
               <el-descriptions-item label="更新时间">{{ formatDateTime(ticketDetail.updatedAt) }}</el-descriptions-item>
