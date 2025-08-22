@@ -61,6 +61,7 @@ function open(options = {
       || item.serie?.indexOf("G60") > -1
       || item.serie?.indexOf("G12") > -1
       || item.serie?.indexOf("G39") > -1
+      || item.serie?.indexOf("G57") > -1
       || item.serie?.indexOf("无边") > -1
     )) {
       perkSum.value += Number(item.payPrice)
