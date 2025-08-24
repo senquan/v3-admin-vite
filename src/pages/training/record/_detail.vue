@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { request } from "@/http/axios"
-import { loadParticipants } from "./apis"
 import { reportScore } from "../../skill/apis/exam"
+import { loadParticipants } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
@@ -49,7 +49,7 @@ function open(options = {
   formData.training_category = options.data?.training_category
   formData.training_mode = options.data?.training_mode
   formData.trainer = options.data?.trainer
-  formData.hours = options.data?.hours
+  formData.hours = options.data?.training_hours
 
   loadParticipants(options.data?.id).then((res) => {
     if (res.code === 0) {

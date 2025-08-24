@@ -81,6 +81,14 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "考试中心"
         }
+      },
+      {
+        path: "study",
+        component: () => import("@/pages/skill/study.vue"),
+        name: "self-study",
+        meta: {
+          title: "自学计划"
+        }
       }
     ]
   },

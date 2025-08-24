@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { MyTask, MyTrainingListParams, TrainingRecord, TrainingStats, User } from "./apis/training"
-import { useRouter } from 'vue-router'
+import { useRouter } from "vue-router"
 import {
-  getTrainingDetail,
   getTrainingStats
 } from "./apis/training"
 import RadarChart from "./components/radar.vue"
@@ -12,8 +11,8 @@ const router = useRouter()
 // 响应式数据
 const loading = ref(false)
 const tableData = ref<MyTask[]>([])
-const detailDialogVisible = ref(false)
-const currentRecord = ref<TrainingRecord | null>(null)
+// const detailDialogVisible = ref(false)
+// const currentRecord = ref<TrainingRecord | null>(null)
 const certificateData = ref<any[]>([])
 
 // 统计数据
@@ -127,18 +126,18 @@ function handleCurrentChange(page: number) {
 }
 
 // 查看详情
-async function handleViewDetail(record: TrainingRecord) {
-  try {
-    const response = await getTrainingDetail(record.id)
-    if (response.code === 200) {
-      currentRecord.value = response.data.record
-      detailDialogVisible.value = true
-    }
-  } catch (error) {
-    console.error("获取培训详情失败:", error)
-    ElMessage.error("获取培训详情失败")
-  }
-}
+// async function handleViewDetail(record: TrainingRecord) {
+//   try {
+//     const response = await getTrainingDetail(record.id)
+//     if (response.code === 200) {
+//       currentRecord.value = response.data.record
+//       detailDialogVisible.value = true
+//     }
+//   } catch (error) {
+//     console.error("获取培训详情失败:", error)
+//     ElMessage.error("获取培训详情失败")
+//   }
+// }
 
 // 标记完成
 // async function handleMarkComplete(record: TrainingRecord) {
@@ -187,25 +186,25 @@ function handleTakeExam(record: TrainingRecord) {
 // }
 
 // 获取培训分类名称
-function getTrainingCategoryName(category: number | undefined) {
-  const categoryMap: Record<number, string> = {
-    1: "技能培训",
-    2: "安全培训",
-    3: "管理培训",
-    4: "其他培训"
-  }
-  return category ? categoryMap[category] || "未知" : "-"
-}
+// function getTrainingCategoryName(category: number | undefined) {
+//   const categoryMap: Record<number, string> = {
+//     1: "技能培训",
+//     2: "安全培训",
+//     3: "管理培训",
+//     4: "其他培训"
+//   }
+//   return category ? categoryMap[category] || "未知" : "-"
+// }
 
 // 获取状态名称
-function getStatusName(status: number) {
-  const statusMap: Record<number, string> = {
-    0: "已取消",
-    1: "进行中",
-    2: "已完成"
-  }
-  return statusMap[status] || "未知"
-}
+// function getStatusName(status: number) {
+//   const statusMap: Record<number, string> = {
+//     0: "已取消",
+//     1: "进行中",
+//     2: "已完成"
+//   }
+//   return statusMap[status] || "未知"
+// }
 
 // 获取状态名称
 function getResultName(result: boolean) {
@@ -234,10 +233,10 @@ function getTaskStatus(progress: number | undefined) {
 }
 
 // 格式化日期
-function formatDate(dateStr: string | undefined) {
-  if (!dateStr) return "-"
-  return new Date(dateStr).toLocaleDateString("zh-CN")
-}
+// function formatDate(dateStr: string | undefined) {
+//   if (!dateStr) return "-"
+//   return new Date(dateStr).toLocaleDateString("zh-CN")
+// }
 
 // 组件挂载
 onMounted(() => {
@@ -501,7 +500,6 @@ onMounted(() => {
         </el-card>
       </el-col>
     </el-row>
-
 
     <!-- 培训详情对话框 -->
     <!-- <el-dialog v-model="detailDialogVisible" title="培训详情" width="800px">

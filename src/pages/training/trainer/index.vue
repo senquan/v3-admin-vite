@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { FormInstance, UploadProps } from "element-plus"
 import type * as TrainerType from "../../training/trainer/apis/type"
-import defaultAvatarMale from "@@/assets/images/avatar/default_avatar_male.png?url"
-import defaultAvatarFemale from "@@/assets/images/avatar/default_avatar_female.png?url"
 import { getCascaderOptions } from "@/common/utils/helper"
 import { request } from "@/http/axios"
+import defaultAvatarFemale from "@@/assets/images/avatar/default_avatar_female.png?url"
+import defaultAvatarMale from "@@/assets/images/avatar/default_avatar_male.png?url"
 import { fetchTagListOpt as fetchTags } from "../../setting/apis"
 import * as TrainerApi from "../../training/trainer/apis"
 

@@ -232,7 +232,7 @@ function customUploadRequest(options: any) {
 function handleSearchCoursewares(value: string) {
   if (value === "" && coursewareOptions.value.length > 0) return
   searchLoading.value = true
-  fetchCoursewares({ keyword: value }).then((response) => {
+  fetchCoursewares({ keyword: value, status: 1 }).then((response) => {
     if (response.code === 0) {
       coursewareOptions.value = response.data.coursewares
       searchLoading.value = false

@@ -47,6 +47,7 @@ export interface CoursewareCreateData {
 
 export interface CoursewareListRequestParams {
   keyword?: string
+  status?: number
   sort?: string
   page?: number
   pageSize?: number

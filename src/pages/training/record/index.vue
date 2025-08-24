@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
 import { getCascaderOptions } from "@/common/utils/helper"
+// @ts-expect-error - Ignore type checking for html2pdf.js module
+import html2pdf from "html2pdf.js"
 import { fetchCategoryListOpt } from "../../setting/apis"
 import { generateExam, getExamDetail, publishExam, regenerateExam } from "../../skill/apis/exam"
 import DetailForm from "./_detail.vue"
 import { fetchList as fetchListByBranch, fetchListGroup } from "./apis"
-// @ts-ignore
-import html2pdf from "html2pdf.js"
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -224,13 +224,13 @@ function loadExamCategories() {
 
 async function handleDownloadExam() {
   if (!examPreviewData.value) {
-    ElMessage.warning('没有试卷数据可供下载')
+    ElMessage.warning("没有试卷数据可供下载")
     return
   }
 
   // 创建一个新的HTML元素，用于生成PDF
-  const element = document.createElement('div')
-  element.className = 'exam-pdf-container'
+  const element = document.createElement("div")
+  element.className = "exam-pdf-container"
 
   // 添加试卷标题和基本信息
   let content = `
@@ -246,7 +246,7 @@ async function handleDownloadExam() {
   `
 
   // 添加试题内容
-  content += '<div class="exam-pdf-questions">'
+  content += "<div class='exam-pdf-questions'>"
   examQuestions.value.forEach((question: any, index: number) => {
     content += `
       <div class="question-pdf-item">
@@ -260,7 +260,7 @@ async function handleDownloadExam() {
 
     // 添加选项（如果有）
     if (question.questionEntity.options && question.questionEntity.options.length > 0) {
-      content += '<div class="question-pdf-options">'
+      content += "<div class='question-pdf-options'>"
       question.questionEntity.options
         .sort((a: any, b: any) => a.option_label.localeCompare(b.option_label))
         .forEach((option: any) => {
@@ -271,19 +271,19 @@ async function handleDownloadExam() {
             </div>
           `
         })
-      content += '</div>'
+      content += "</div>"
     }
 
-    content += '</div>'
+    content += "</div>"
   })
-  content += '</div>'
+  content += "</div>"
 
   // 将内容添加到元素中
   element.innerHTML = content
   document.body.appendChild(element)
 
   // 添加PDF样式
-  const style = document.createElement('style')
+  const style = document.createElement("style")
   style.textContent = `
     .exam-pdf-container {
       font-family: Arial, sans-serif;
@@ -365,18 +365,18 @@ async function handleDownloadExam() {
   const opt = {
     margin: 10,
     filename: `${examPreviewData.value.title}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: "jpeg", quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
   }
 
   try {
     // 生成PDF并下载
     await html2pdf().from(element).set(opt).save()
-    ElMessage.success('试卷下载成功')
+    ElMessage.success("试卷下载成功")
   } catch (error) {
-    console.error('PDF生成失败:', error)
-    ElMessage.error('PDF生成失败')
+    console.error("PDF生成失败:", error)
+    ElMessage.error("PDF生成失败")
   } finally {
     // 清理临时元素
     document.body.removeChild(element)

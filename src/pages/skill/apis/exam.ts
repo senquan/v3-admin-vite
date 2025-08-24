@@ -259,7 +259,7 @@ export function publishExam(id: number) {
 export interface ScoreReportData {
   exam_record_id: number
   paper_path: {
-    name: string,
+    name: string
     url: string
   }[]
   score: number

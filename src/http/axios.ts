@@ -55,7 +55,7 @@ function createInstance() {
       const message = get(error, "response.data.message")
       switch (status) {
         case 400:
-          error.message = "请求错误"
+          error.message = `请求参数错误: ${message}`
           break
         case 401:
           // Token 过期时

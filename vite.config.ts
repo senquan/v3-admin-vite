@@ -38,12 +38,12 @@ export default defineConfig(({ mode }) => {
       // 反向代理
       proxy: {
         "/api": {
-          target: "http://localhost:5003/",
+          target: "http://localhost:33339/",
           changeOrigin: true,
           rewrite: path => path
         },
         "/uploads": {
-          target: "http://localhost:5003/",
+          target: "http://localhost:33339/",
           changeOrigin: true,
           rewrite: path => path
         }
