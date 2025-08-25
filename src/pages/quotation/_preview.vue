@@ -55,20 +55,22 @@ function open(options = {
 
   perkSum.value = 0
   otherSum.value = 0
-  orderData.value.forEach((item: any) => {
-    if (item.serie && (
-      item.serie?.indexOf("G70") > -1
-      || item.serie?.indexOf("G60") > -1
-      || item.serie?.indexOf("G12") > -1
-      || item.serie?.indexOf("G39") > -1
-      || item.serie?.indexOf("G57") > -1
-      || item.serie?.indexOf("无边") > -1
-    )) {
-      perkSum.value += Number(item.payPrice)
-    } else {
-      otherSum.value += Number(item.payPrice)
-    }
-  })
+  if (options.platformId !== 2 && options.platformId !== 6) {
+    orderData.value.forEach((item: any) => {
+      if (item.serie && (
+        item.serie?.indexOf("G70") > -1
+        || item.serie?.indexOf("G60") > -1
+        || item.serie?.indexOf("G12") > -1
+        || item.serie?.indexOf("G39") > -1
+        || item.serie?.indexOf("G57") > -1
+        || item.serie?.indexOf("无边") > -1
+      )) {
+        perkSum.value += Number(item.payPrice)
+      } else {
+        otherSum.value += Number(item.payPrice)
+      }
+    })
+  }
 }
 
 function close() {
