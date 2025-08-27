@@ -46,3 +46,10 @@ export function loadParticipants(id: number) {
     method: "get"
   })
 }
+
+export function generateQRCode(id: number) {
+  return request<Record.RecordQRCodeResponseData>({
+    url: `record/${id}/qrcode`,
+    method: "get"
+  })
+}

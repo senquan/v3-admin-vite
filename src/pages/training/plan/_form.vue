@@ -13,10 +13,16 @@ const formData = reactive({
   training_category: 0,
   planned_participants: 0,
   planned_time: "",
+  planned_end_time: "",
   training_hours: 0,
   assessment_method: 0,
-  exam_method: 0
+  exam_method: 0,
+  objectives: "",
+  description: ""
 })
+
+const newObjective = ref("")
+const objectiveItems = ref([] as string[])
 
 const formRef = ref()
 const visible = ref(false)
@@ -50,8 +56,13 @@ function resetForm() {
   formData.training_category = 0
   formData.planned_participants = 0
   formData.planned_time = ""
+  formData.planned_end_time = ""
   formData.training_hours = 0
   formData.assessment_method = 0
+  formData.objectives = ""
+  formData.description = ""
+  objectiveItems.value = []
+  newObjective.value = ""
   trainerOptions.value = []
 }
 
@@ -77,6 +88,9 @@ function open(options = {
             }
           }
         })
+        if (data.objectives) {
+          objectiveItems.value = data.objectives.split(",,").filter((item: string) => item.trim())
+        }
         if (data.trainer) {
           formData.trainer = String(data.trainer.id)
           trainerOptions.value = [{
@@ -104,6 +118,17 @@ function open(options = {
   }
 }
 
+function addObjective() {
+  if (newObjective.value.trim()) {
+    objectiveItems.value.push(newObjective.value.trim())
+    newObjective.value = ""
+  }
+}
+
+function removeObjective(index: number) {
+  objectiveItems.value.splice(index, 1)
+}
+
 function close() {
   visible.value = false
   emit("close")
@@ -116,6 +141,8 @@ function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
     btnSubmit.loading = true
+    formData.objectives = objectiveItems.value.join(",,")
+
     const request = isEdit.value
       ? updatePlan(formData.id, formData)
       : createPlan(formData)
@@ -258,8 +285,27 @@ defineExpose({
 
       <el-row>
         <el-col :span="12">
-          <el-form-item label="预计时间" prop="planned_time">
-            <el-date-picker v-model="formData.planned_time" type="datetime" placeholder="选择培训预计时间" class="filter-item" />
+          <el-form-item label="开始时间" prop="planned_time">
+            <el-date-picker v-model="formData.planned_time" type="datetime" placeholder="选择培训预计开始时间" class="filter-item" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="结束时间" prop="planned_end_time">
+            <el-date-picker v-model="formData.planned_end_time" type="datetime" placeholder="选择培训预计结束时间" class="filter-item" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="12">
+          <el-form-item label="考核方式" prop="assessment_method">
+            <el-select v-model="formData.assessment_method" placeholder="请选择考核方式" :empty-values="[0]" :value-on-clear="0">
+              <el-option :key="1" label="考试" :value="1" />
+              <el-option :key="2" label="学习记录" :value="2" />
+              <el-option :key="3" label="检查" :value="3" />
+              <el-option :key="4" label="抽查" :value="4" />
+              <el-option :key="5" label="不考核" :value="5" />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -271,14 +317,45 @@ defineExpose({
 
       <el-row>
         <el-col :span="24">
-          <el-form-item label="考核方式" prop="assessment_method">
-            <el-select v-model="formData.assessment_method" placeholder="请选择考核方式" :empty-values="[0]" :value-on-clear="0">
-              <el-option :key="1" label="考试" :value="1" />
-              <el-option :key="2" label="学习记录" :value="2" />
-              <el-option :key="3" label="检查" :value="3" />
-              <el-option :key="4" label="抽查" :value="4" />
-              <el-option :key="5" label="不考核" :value="5" />
-            </el-select>
+          <el-form-item label="培训详情" prop="description">
+            <el-input
+              type="textarea"
+              v-model="formData.description"
+              placeholder="请输入培训详情"
+              :rows="3"
+              maxlength="800"
+              show-word-limit
+            />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label="培训目标" prop="objectives">
+            <div class="objective-container">
+              <!-- 已添加的目标列表 -->
+              <div v-if="objectiveItems.length > 0" class="objective-list">
+                <div v-for="(item, index) in objectiveItems" :key="index" class="objective-item">
+                  <span class="objective-text">{{ item }}</span>
+                  <el-button type="danger" size="small" circle @click="removeObjective(index)">
+                    <el-icon><Close /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+              <!-- 输入新目标 -->
+              <div class="objective-input">
+                <el-input
+                  v-model="newObjective"
+                  type="text"
+                  placeholder="请输入培训目标"
+                  @keyup.enter="addObjective"
+                />
+                <div class="add-objective" @click="addObjective">
+                  <el-icon><CirclePlus /></el-icon>
+                </div>
+              </div>
+            </div>
           </el-form-item>
         </el-col>
       </el-row>
@@ -335,5 +412,58 @@ defineExpose({
   width: 100px;
   height: 100px;
   text-align: center;
+}
+
+.objective-container {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+}
+
+.objective-list {
+  margin-bottom: 10px;
+}
+
+.objective-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px;
+  margin-bottom: 8px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.objective-text {
+  padding-right: 10px;
+  flex: 1;
+  color: #606266;
+}
+
+.objective-input {
+  display: flex;
+  align-items: center;
+}
+
+.add-objective {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: background-color 0.3s;
+}
+
+.add-objective:hover {
+  background-color: #f5f7fa;
+}
+
+.add-objective .el-icon {
+  font-size: 26px;
+  color: #409eff;
 }
 </style>

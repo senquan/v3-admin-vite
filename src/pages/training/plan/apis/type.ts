@@ -12,12 +12,15 @@ export interface PlanListData {
   training_category: number
   planned_participants: number
   planned_time: string
+  planned_end_time: string
   training_hours: number
   assessment_method: number
   exam_method: number
   status: number
   created_time: string
   updated_time: string
+  objectives: string
+  description: string
 }
 
 export interface PlanCreateData {
@@ -29,9 +32,12 @@ export interface PlanCreateData {
   training_category: number
   planned_participants: number
   planned_time: string
+  planned_end_time: string
   training_hours: number
   assessment_method: number
   exam_method: number
+  objectives: string
+  description: string
 }
 
 export interface PlanListRequestParams {

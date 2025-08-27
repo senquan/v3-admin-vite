@@ -108,6 +108,12 @@ export interface RecordDetailResponseData {
   data: RecordListData
 }
 
+export interface RecordQRCodeResponseData {
+  code: number
+  message: string
+  data: string
+}
+
 export interface RecordActionResponseData {
   code: number
   message: string

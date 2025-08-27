@@ -1,15 +1,18 @@
 <script lang="ts" setup>
 import { request } from "@/http/axios"
+import { formatDate } from "@/utils/date"
 import { reportScore } from "../../skill/apis/exam"
-import { loadParticipants } from "./apis"
+import { generateQRCode, loadParticipants } from "./apis"
 
-const emit = defineEmits(["success", "close"])
+const emit = defineEmits(["success", "close", "refresh"])
 
 const formData = reactive({
   name: "",
+  qr_code_path: "",
   training_category: 0,
   training_mode: 0,
   trainer: "",
+  actual_time: "",
   hours: 0
 })
 
@@ -32,6 +35,10 @@ const scoreForm = reactive({
 const btnSubmit = reactive({
   loading: false
 })
+const qrCordPath = computed(() => {
+  return formData.qr_code_path ? formData.qr_code_path : "/uploads/qrcode/default.jpg"
+})
+const recordId = ref(0)
 
 function resetForm() {
   formData.name = ""
@@ -45,11 +52,14 @@ function open(options = {
   data: {} as any
 }) {
   resetForm()
+  recordId.value = options.data?.id
   formData.name = options.data?.name
   formData.training_category = options.data?.training_category
   formData.training_mode = options.data?.training_mode
   formData.trainer = options.data?.trainer
   formData.hours = options.data?.training_hours
+  formData.actual_time = options.data?.actual_time
+  formData.qr_code_path = options.data?.qr_code_path
 
   loadParticipants(options.data?.id).then((res) => {
     if (res.code === 0) {
@@ -157,6 +167,18 @@ function handleExamView(row: any) {
   }
 }
 
+function handleRegenerate() {
+  generateQRCode(recordId.value).then((res) => {
+    if (res.code === 0) {
+      formData.qr_code_path = res.data
+      emit("refresh")
+      ElMessage.success("二维码重新生成成功")
+    } else {
+      ElMessage.error(res.message)
+    }
+  })
+}
+
 defineExpose({
   open
 })
@@ -174,13 +196,34 @@ defineExpose({
       :column="3"
       border
     >
-      <el-descriptions-item width="150px" :span="3">
+      <el-descriptions-item width="150px" :span="2">
         <template #label>
           <div class="cell-item">
             培训名称
           </div>
         </template>
         {{ formData.name }}
+      </el-descriptions-item>
+      <el-descriptions-item width="150px" :rowspan="3" align="center">
+        <template #label>
+          <div class="cell-item">
+            小程序二维码
+          </div>
+        </template>
+        <el-image
+          :src="qrCordPath"
+          :preview-src-list="[qrCordPath]"
+          alt="小程序二维码"
+          style="width: 100px; height: 100px;"
+          fit="contain"
+        />
+        <el-button
+          type="default"
+          size="small"
+          @click="handleRegenerate"
+        >
+          重新生成
+        </el-button>
       </el-descriptions-item>
       <el-descriptions-item width="150px">
         <template #label>
@@ -205,6 +248,14 @@ defineExpose({
           </div>
         </template>
         {{ formData.trainer }}
+      </el-descriptions-item>
+      <el-descriptions-item>
+        <template #label>
+          <div class="cell-item">
+            开始时间
+          </div>
+        </template>
+        {{ formatDate(formData.actual_time) }}
       </el-descriptions-item>
     </el-descriptions>
     <el-table :data="recordData" style="margin-top: 20px;">

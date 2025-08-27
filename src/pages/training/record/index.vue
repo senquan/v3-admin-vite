@@ -49,6 +49,7 @@ const examSettingsRules = {
   categories: [{ required: true, message: "请选择考试分类", trigger: "change" }]
 }
 const isRegenerateExam = ref(false)
+const currentRecordId = ref(0)
 
 function fetchList() {
   loading.value = true
@@ -66,6 +67,7 @@ function handleFilter() {
 function handleDetail(id: number, name: string) {
   recordDrawer.value = true
   branchName.value = name
+  currentRecordId.value = id
   loadDetail(id)
 }
 
@@ -192,6 +194,8 @@ async function handleGenerateExam() {
             type: "success",
             message: "生成试卷成功"
           })
+          resetExamSettingsForm()
+          loadDetail(currentRecordId.value)
         }
       }).catch((error) => {
         console.error("生成考卷失败:", error)
@@ -203,6 +207,15 @@ async function handleGenerateExam() {
       examSettingsDialogVisible.value = false
     }
   }).catch(() => {})
+}
+
+function resetExamSettingsForm() {
+  examSettingsForm.totalScore = 100
+  examSettingsForm.passScore = 60
+  examSettingsForm.questionCount = 50
+  examSettingsForm.level = 2
+  examSettingsForm.duration = 120
+  handleCategoryClear()
 }
 
 function loadExamCategories() {
@@ -461,6 +474,7 @@ onMounted(() => {
 
     <DetailForm
       ref="recordFormRef"
+      @refresh="loadDetail(currentRecordId)"
       @close="recordFormVisibility = false"
     />
 
