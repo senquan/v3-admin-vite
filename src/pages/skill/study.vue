@@ -1,17 +1,16 @@
 <script lang="ts" setup>
-import type { StudyPlan } from "./apis/study"
+import type { ExamRecord, StudyPlan } from "./apis/study"
 import { formatDateTime } from "@/common/utils/datetime"
-import { ElMessage, ElMessageBox } from "element-plus"
+import { getCascaderOptions } from "@/common/utils/helper"
 import { useRouter } from "vue-router"
+import { fetchCategoryListOpt } from "../setting/apis"
 import {
-  createStudyPlan,
   deleteStudyPlan,
-  generateMockExam,
   getMockExamList,
-  getStudyPlanList,
-  updateStudyPlan
+  getPlanExamRecords,
+  getStudyPlanList
 } from "./apis/study"
-// import MockExamForm from "./components/MockExamForm.vue"
+import MockExamForm from "./components/MockExamForm.vue"
 import StudyPlanForm from "./components/StudyPlanForm.vue"
 
 const router = useRouter()
@@ -27,13 +26,14 @@ const listQuery = reactive({
 
 const totalPlans = ref(0)
 const tableData = ref<StudyPlan[]>([])
+const examRecordData = ref<ExamRecord[]>([])
 const studyPlanFormRef = ref<any>(null)
 const mockExamFormRef = ref<any>(null)
 const formVisibility = ref(false)
 const examFormVisibility = ref(false)
-
+const mockDrawer = ref(false)
 const totalPages = computed(() => Math.ceil(totalPlans.value / listQuery.pageSize))
-
+const currentRow = ref<StudyPlan>()
 const searchOptions = reactive({
   categories: [
     { label: "制度学习", value: 1 },
@@ -56,6 +56,7 @@ const searchOptions = reactive({
     { label: "已暂停", value: 3 }
   ]
 })
+const examCategories = ref<any>([])
 
 async function fetchStudyPlans() {
   loading.value = true
@@ -121,40 +122,91 @@ function handleDelete(id: number) {
   })
 }
 
-function handleGenerateExam(row: StudyPlan) {
+function handleMock(row: StudyPlan) {
+  mockDrawer.value = true
+  currentRow.value = row
+  loadPlanExamRecords()
+  loadExamCategories()
+}
+
+function loadPlanExamRecords() {
+  if (currentRow.value) {
+    getPlanExamRecords(currentRow.value.id, { page: 1, pageSize: 20 }).then((res) => {
+      if (res.data && res.data.records) {
+        examRecordData.value = res.data.records
+      } else {
+        examRecordData.value = []
+      }
+    })
+  }
+}
+
+function loadExamCategories() {
+  if (examCategories.value.length > 0) return
+  fetchCategoryListOpt(1).then((res) => {
+    const categoryOptData: Array<any> = []
+    if (res.data) {
+      for (const item of res.data.categories) {
+        const parent = item.parentId || 0
+        if (categoryOptData[parent] === undefined) {
+          categoryOptData[parent] = []
+        }
+        categoryOptData[parent].push(item)
+      }
+      examCategories.value = getCascaderOptions(categoryOptData, 0, 0, 3)
+    }
+  })
+}
+
+function handleGenerateExam() {
   mockExamFormRef.value?.open({
-    planId: row._id,
-    planTitle: row.title,
-    category: row.category,
-    level: row.level
+    planId: currentRow.value?.id,
+    planTitle: currentRow.value?.title,
+    category: currentRow.value?.category,
+    level: currentRow.value?.level,
+    categories: examCategories.value
   })
   examFormVisibility.value = true
 }
 
-function handleStartExam(row: StudyPlan) {
-  // 获取该计划的模拟试卷列表
-  getMockExamList(row._id).then((res) => {
-    if (res.data && res.data.exams && res.data.exams.length > 0) {
-      const exam = res.data.exams[0] // 取第一个可用的试卷
-      // 跳转到考试答题页面
+function handleStartExam(row: ExamRecord) {
+  if (!row.exam_id) {
+    ElMessage.error("考试ID无效")
+    return
+  }
+
+  ElMessageBox.confirm(
+    "确定要开始考试吗？",
+    "开始考试",
+    {
+      confirmButtonText: "开始答题",
+      cancelButtonText: "取消",
+      type: "info"
+    }
+  ).then(() => {
+    if (row.exam_id) {
       router.push({
-        path: "/skill/exam-taking",
-        query: { examId: exam._id }
+        name: "ExamTakingWithId",
+        params: {
+          examId: row.exam_id
+        }
       })
-    } else {
-      ElMessage.warning("该计划暂无可用的模拟试卷，请先生成试卷")
     }
   }).catch(() => {
-    ElMessage.error("获取试卷失败")
+    // 用户取消
   })
 }
 
-function handleViewResult(row: StudyPlan) {
+function handleViewResult(row: ExamRecord) {
   // 跳转到考试结果页面
-  router.push({
-    path: "/skill/exam-result",
-    query: { planId: row._id }
-  })
+  if (row.exam_id) {
+    router.push({
+      name: "ExamResult",
+      params: {
+        examId: row.exam_id
+      }
+    })
+  }
 }
 
 function openStudyPlanForm(id: number) {
@@ -177,6 +229,7 @@ function getLevel(value: number) {
 function onExamFormSuccess() {
   examFormVisibility.value = false
   ElMessage.success("模拟试卷生成成功")
+  loadPlanExamRecords()
 }
 
 onMounted(() => {
@@ -252,7 +305,7 @@ onMounted(() => {
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
       >
-        <vxe-column field="_id" width="60" title="ID" />
+        <vxe-column field="id" width="60" title="ID" />
         <vxe-column field="title" min-width="200" title="计划名称">
           <template #default="data">
             <el-text style="display: flex;">{{ data.row.title }}</el-text>
@@ -294,11 +347,9 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actions" title="操作" width="300" fixed="right">
           <template #default="data">
-            <el-button type="primary" @click="handleEdit(data.row._id)">编辑</el-button>
-            <!-- <el-button type="success" @click="handleGenerateExam(data.row)">生成试卷</el-button>
-            <el-button type="warning" @click="handleStartExam(data.row)">开始答题</el-button>
-            <el-button type="info" @click="handleViewResult(data.row)">查看结果</el-button> -->
-            <el-button type="danger" @click="handleDelete(data.row._id)">删除</el-button>
+            <el-button type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
+            <el-button type="success" @click="handleMock(data.row)">模拟考试</el-button>
+            <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -317,6 +368,36 @@ onMounted(() => {
         @current-change="handleFilter"
       />
     </div>
+
+    <el-drawer v-model="mockDrawer" :title="`模拟考试记录 - ${currentRow?.title}`" size="50%" direction="rtl">
+      <div class="toolbox">
+        <el-button type="primary" @click="handleGenerateExam">新增模拟考试</el-button>
+      </div>
+      <vxe-table
+        :data="examRecordData"
+      >
+        <vxe-column title="生成时间" min-width="180" align="left">
+          <template #default="data">
+            <el-text>{{ formatDateTime(data.row.create_time) }}</el-text>
+          </template>
+        </vxe-column>
+        <vxe-column field="total_score" title="总分" width="80" />
+        <vxe-column field="score" title="最高分" width="80" />
+        <vxe-column field="duration" title="考试时长" width="80" />
+        <vxe-column field="attempt_count" title="重试次数" width="80" />
+        <vxe-column title="最后完成时间" min-width="180" align="left">
+          <template #default="data">
+            <el-text>{{ formatDateTime(data.row.end_time) }}</el-text>
+          </template>
+        </vxe-column>
+        <vxe-column title="操作" width="220">
+          <template #default="data">
+            <el-button type="warning" @click="handleStartExam(data.row)">开始答题</el-button>
+            <el-button type="info" @click="handleViewResult(data.row)">查看结果</el-button>
+          </template>
+        </vxe-column>
+      </vxe-table>
+    </el-drawer>
 
     <!-- 自学计划表单 -->
     <StudyPlanForm
@@ -358,5 +439,10 @@ onMounted(() => {
 
 .el-button + .el-button {
   margin-left: 8px;
+}
+
+.toolbox {
+  margin-right: 20px;
+  text-align: right;
 }
 </style>

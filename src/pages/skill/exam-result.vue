@@ -10,30 +10,15 @@ const router = useRouter()
 
 // 考试数据
 const exam = ref<Exam | null>(null)
-const questions = ref<ExamQuestion[]>([])
-const userAnswers = ref<string[]>([])
-const score = ref(0)
-const correctCount = ref(0)
-const totalQuestions = ref(0)
-const usedTime = ref(0)
+const examRecord = ref<any>(null)
+const questions = ref<any[]>([])
+const statistics = ref<any>({})
 const showDetails = ref(true)
+const showTypeStats = ref(false)
 
 // 计算属性
-const incorrectCount = computed(() => {
-  return totalQuestions.value - correctCount.value - unansweredCount.value
-})
-
-const unansweredCount = computed(() => {
-  return userAnswers.value.filter(answer => !answer || !answer.trim()).length
-})
-
-const accuracyRate = computed(() => {
-  if (totalQuestions.value === 0) return 0
-  return Math.round((correctCount.value / totalQuestions.value) * 100)
-})
-
 const scoreClass = computed(() => {
-  if (score.value >= (exam.value?.pass_score || 60)) {
+  if (statistics.value.isPassed) {
     return "pass"
   }
   return "fail"
@@ -44,10 +29,22 @@ const statusClass = computed(() => {
 })
 
 const scoreStatus = computed(() => {
-  if (score.value >= (exam.value?.pass_score || 60)) {
+  if (statistics.value.isPassed) {
     return "合格"
   }
   return "不合格"
+})
+
+const accuracyRate = computed(() => {
+  if (statistics.value.totalQuestions === 0) return 0
+  return Math.round((statistics.value.correctCount / statistics.value.totalQuestions) * 100)
+})
+
+const usedTime = computed(() => {
+  if (examRecord.value?.used_time) {
+    return Math.round(examRecord.value.used_time / 60) // 转换为分钟
+  }
+  return 0
 })
 
 // 获取题目类型名称
@@ -63,26 +60,14 @@ function getQuestionTypeName(type?: string): string {
 }
 
 // 检查题目是否正确
-function isQuestionCorrect(index: number): boolean {
-  const userAnswer = userAnswers.value[index]
-  const correctAnswer = questions.value[index]?.questionEntity?.answer
-
-  if (!userAnswer || !correctAnswer) return false
-
-  // 对于多选题，需要比较排序后的答案
-  if (questions.value[index]?.questionEntity?.question_type === "multiple_choice") {
-    const userSorted = userAnswer.split(",").sort().join(",")
-    const correctSorted = correctAnswer.split(",").sort().join(",")
-    return userSorted === correctSorted
-  }
-
-  return userAnswer === correctAnswer
+function isQuestionCorrect(question: any): boolean {
+  return question.isCorrect === true
 }
 
 // 获取题目结果样式类
-function getQuestionResultClass(index: number): string {
-  if (isQuestionCorrect(index)) return "correct"
-  if (userAnswers.value[index]) return "incorrect"
+function getQuestionResultClass(question: any): string {
+  if (question.isCorrect === true) return "correct"
+  if (question.isCorrect === false) return "incorrect"
   return "unanswered"
 }
 
@@ -152,24 +137,11 @@ async function loadExamResult() {
     if (response.code === 0) {
       // 设置考试信息
       exam.value = response.data.exam
-      questions.value = response.data.exam.examQuestions || []
+      examRecord.value = response.data.examRecord
+      questions.value = response.data.questions || []
+      statistics.value = response.data.statistics || {}
 
-      // 设置统计数据
-      const stats = response.data.statistics
-      score.value = stats.score
-      correctCount.value = stats.correctCount
-      totalQuestions.value = stats.totalQuestions
-
-      // 设置用户答案
-      userAnswers.value = response.data.questions.map(q => q.userAnswer || "")
-
-      // 计算用时（如果后端返回了用时数据，应该使用后端数据）
-      if (response.data.examRecord && response.data.examRecord.used_time) {
-        usedTime.value = response.data.examRecord.used_time
-      } else {
-        // 如果没有用时数据，保留原来的模拟逻辑
-        usedTime.value = Math.floor(Math.random() * 30) + 10
-      }
+      console.log("考试结果数据:", response.data)
     } else {
       ElMessage.error(response.message || "获取考试结果失败")
     }
@@ -199,7 +171,7 @@ onMounted(() => {
     <div class="score-display">
       <div class="score-card">
         <div class="score-title">本次答题得分</div>
-        <div class="score-value" :class="scoreClass">{{ score }}分</div>
+        <div class="score-value" :class="scoreClass">{{ statistics.score || 0 }}分</div>
         <div class="score-status" :class="statusClass">{{ scoreStatus }}</div>
 
         <div class="score-details">
@@ -209,7 +181,15 @@ onMounted(() => {
           </div>
           <div class="detail-item">
             <span class="label">答题数量</span>
-            <span class="value">{{ totalQuestions }}</span>
+            <span class="value">{{ statistics.totalQuestions || 0 }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">满分</span>
+            <span class="value">{{ statistics.maxScore || 0 }}分</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">及格分</span>
+            <span class="value">{{ statistics.passScore || 60 }}分</span>
           </div>
         </div>
       </div>
@@ -228,19 +208,34 @@ onMounted(() => {
         <div class="statistics">
           <div class="stat-item">
             <div class="stat-label">正确题数</div>
-            <div class="stat-value correct">{{ correctCount }}</div>
+            <div class="stat-value correct">{{ statistics.correctCount || 0 }}</div>
           </div>
           <div class="stat-item">
             <div class="stat-label">错误题数</div>
-            <div class="stat-value incorrect">{{ incorrectCount }}</div>
+            <div class="stat-value incorrect">{{ statistics.incorrectCount || 0 }}</div>
           </div>
           <div class="stat-item">
             <div class="stat-label">未答题数</div>
-            <div class="stat-value unanswered">{{ unansweredCount }}</div>
+            <div class="stat-value unanswered">{{ statistics.pendingCount || 0 }}</div>
           </div>
           <div class="stat-item">
             <div class="stat-label">正确率</div>
             <div class="stat-value accuracy">{{ accuracyRate }}%</div>
+          </div>
+        </div>
+
+        <!-- 题目类型统计 -->
+        <div v-if="showTypeStats && statistics.typeStats" class="type-stats">
+          <div class="stats-title">题目类型统计</div>
+          <div class="type-stats-grid">
+            <div v-for="(stat, type) in statistics.typeStats" :key="type" class="type-stat-item">
+              <div class="type-name">{{ getQuestionTypeName(type.toString()) }}</div>
+              <div class="type-details">
+                <span class="type-correct">答对: {{ stat.correct }}</span>
+                <span class="type-total">总数: {{ stat.total }}</span>
+                <span class="type-rate">正确率: {{ stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0 }}%</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -252,33 +247,33 @@ onMounted(() => {
             v-for="(question, index) in questions"
             :key="index"
             class="question-item"
-            :class="getQuestionResultClass(index)"
+            :class="getQuestionResultClass(question)"
           >
             <div class="question-header">
               <span class="question-number">第{{ index + 1 }}题</span>
-              <span class="question-type">{{ getQuestionTypeName(question.questionEntity?.question_type) }}</span>
-              <span class="question-score">{{ question.question_score }}分</span>
-              <span class="result-icon" :class="getQuestionResultClass(index)">
-                <el-icon v-if="isQuestionCorrect(index)"><Check /></el-icon>
-                <el-icon v-else-if="userAnswers[index]"><Close /></el-icon>
+              <span class="question-type">{{ getQuestionTypeName(question.question_type) }}</span>
+              <span class="question-score">{{ question.score }}分</span>
+              <span class="result-icon" :class="getQuestionResultClass(question)">
+                <el-icon v-if="isQuestionCorrect(question)"><Check /></el-icon>
+                <el-icon v-else-if="question.userAnswer"><Close /></el-icon>
                 <el-icon v-else><Minus /></el-icon>
               </span>
             </div>
 
             <div class="question-content">
-              <div class="question-text">{{ question.questionEntity?.content }}</div>
+              <div class="question-text">{{ question.question_text }}</div>
 
-              <div class="answer-comparison" v-if="question.questionEntity?.options">
+              <div class="answer-comparison" v-if="question.options">
                 <div class="answer-row">
                   <span class="answer-label">您的答案：</span>
-                  <span class="user-answer" :class="{ correct: isQuestionCorrect(index), incorrect: userAnswers[index] && !isQuestionCorrect(index) }">
-                    {{ formatAnswer(userAnswers[index]) || "未作答" }}
+                  <span class="user-answer" :class="{ correct: isQuestionCorrect(question), incorrect: question.userAnswer && !isQuestionCorrect(question) }">
+                    {{ formatAnswer(question.userAnswer) || "未作答" }}
                   </span>
                 </div>
                 <div class="answer-row">
                   <span class="answer-label">正确答案：</span>
                   <span class="correct-answer">
-                    {{ formatAnswer(question.questionEntity?.answer || "", question.questionEntity?.options) }}
+                    {{ formatAnswer(question.answer || "", question.options) }}
                   </span>
                 </div>
               </div>
@@ -286,19 +281,19 @@ onMounted(() => {
               <div class="answer-comparison" v-else>
                 <div class="answer-row">
                   <span class="answer-label">您的答案：</span>
-                  <span class="user-answer" :class="{ correct: isQuestionCorrect(index), incorrect: userAnswers[index] && !isQuestionCorrect(index) }">
-                    {{ userAnswers[index] || "未作答" }}
+                  <span class="user-answer" :class="{ correct: isQuestionCorrect(question), incorrect: question.userAnswer && !isQuestionCorrect(question) }">
+                    {{ question.userAnswer || "未作答" }}
                   </span>
                 </div>
                 <div class="answer-row">
                   <span class="answer-label">正确答案：</span>
-                  <span class="correct-answer">{{ question.questionEntity?.answer }}</span>
+                  <span class="correct-answer">{{ question.answer }}</span>
                 </div>
               </div>
 
-              <div class="question-analysis" v-if="question.questionEntity?.analysis">
+              <div class="question-analysis" v-if="question.explanation">
                 <div class="analysis-label">解析：</div>
-                <div class="analysis-content">{{ question.questionEntity.analysis }}</div>
+                <div class="analysis-content">{{ question.explanation }}</div>
               </div>
             </div>
           </div>
@@ -455,6 +450,61 @@ onMounted(() => {
 
 .stat-value.accuracy {
   color: #409eff;
+}
+
+/* 题目类型统计样式 */
+.type-stats {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stats-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.type-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.type-stat-item {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #4a90e2;
+}
+
+.type-name {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.type-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.type-correct {
+  color: #28a745;
+}
+
+.type-total {
+  color: #6c757d;
+}
+
+.type-rate {
+  color: #007bff;
+  font-weight: 500;
 }
 
 .question-list {

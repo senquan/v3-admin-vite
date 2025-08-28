@@ -1,8 +1,9 @@
+import type { GenerateExamParams } from "./exam"
 import { request } from "@/http/axios"
 
 // 自学计划接口
 export interface StudyPlan {
-  _id: number
+  id: number
   title: string
   description?: string
   category: number
@@ -66,7 +67,7 @@ export interface MockQuestion {
 
 // 答题记录接口
 export interface ExamRecord {
-  _id: number
+  id: number
   exam_id: number
   user_id: number
   start_time: string
@@ -107,15 +108,15 @@ export interface StudyPlanCreateData {
 }
 
 export interface MockExamCreateData {
+  study_plan_id: number
+  question_count: number
+  level: number
   title: string
   description?: string
-  plan_id: number
   category: number
-  level: number
   total_score: number
   pass_score: number
   duration: number
-  question_count: number
 }
 
 export interface SubmitExamData {
@@ -148,6 +149,17 @@ export interface MockExamListResponse {
   message: string
   data: {
     exams: MockExam[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
+export interface ExamRecordListResponse {
+  code: number
+  message: string
+  data: {
+    records: ExamRecord[]
     total: number
     page: number
     pageSize: number
@@ -201,7 +213,7 @@ export function getStudyPlanList(params: StudyPlanListParams) {
 // 获取自学计划详情
 export function getStudyPlanDetail(id: number) {
   return request<StudyPlanDetailResponse>({
-    url: `study/plans/${id}`,
+    url: `study/${id}`,
     method: "get"
   })
 }
@@ -209,7 +221,7 @@ export function getStudyPlanDetail(id: number) {
 // 创建自学计划
 export function createStudyPlan(data: StudyPlanCreateData) {
   return request<ActionResponse>({
-    url: "study/",
+    url: "study",
     method: "post",
     data
   })
@@ -218,7 +230,7 @@ export function createStudyPlan(data: StudyPlanCreateData) {
 // 更新自学计划
 export function updateStudyPlan(id: number, data: StudyPlanCreateData) {
   return request<ActionResponse>({
-    url: `study/plans/${id}`,
+    url: `study/${id}`,
     method: "put",
     data
   })
@@ -227,16 +239,41 @@ export function updateStudyPlan(id: number, data: StudyPlanCreateData) {
 // 删除自学计划
 export function deleteStudyPlan(id: number) {
   return request<ActionResponse>({
-    url: `study/plans/${id}`,
+    url: `study/${id}`,
     method: "delete"
+  })
+}
+
+// 批量删除自学计划
+export function batchDeleteStudyPlans(ids: number[]) {
+  return request<ActionResponse>({
+    url: "study/batch/delete",
+    method: "post",
+    data: { ids }
+  })
+}
+
+// 开始学习计划
+export function startStudyPlan(id: number) {
+  return request<ActionResponse>({
+    url: `study/${id}/start`,
+    method: "post"
+  })
+}
+
+// 完成学习计划
+export function completeStudyPlan(id: number) {
+  return request<ActionResponse>({
+    url: `study/${id}/complete`,
+    method: "post"
   })
 }
 
 // 更新学习进度
 export function updateStudyProgress(planId: number, materialId: number, duration: number) {
   return request<ActionResponse>({
-    url: `study/plans/${planId}/progress`,
-    method: "post",
+    url: `study/${planId}/progress`,
+    method: "put",
     data: {
       material_id: materialId,
       study_duration: duration
@@ -253,9 +290,9 @@ export function getMockExamList(planId: number) {
 }
 
 // 生成模拟试卷
-export function generateMockExam(data: MockExamCreateData) {
+export function generateMockExam(data: GenerateExamParams) {
   return request<ActionResponse>({
-    url: "study/mock-exams/generate",
+    url: `exam/generate-mock/${data.recordId}`,
     method: "post",
     data
   })
@@ -295,9 +332,9 @@ export function getMockExamResult(recordId: number) {
 }
 
 // 获取我的考试记录
-export function getMyExamRecords(params: { page?: number, pageSize?: number }) {
-  return request({
-    url: "study/exam-records/my",
+export function getPlanExamRecords(planId: number, params: { page?: number, pageSize?: number }) {
+  return request<ExamRecordListResponse>({
+    url: `study/records/${planId}`,
     method: "get",
     params
   })

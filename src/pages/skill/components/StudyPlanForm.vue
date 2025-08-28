@@ -72,6 +72,7 @@ function resetForm() {
     target_score: 60,
     coursewares: []
   })
+  coursewareOptions.value = []
   formRef.value?.clearValidate()
 }
 
@@ -82,14 +83,22 @@ async function loadPlanDetail() {
     if (res.data) {
       const plan = res.data
       Object.assign(formData, {
-        title: plan.title,
+        title: plan.title || "",
         description: plan.description || "",
-        category: plan.category,
-        level: plan.level,
-        study_hours: plan.study_hours,
-        target_score: plan.target_score,
-        coursewares: plan.coursewares || []
+        category: plan.category || 1,
+        level: plan.level || 1,
+        study_hours: Number(plan.study_hours) || 0,
+        target_score: plan.target_score || 60,
+        coursewares: plan.coursewares.map((item: any) => item.courseware_id) || []
       })
+      coursewareOptions.value = plan.coursewares
+        ? plan.coursewares.map((item: any) => ({
+            title: item.courseware?.title || "",
+            id: item.courseware?._id || 0
+          }))
+        : []
+
+      console.log("coursewares", plan.coursewares)
     }
   } catch (error) {
     console.error("加载计划详情失败:", error)

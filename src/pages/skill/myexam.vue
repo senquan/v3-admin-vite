@@ -588,10 +588,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.exam-center-container {
-  padding: 20px;
-}
-
 .page-header {
   margin-bottom: 20px;
   padding: 20px;
