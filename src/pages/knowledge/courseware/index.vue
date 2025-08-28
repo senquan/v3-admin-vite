@@ -21,7 +21,7 @@ const fileList = ref<any>([])
 const queryParams = reactive({
   keyword: "",
   category: "",
-  status: "",
+  status: 1,
   page: 1,
   pageSize: 10
 })
