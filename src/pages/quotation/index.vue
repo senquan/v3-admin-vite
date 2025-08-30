@@ -286,7 +286,7 @@ function loadDetail(id: number) {
           materialList.value += `<${item.product.materialId}*${item.quantity}>`
         }
         res.data.items.forEach((item: any) => {
-          item.returnDiscount = item.product.basePrice > 0 ? Math.round((item.unitPrice / item.product.basePrice) * 10000) / 10000 : 0
+          item.returnDiscount = 1
           item.returnQuantity = 0
           item.refund = 0
         })
@@ -474,7 +474,7 @@ function getSummaries(param: any) {
 }
 
 function getRefundValue(row: any) {
-  return Math.round(row.product.basePrice * row.returnDiscount * row.returnQuantity * 100) / 100
+  return Math.round(row.unitPrice * row.returnDiscount * row.returnQuantity * 100) / 100
 }
 
 function resetReturnForm() {
@@ -577,7 +577,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="detailDrawer" title="订单详情" size="42%" direction="rtl">
+    <el-drawer v-model="detailDrawer" title="订单详情" size="45%" direction="rtl">
       <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
         <el-tab-pane label="物料详情" name="materia">
           <div>
@@ -595,22 +595,33 @@ onMounted(() => {
           </div>
           <el-form v-if="orderDetail.status === 4">
             <el-table :data="orderDetail.items" show-summary :summary-method="getSummaries">
-              <el-table-column label="条形码" width="130" align="center">
+              <el-table-column label="型号" width="120" align="center">
                 <template #default="scope">
-                  <el-text truncated>{{ scope.row.product.barCode }}</el-text>
+                  <el-text truncated>{{ scope.row.product.modelType?.name || "n/a" }}</el-text>
                 </template>
               </el-table-column>
-              <el-table-column label="名称" min-width="200">
+              <el-table-column label="名称" min-width="180">
                 <template #default="scope">
                   <el-text truncated>{{ scope.row.product.name }}</el-text>
                 </template>
               </el-table-column>
-              <el-table-column prop="quantity" width="80" label="数量" align="center" />
-              <el-table-column prop="product.basePrice" width="80" label="原单价" align="center" />
-              <el-table-column prop="unitPrice" label="到手单价" width="80" align="center" />
-              <el-table-column prop="returnDiscount" width="90" label="折扣" align="center">
+              <el-table-column label="颜色" width="80" align="center">
                 <template #default="scope">
-                  <el-input v-model="scope.row.returnDiscount" :disabled="scope.row.returnDiscount === 0" style="width: 100%;" @change="scope.row.refund = getRefundValue(scope.row)" />
+                  <el-text truncated>{{ scope.row.product.color?.value || "默认色" }}</el-text>
+                </template>
+              </el-table-column>
+              <el-table-column prop="quantity" width="60" label="数量" align="center" />
+              <el-table-column prop="unitPrice" label="到手单价" width="80" align="center">
+                <template #default="scope">
+                  <el-text line-clamp="2">
+                    <el-text tag="del">{{ scope.row.product.basePrice }}</el-text><br>
+                    <el-text>{{ scope.row.unitPrice }}</el-text>
+                  </el-text>
+                </template>
+              </el-table-column>
+              <el-table-column prop="returnDiscount" width="80" label="折扣" align="center">
+                <template #default="scope">
+                  <el-input v-model="scope.row.returnDiscount" style="width: 100%;" @change="scope.row.refund = getRefundValue(scope.row)" />
                 </template>
               </el-table-column>
               <el-table-column prop="returnQuantity" width="100" label="退回数量" align="center">
@@ -635,6 +646,11 @@ onMounted(() => {
             </div>
           </el-form>
         </el-tab-pane>
+        <!-- <el-tab-pane label="订单补货" name="replenishment">
+          <div>
+            11
+          </div>
+        </el-tab-pane> -->
         <el-tab-pane label="订单流程" name="workflow">
           <el-timeline style="margin-top: 20px;">
             <el-timeline-item
@@ -718,5 +734,9 @@ onMounted(() => {
 .platform-icon {
   margin-left: 10px;
   cursor: pointer;
+}
+
+:deep(.el-text.is-line-clamp) {
+  line-height: 1.2;
 }
 </style>

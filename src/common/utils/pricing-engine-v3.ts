@@ -114,6 +114,8 @@ class PricingEngineV3 {
         appliedProducts: [] as number[]
       }
 
+      // console.log("Rule apply", rule)
+
       try {
         if (scope === "product") {
           this.applyProductRule(rule, products, productResults, result, matchLog)
@@ -150,7 +152,7 @@ class PricingEngineV3 {
       return
     }
 
-    console.log("Product matchedProducts", matchedProducts)
+    // console.log("Product matchedProducts", matchedProducts)
 
     matchLog.matched = true
     matchLog.appliedProducts = matchedProducts.map(p => p.id)
@@ -166,7 +168,7 @@ class PricingEngineV3 {
         0
       )
       const discountAmount = this.calculateTieredDiscount(rule.discountStrategy.tieredConfig!, baseAmount, baseQuantity)
-      if (discountAmount > 0) {
+      if (discountAmount !== 0) {
         // 将满减额按比例分配到每个产品
         for (const product of matchedProducts) {
           const productResult = productResults.get(product.id)!
@@ -211,9 +213,10 @@ class PricingEngineV3 {
           product,
           productResult
         )
-
-        if (discountAmount > 0) {
+        // console.log("Discount amount", discountAmount)
+        if (discountAmount !== 0) {
           productResult.totalDiscount += discountAmount
+          // console.log("total discount", productResult.totalDiscount)
           productResult.finalUnitPrice = Math.max(0, (product.basePrice * product.quantity - productResult.totalDiscount) / product.quantity)
           productResult.appliedRules.push(rule.id)
 
