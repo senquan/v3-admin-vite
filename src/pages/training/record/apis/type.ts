@@ -62,6 +62,8 @@ export interface RecordListRequestParams {
 export interface RecordStaffListRequestParams {
   keyword?: string
   type?: string
+  page?: number
+  pageSize?: number
   id: string
 }
 
