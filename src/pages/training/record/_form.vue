@@ -92,7 +92,7 @@ function loadOuterParticipants(node: any, resolve: any) {
 function loadParticipants(node: any, resolve: any, type: string = "inner") {
   if (node.level === 0) return resolve(scopeOptions.value)
   if (node.isLeaf || node.level > 1) return resolve([])
-  fetchStaff({ id: node.data.value, type }).then((res) => {
+  fetchStaff({ id: node.data.value, type, pageSize: 300 }).then((res) => {
     if (res.code === 0) {
       return resolve(res.data.users.map((item: any) => {
         return {
