@@ -43,8 +43,6 @@ export interface UploadFile {
 
 export interface RecordCreateData {
   id: number
-  participants: number[]
-  participants_outer: number[]
   contents: string
   contents_select: UploadFile[]
   contents_matrix: number[]

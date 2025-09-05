@@ -4,14 +4,12 @@ import { request } from "@/http/axios"
 import { fetchCategoryListOpt } from "../../setting/apis"
 import { fetchList as fetchCoursewares } from "./../../knowledge/courseware/apis"
 import { fetchList as fetchCertificates } from "./../../training/certificate/apis"
-import { createRecord, fetchStaff } from "./apis"
+import { createRecord } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
 const formData = reactive({
   id: 0,
-  participants: [],
-  participants_outer: [],
   contents: "",
   contents_select: [] as { name: string, url: string }[],
   contents_matrix: [] as number[],
@@ -22,11 +20,6 @@ const formData = reactive({
 const formRef = ref()
 const visible = ref(false)
 const scopeOptions = ref<any>([])
-const props = ref({
-  label: "label",
-  value: "value",
-  isLeaf: "isLeaf"
-})
 const planData = reactive<any>({})
 const dicts = ref({
   categories: [] as any,
@@ -51,8 +44,6 @@ const treeSelectKey = ref(0)
 
 function resetForm() {
   formData.id = 0
-  formData.participants = []
-  formData.participants_outer = []
   formData.contents = ""
   formData.contents_select = []
   formData.contents_matrix = []
@@ -85,33 +76,6 @@ function close() {
   emit("close")
 }
 
-function loadOuterParticipants(node: any, resolve: any) {
-  loadParticipants(node, resolve, "outer")
-}
-
-function loadParticipants(node: any, resolve: any, type: string = "inner") {
-  if (node.level === 0) return resolve(scopeOptions.value)
-  if (node.isLeaf || node.level > 1) return resolve([])
-  fetchStaff({ id: node.data.value, type, pageSize: 300 }).then((res) => {
-    if (res.code === 0) {
-      return resolve(res.data.users.map((item: any) => {
-        return {
-          value: item.id,
-          label: item.realname,
-          isLeaf: true
-        }
-      }))
-    } else {
-      ElMessage({
-        message: "获取人员失败",
-        type: "error",
-        offset: 0
-      })
-      return resolve([])
-    }
-  })
-}
-
 function loadMatrix() {
   if (matrix.value.length > 0) return
   fetchCategoryListOpt(0).then((res) => {
@@ -132,14 +96,6 @@ function loadMatrix() {
 function handleSubmit() {
   formRef.value.validate((valid: any) => {
     if (!valid) return
-    if (formData.participants.length === 0 && formData.participants_outer.length === 0) {
-      ElMessage({
-        message: "请选择参与人员",
-        type: "error",
-        offset: 0
-      })
-      return
-    }
     btnSubmit.loading = true
     if (planData.training_category === 1 || planData.training_category === 2) {
       formData.contents_select = fileList.value.map((item: any) => {
@@ -283,43 +239,6 @@ defineExpose({
       :rules="rules"
       label-width="100px"
     >
-      <el-row>
-        <el-col :span="24">
-          <el-form-item label="人员选择" prop="participants">
-            <div>
-              <el-text>本单位人员</el-text>
-              <el-tree-select
-                :key="`inner-${treeSelectKey}`"
-                v-model="formData.participants"
-                lazy
-                :load="loadParticipants"
-                :props="props"
-                multiple
-                filterable
-                :render-after-expand="false"
-                show-checkbox
-                style="margin-left: 20px; width: 380px;"
-              />
-            </div>
-            <div style="margin-top: 20px;">
-              <el-text>外单位人员</el-text>
-              <el-tree-select
-                :key="`outer-${treeSelectKey}`"
-                v-model="formData.participants_outer"
-                lazy
-                :load="loadOuterParticipants"
-                :props="props"
-                multiple
-                filterable
-                :render-after-expand="false"
-                show-checkbox
-                style="margin-left: 20px; width: 380px;"
-              />
-            </div>
-          </el-form-item>
-        </el-col>
-      </el-row>
-
       <el-row>
         <el-col :span="24">
           <el-form-item label="培训内容" prop="contents">
