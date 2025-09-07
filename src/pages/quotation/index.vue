@@ -192,7 +192,11 @@ function navto(platform: string, code: string) {
   if (orderVersion.value === 3) {
     router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=3`)
   } else {
-    router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
+    if (listQuery.type === "4") {
+      router.push(`/quotation/new-replenishment?platform=${platform}&code=${code}&type=${listQuery.type}`)
+    } else {
+      router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
+    }
   }
 }
 
@@ -209,6 +213,8 @@ function handleDetail(id: number) {
 function handleEdit(id: number, type: number) {
   if (type === 3) {
     router.push(`/quotation/new-v3?id=${id}`)
+  } else if (type === 4) {
+    router.push(`/quotation/new-replenishment?id=${id}`)
   } else {
     router.push(`/quotation/new?id=${id}`)
   }
@@ -486,8 +492,22 @@ function resetReturnForm() {
   returnForm.remark = ""
 }
 
+function getOrderType(path: string) {
+  if (path === "quotation") {
+    return "1"
+  } else if (path === "project") {
+    return "2"
+  } else if (path === "v3") {
+    return "3"
+  } else if (path === "replenishment") {
+    return "4"
+  }
+  return "1"
+}
+
 onMounted(() => {
-  listQuery.type = router.currentRoute.value.path === "/quotation/quotation/project" ? "2" : "1"
+  const path = router.currentRoute.value.path.split("/").pop() || ""
+  listQuery.type = getOrderType(path)
   fetchOrders()
 })
 </script>
@@ -500,8 +520,8 @@ onMounted(() => {
       <el-date-picker v-model="listQuery.endDate" placeholder="选择结束日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
       <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
-      <el-button type="primary" @click="handleNew">新增订单</el-button>
-      <el-button type="primary" @click="handleNewV3">新增订单(新版)</el-button>
+      <el-button type="primary" v-if="listQuery.type !== '3'" @click="handleNew">新增订单</el-button>
+      <el-button type="primary" v-if="listQuery.type === '3' || listQuery.type === '2'" @click="handleNewV3">新增订单(新版)</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
@@ -577,7 +597,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="detailDrawer" title="订单详情" size="45%" direction="rtl">
+    <el-drawer v-model="detailDrawer" title="订单详情" size="50%" direction="rtl">
       <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
         <el-tab-pane label="物料详情" name="materia">
           <div>
@@ -622,6 +642,11 @@ onMounted(() => {
               <el-table-column prop="returnDiscount" width="80" label="折扣" align="center">
                 <template #default="scope">
                   <el-input v-model="scope.row.returnDiscount" style="width: 100%;" @change="scope.row.refund = getRefundValue(scope.row)" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="returnDiscount" width="80" label="折后单价" align="center">
+                <template #default="scope">
+                  {{ (scope.row.unitPrice * scope.row.returnDiscount).toFixed(2) }}
                 </template>
               </el-table-column>
               <el-table-column prop="returnQuantity" width="100" label="退回数量" align="center">

@@ -31,10 +31,20 @@ class PricingEngineV3 {
 
     const productMap = new Map() // 普通产品
     const bonusMap = new Map() // 赠品产品
+    const quantityMap = new Map<number, number>() // 产品数量映射
+
+    validProducts.forEach((product) => {
+      const currentQuantity = quantityMap.get(product.id) || 0
+      quantityMap.set(product.id, currentQuantity + product.quantity)
+    })
 
     validProducts.forEach((product) => {
       const targetMap = this.bonusSeriesIds.value.includes(product.serie?.id || 0) ? bonusMap : productMap
-      targetMap.set(product.id, product)
+      targetMap.set(product.id, {
+        ...product,
+        quantity: quantityMap.get(product.id) || product.quantity,
+        unitPrice: product.basePrice
+      })
     })
 
     // 初始化结果
