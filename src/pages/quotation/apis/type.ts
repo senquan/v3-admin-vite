@@ -48,6 +48,7 @@ export interface OrderItemsData {
 
 export interface OrderCreateData {
   type: number
+  relatedId?: number
   platformId: number
   name: string
   originPrice: number

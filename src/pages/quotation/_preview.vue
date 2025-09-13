@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
+import { extractPackageQuantity } from "@/common/utils/helper"
 import html2canvas from "html2canvas"
 
 const emit = defineEmits(["success", "close"])
@@ -11,7 +12,7 @@ const title = ref("")
 const platform = ref(0)
 const license = ref("")
 const platformBackgroundColor = ref("#4b8f88")
-const type = ref(1)
+const type = ref(1) // 1: 普通报价单 2: 工程报价单 3: 退货单
 const perkSum = ref(0)
 const otherSum = ref(0)
 
@@ -53,23 +54,26 @@ function open(options = {
     platformBackgroundColor.value = "#e53953"
   }
 
-  perkSum.value = 0
-  otherSum.value = 0
-  if (options.platformId !== 2 && options.platformId !== 6) {
-    orderData.value.forEach((item: any) => {
-      if (item.serie && (
-        item.serie?.indexOf("G70") > -1
-        || item.serie?.indexOf("G60") > -1
-        || item.serie?.indexOf("G12") > -1
-        || item.serie?.indexOf("G39") > -1
-        || item.serie?.indexOf("G57") > -1
-        || item.serie?.indexOf("无边") > -1
-      )) {
-        perkSum.value += Number(item.payPrice)
-      } else {
-        otherSum.value += Number(item.payPrice)
-      }
-    })
+  // 国补统计
+  if (type.value !== 3) {
+    perkSum.value = 0
+    otherSum.value = 0
+    if (options.platformId !== 2 && options.platformId !== 6) {
+      orderData.value.forEach((item: any) => {
+        if (item.serie && (
+          item.serie?.indexOf("G70") > -1
+          || item.serie?.indexOf("G60") > -1
+          || item.serie?.indexOf("G12") > -1
+          || item.serie?.indexOf("G39") > -1
+          || item.serie?.indexOf("G57") > -1
+          || item.serie?.indexOf("无边") > -1
+        )) {
+          perkSum.value += Number(item.payPrice)
+        } else {
+          otherSum.value += Number(item.payPrice)
+        }
+      })
+    }
   }
 }
 
@@ -177,24 +181,51 @@ function getSummaries(param: any) {
   return sums
 }
 
-function formatPrice(price: string) {
-  return String(Math.floor(Number(price) * 10) / 10)
+function getReturnSummaries(param: any) {
+  const { columns, data } = param
+  const sums: (string | VNode)[] = []
+  columns.forEach((column: { property: string }, index: number) => {
+    if (index === 0) {
+      sums[index] = h("div", [
+        "总计"
+      ])
+      return
+    }
+    let values
+    if (index === 5) {
+      values = data.map((item: Record<string, any>) => {
+        if (item.serie?.includes("套装") || item.serie?.includes("预售")) {
+          const q = extractPackageQuantity(item.name) || 10
+          return item.returnQuantity * q
+        } else if (item.isBonus || item.id === "") {
+          return 0
+        } else {
+          return Number(item[column.property])
+        }
+      })
+    } else {
+      values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    }
+    if (index === 5 || index === 6) {
+      if (!values.every((value: number) => Number.isNaN(value))) {
+        sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
+          const value = Number(curr)
+          if (!Number.isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)}`).toFixed(index === 5 ? 0 : 2)
+      }
+    } else {
+      sums[index] = ""
+    }
+  })
+  return sums
 }
 
-/**
- * 从"x只装"格式的字符串中提取数字
- * @param text 包含"x只装"格式的字符串，例如："10只装"
- * @returns 提取的数字，如果没有匹配则返回null
- */
-function extractPackageQuantity(text: string): number | null {
-  if (!text || typeof text !== "string") {
-    return null
-  }
-  const match = text.match(/(\d+)只装/)
-  if (match && match[1]) {
-    return Number.parseInt(match[1], 10)
-  }
-  return null
+function formatPrice(price: string) {
+  return String(Math.floor(Number(price) * 10) / 10)
 }
 </script>
 
@@ -210,19 +241,80 @@ function extractPackageQuantity(text: string): number | null {
     :style="`background-color: ${platformBackgroundColor}`"
   >
     <div id="print-area" :style="`background-color: ${platformBackgroundColor}; padding: 10px 10px 0 10px;`">
-      <div class="header-container" v-if="type === 1">
+      <div class="header-container" v-if="type === 1 || type === 4">
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="title">
-          公牛官方报价单
+          {{ type === 1 ? "公牛官方报价单" : "补货单" }}
           <span>授权编码：{{ license }}</span>
         </div>
         <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
+      </div>
+      <div class="header-container" v-else-if="type === 3">
+        <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
+        <div class="intro" style="width: 800px;">退货单 (不拆包装! 不影响二次销售)</div>
       </div>
       <div class="header-container" v-else>
         <div class="form-header" />
       </div>
 
       <el-table
+        v-if="type === 3 || type === 4"
+        :data="orderData"
+        :summary-method="getReturnSummaries"
+        show-summary
+        border
+      >
+        <el-table-column prop="imageUrl" label="产品主图" width="120" align="center">
+          <template #default="{ row }">
+            <div class="product-image-container">
+              <el-image
+                style="width: 80px; height: 80px"
+                :src="row.imageUrl?.replace('uploads', 'uploads/thumb/')"
+                :preview-src-list="row.imageUrls"
+                :preview-teleported="true"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="image-slot">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="商品信息" min-width="200" align="center">
+          <template #default="{ row }">
+            <div class="product-info">
+              <span>{{ row.modelType }} · {{ row.serie }}</span>
+              <el-text truncated>{{ row.name }} · {{ row.color }}</el-text>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="basePrice" label="到手单价" width="120" align="center">
+          <template #default="{ row }">
+            <el-text line-clamp="2">
+              <el-text tag="del" class="bold-font">{{ row.basePrice }}</el-text><br>
+              <el-text class="bold-font">{{ row.finalUnitPrice }}</el-text>
+            </el-text>
+          </template>
+        </el-table-column>
+        <el-table-column prop="returnDiscount" label="折扣" width="120" align="center">
+          <template #default="{ row }">{{ row.returnDiscount }}</template>
+        </el-table-column>
+        <el-table-column prop="finalUnitPrice" label="折后单价" width="120" align="center">
+          <template #default="{ row }"><span class="highlight-price">{{ (row.finalUnitPrice * row.returnDiscount).toFixed(2) }}</span></template>
+        </el-table-column>
+        <el-table-column prop="returnQuantity" :label="type === 3 ? '退回数量' : '补货数量'" width="120" align="center">
+          <template #default="{ row }"><span class="highlight-price">{{ row.returnQuantity }}</span></template>
+        </el-table-column>
+        <el-table-column prop="refund" :label="type === 3 ? '退款金额' : '补货金额'" width="120" align="center">
+          <template #default="{ row }"><span class="highlight-price">{{ row.refund.toFixed(2) }}</span></template>
+        </el-table-column>
+      </el-table>
+
+      <el-table
+        v-else
         :data="orderData"
         :summary-method="getSummaries"
         show-summary
@@ -271,7 +363,7 @@ function extractPackageQuantity(text: string): number | null {
       </el-table>
 
       <div class="footer-container">
-        <el-row :gutter="10">
+        <el-row :gutter="10" v-if="type !== 3 && type !== 4">
           <el-col :span="24">
             <div class="price-summary-table" :class="perkSum > 0 ? 'with-perk' : ''">
               <el-descriptions
@@ -345,7 +437,7 @@ function extractPackageQuantity(text: string): number | null {
             <span>{{ title }}</span>
           </el-col>
           <el-col :span="8">
-            报价时间：
+            {{ type === 3 ? "退货时间" : type === 4 ? "补货时间" : "报价时间" }}：
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
@@ -506,9 +598,13 @@ function extractPackageQuantity(text: string): number | null {
 :deep(.el-descriptions__body .el-descriptions__table .el-descriptions__cell) {
   font-size: 25px;
 }
-:deep(.el-table td.el-table__cell div) {
+:deep(.el-table td.el-table__cell div),
+.bold-font {
   font-size: 25px;
   color: black;
+}
+del.bold-font {
+  color: #888;
 }
 .product-info {
   display: inline;

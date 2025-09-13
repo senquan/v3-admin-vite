@@ -2,7 +2,7 @@
 import type { ProductListData } from "../product/apis/type"
 import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotion/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
-import { copyTextToClipboard } from "@/common/utils/helper"
+import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 // import { calculateOrderPriceV3 as calculateOrderPrice, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
 import { calculateOrderPrice, initPromotionRules } from "@@/utils/pricing"
@@ -1106,22 +1106,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
     )
     handleModelSelect(matchedModel || modelOptions.value[0], row)
   }
-}
-
-/**
- * 从"x只装"格式的字符串中提取数字
- * @param text 包含"x只装"格式的字符串，例如："10只装"
- * @returns 提取的数字，如果没有匹配则返回null
- */
-function extractPackageQuantity(text: string): number | null {
-  if (!text || typeof text !== "string") {
-    return null
-  }
-  const match = text.match(/(\d+)只装/)
-  if (match && match[1]) {
-    return Number.parseInt(match[1], 10)
-  }
-  return null
 }
 </script>
 

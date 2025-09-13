@@ -1116,4 +1116,10 @@ defineExpose({
   align-items: center;
   margin-right: 10px;
 }
+
+:deep(.el-tag__content) {
+  font-size: 14px;
+  line-height: 20px;
+  white-space: wrap;
+}
 </style>

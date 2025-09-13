@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { formatDateTime } from "@/common/utils/datetime"
-import { copyTextToClipboard } from "@/common/utils/helper"
+import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
@@ -35,6 +35,8 @@ const orderDetail = ref<any>([])
 const activeTab = ref("materia")
 const returnForm = reactive({
   orderId: 0,
+  platformId: 0,
+  title: "",
   returns: [] as any[],
   total: 0,
   amount: 0,
@@ -169,6 +171,11 @@ function handleFilter() {
   fetchOrders()
 }
 
+function handleNewReplenishment(row: any) {
+  const code = platformOptions.value.find((item: any) => item.value === row.platformId)?.code
+  router.push(`/quotation/new-replenishment?platform=${row.platformId}&code=${code}&type=4&relatedId=${row.id}`)
+}
+
 function handleNewV3() {
   orderVersion.value = 3
   newDialogVisibility.value = true
@@ -192,11 +199,7 @@ function navto(platform: string, code: string) {
   if (orderVersion.value === 3) {
     router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=3`)
   } else {
-    if (listQuery.type === "4") {
-      router.push(`/quotation/new-replenishment?platform=${platform}&code=${code}&type=${listQuery.type}`)
-    } else {
-      router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
-    }
+    router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
   }
 }
 
@@ -286,12 +289,16 @@ function loadDetail(id: number) {
   fetchOrder(id).then((res: any) => {
     if (res.data) {
       returnForm.orderId = id
+      returnForm.platformId = res.data.platformId
+      returnForm.title = res.data.name
       if (res.data.items && Array.isArray(res.data.items)) {
         materialList.value = ""
         for (const item of res.data.items) {
           materialList.value += `<${item.product.materialId}*${item.quantity}>`
         }
+        let idx = 0
         res.data.items.forEach((item: any) => {
+          item.rowIndex = ++idx
           item.returnDiscount = 1
           item.returnQuantity = 0
           item.refund = 0
@@ -351,6 +358,46 @@ function handleSubmitReturn() {
       ElMessage.error("申请失败")
     }
   })
+}
+
+function handlePreviewReturn() {
+  const previewData = orderDetail.value.items.filter((item: any) => item.returnQuantity > 0).map((item: any) => {
+    const product = item.product
+    const images = product.imageUrls?.split(",") || []
+    return {
+      rowId: getRowIdentity(),
+      id: String(product.id),
+      modelType: product.modelType?.name || "",
+      modelTypeId: product.modelType?.name || "",
+      modelOld: product.modelType?.name || "",
+      materialId: product.materialId || "",
+      serie: product.serie?.name || "",
+      color: product.color?.value || "",
+      name: product.name || "",
+      quantity: item.quantity || 1,
+      basePrice: product.basePrice || 0,
+      finalUnitPrice: item.unitPrice || 0,
+      payPrice: item.totalPrice || 0,
+      colorOptions: [],
+      backupProducts: [],
+      colorEditable: false,
+      popoverVisible: false,
+      isBonus: bonusSeriesIds.value.includes(product.serie?.id),
+      imageUrls: images,
+      imageUrl: images.length > 0 ? images[0] : "",
+      returnQuantity: item.returnQuantity,
+      returnDiscount: item.returnDiscount,
+      refund: item.refund
+    }
+  })
+  previewFormRef.value?.open({
+    data: previewData,
+    type: 3,
+    title: returnForm.title,
+    platformId: returnForm.platformId,
+    license: ""
+  })
+  previewFormVisible.value = true
 }
 
 function handleUpdateStatus() {
@@ -454,8 +501,22 @@ function getSummaries(param: any) {
       ])
       return
     }
-    const values = data.map((item: Record<string, any>) => Number(item[column.property]))
-    if (index === 2 || index === 6 || index === 7) {
+    let values
+    if (index === 7) {
+      values = data.map((item: Record<string, any>) => {
+        if (item.product.serie?.name.includes("套装") || item.product.serie?.name.includes("预售")) {
+          const q = extractPackageQuantity(item.product.name) || 10
+          return item.returnQuantity * q
+        } else if (item.isBonus || item.id === "") {
+          return 0
+        } else {
+          return Number(item[column.property])
+        }
+      })
+    } else {
+      values = data.map((item: Record<string, any>) => Number(item[column.property]))
+    }
+    if (index === 2 || index === 7 || index === 8) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
           const value = Number(curr)
@@ -464,12 +525,12 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 2 || index === 6 ? 0 : 2)
-      }
-      if (index === 6) {
-        returnForm.total = Number(sums[index])
+        }, 0)}`).toFixed(index === 2 || index === 7 ? 0 : 2)
       }
       if (index === 7) {
+        returnForm.total = Number(sums[index])
+      }
+      if (index === 8) {
         returnForm.amount = Number(sums[index])
       }
     } else {
@@ -480,11 +541,29 @@ function getSummaries(param: any) {
 }
 
 function getRefundValue(row: any) {
-  return Math.round(row.unitPrice * row.returnDiscount * row.returnQuantity * 100) / 100
+  if (row.returnDiscount > 1) {
+    row.returnDiscount = 1
+    ElMessage.warning("折扣率不可大于 1")
+  }
+  if (row.rowIndex === 1) {
+    recalculateAllRefoundValue(row.returnDiscount)
+  }
+  row.refund = Math.round(row.unitPrice * row.returnDiscount * row.returnQuantity * 100) / 100
+}
+
+function recalculateAllRefoundValue(discount: number) {
+  orderDetail.value?.items.forEach((row: any) => {
+    if (row.rowIndex !== 1) {
+      row.returnDiscount = discount
+      if (row.returnQuantity > 0) getRefundValue(row)
+    }
+  })
 }
 
 function resetReturnForm() {
   returnForm.orderId = 0
+  returnForm.platformId = 0
+  returnForm.title = ""
   returnForm.returns = [] as any[]
   returnForm.total = 0
   returnForm.amount = 0
@@ -505,6 +584,23 @@ function getOrderType(path: string) {
   return "1"
 }
 
+function getStep(row: any) {
+  if (row.product.serie?.name.includes("套装") || row.product.serie?.name.includes("预售")) {
+    const q = extractPackageQuantity(row.product.name) || 10
+    return Math.round((1 / q) * 10) / 10
+  } else {
+    return 1
+  }
+}
+
+function getPrecision(row: any) {
+  if (row.product.serie?.name.includes("套装") || row.product.serie?.name.includes("预售")) {
+    return 1
+  } else {
+    return 0
+  }
+}
+
 onMounted(() => {
   const path = router.currentRoute.value.path.split("/").pop() || ""
   listQuery.type = getOrderType(path)
@@ -520,8 +616,8 @@ onMounted(() => {
       <el-date-picker v-model="listQuery.endDate" placeholder="选择结束日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
       <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
-      <el-button type="primary" v-if="listQuery.type !== '3'" @click="handleNew">新增订单</el-button>
-      <el-button type="primary" v-if="listQuery.type === '3' || listQuery.type === '2'" @click="handleNewV3">新增订单(新版)</el-button>
+      <el-button type="primary" v-if="listQuery.type !== '3' && listQuery.type !== '4'" @click="handleNew">新增订单</el-button>
+      <el-button type="primary" v-if="listQuery.type === '2' || listQuery.type === '3'" @click="handleNewV3">新增订单(新版)</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
@@ -577,7 +673,8 @@ onMounted(() => {
           <template #default="data">
             <el-button type="success" @click="handlePreview(data.row.id)">报价预览</el-button>
             <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id, data.row.type)">继续报价</el-button>
-            <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button>
+            <el-button type="primary" v-if="data.row.status > -1 && listQuery.type !== '4'" @click="handleNewReplenishment(data.row)">补货</el-button>
+            <!-- <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button> -->
             <el-button type="primary" v-if="data.row.status > -1" @click="handleReturn(data.row.id)">售后</el-button>
           </template>
         </vxe-column>
@@ -609,11 +706,11 @@ onMounted(() => {
         </el-tab-pane>
         <el-tab-pane label="申请售后" name="service">
           <div>
-            <el-alert v-if="orderDetail.status !== 4 && orderDetail.status !== 5" title="已签收状态下才可申请售后" type="success" effect="dark" :closable="false" />
+            <el-alert v-if="orderDetail.status === -1" title="草稿状态下不可申请售后" type="success" effect="dark" :closable="false" />
             <el-alert v-if="orderDetail.status === 5" title="本订单已申请退货" type="warning" effect="dark" :closable="false" />
-            <el-alert v-if="orderDetail.status === 4" title="不拆包装、不影响二次销售" type="error" effect="dark" :closable="false" />
+            <el-alert v-if="orderDetail.status > -1 && orderDetail.status !== 5" title="不拆包装、不影响二次销售" type="error" effect="dark" :closable="false" />
           </div>
-          <el-form v-if="orderDetail.status === 4">
+          <el-form v-if="orderDetail.status > -1 && orderDetail.status !== 5">
             <el-table :data="orderDetail.items" show-summary :summary-method="getSummaries">
               <el-table-column label="型号" width="120" align="center">
                 <template #default="scope">
@@ -641,7 +738,7 @@ onMounted(() => {
               </el-table-column>
               <el-table-column prop="returnDiscount" width="80" label="折扣" align="center">
                 <template #default="scope">
-                  <el-input v-model="scope.row.returnDiscount" style="width: 100%;" @change="scope.row.refund = getRefundValue(scope.row)" />
+                  <el-input v-model="scope.row.returnDiscount" style="width: 100%;" @change="getRefundValue(scope.row)" />
                 </template>
               </el-table-column>
               <el-table-column prop="returnDiscount" width="80" label="折后单价" align="center">
@@ -655,10 +752,11 @@ onMounted(() => {
                     v-model="scope.row.returnQuantity"
                     controls-position="right"
                     :min="0"
-                    :precision="0"
+                    :step="getStep(scope.row)"
+                    :precision="getPrecision(scope.row)"
                     :max="scope.row.quantity"
                     style="width: 100%;"
-                    @change="scope.row.refund = getRefundValue(scope.row)"
+                    @change="getRefundValue(scope.row)"
                   />
                 </template>
               </el-table-column>
@@ -667,6 +765,7 @@ onMounted(() => {
             <div class="footer-container">
               <el-input v-model="returnForm.reason" placeholder="请输入退货原因" />
               <el-input v-model="returnForm.remark" type="textarea" :rows="3" placeholder="请输入售后备注" style="margin-top: 10px;" />
+              <el-button type="success" @click="handlePreviewReturn" style="margin-top: 10px;">退货单预览</el-button>
               <el-button type="primary" @click="handleSubmitReturn" style="margin-top: 10px;">提交退货申请</el-button>
             </div>
           </el-form>

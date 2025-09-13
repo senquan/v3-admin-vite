@@ -268,3 +268,19 @@ export async function copyTextToClipboard(text: string) {
     console.error("Could not copy text: ", err)
   }
 }
+
+/**
+ * 从"x只装"格式的字符串中提取数字
+ * @param text 包含"x只装"格式的字符串，例如："10只装"
+ * @returns 提取的数字，如果没有匹配则返回null
+ */
+export function extractPackageQuantity(text: string): number | null {
+  if (!text || typeof text !== "string") {
+    return null
+  }
+  const match = text.match(/(\d+)只装/)
+  if (match && match[1]) {
+    return Number.parseInt(match[1], 10)
+  }
+  return null
+}

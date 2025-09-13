@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ProductListData } from "../product/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
-import { copyTextToClipboard } from "@/common/utils/helper"
+import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import PreviewForm from "./_preview.vue"
@@ -42,6 +42,7 @@ const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bon
 const router = useRouter()
 const platformId = ref(0)
 const orderId = ref(0)
+const relatedOrderId = ref(0)
 const defaultRecord: TableRowData = {
   rowId: "",
   id: "",
@@ -84,6 +85,7 @@ const calculatedPrice = ref<any>({
 })
 const formData = ref({
   id: 0,
+  relatedId: 0,
   type: 3,
   status: 0,
   platformId: 0,
@@ -500,6 +502,7 @@ function submitOrder(status: number) {
       materialList.value += `<${product.materialId}*${product.quantity}>`
     }
     formData.value.status = status
+    formData.value.relatedId = relatedOrderId.value
     formData.value.platformId = platformId.value
     formData.value.products = products
     formData.value.flashPrice = finalPrice.value || 0
@@ -546,6 +549,20 @@ function handleDelete(row: any) {
 
 // 处理数量变化
 function handleQuantityChange(row: any) {
+  calculatePrice(row)
+}
+
+function handleDiscountChange(row: any) {
+  if (row.discount > 1) {
+    row.discount = 1
+    ElMessage.warning("折扣率不可大于 1")
+  }
+  if (tableData.value.indexOf(row) === 0) {
+    tableData.value.forEach((item: any) => {
+      item.discount = row.discount
+    })
+    defaultRecord.discount = row.discount
+  }
   calculatePrice(row)
 }
 
@@ -815,8 +832,18 @@ function orderPreview() {
     ElMessage.warning("正在加载数据，请稍等。")
     return
   }
+  const previewData = tableData.value.filter((item: any) => item.quantity > 0).map((item: any) => {
+    const product = item
+    return {
+      ...product,
+      rowId: getRowIdentity(),
+      returnQuantity: item.quantity,
+      returnDiscount: item.discount,
+      refund: item.finalUnitPrice * item.quantity
+    }
+  })
   previewFormRef.value?.open({
-    data: tableData.value,
+    data: previewData,
     type: formData.value?.type || 1,
     title: formData.value?.name || "",
     platformId: platformId.value || 0,
@@ -878,6 +905,7 @@ async function initModelCache() {
 onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
+  relatedOrderId.value = Number(router.currentRoute.value.query.relatedId)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
   formData.value.type = Number(router.currentRoute.value.query.type) || 3
   if (orderId.value > 0) {
@@ -976,22 +1004,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
     )
     handleModelSelect(matchedModel || modelOptions.value[0], row)
   }
-}
-
-/**
- * 从"x只装"格式的字符串中提取数字
- * @param text 包含"x只装"格式的字符串，例如："10只装"
- * @returns 提取的数字，如果没有匹配则返回null
- */
-function extractPackageQuantity(text: string): number | null {
-  if (!text || typeof text !== "string") {
-    return null
-  }
-  const match = text.match(/(\d+)只装/)
-  if (match && match[1]) {
-    return Number.parseInt(match[1], 10)
-  }
-  return null
 }
 </script>
 
@@ -1116,9 +1128,9 @@ function extractPackageQuantity(text: string): number | null {
         <el-table-column prop="basePrice" label="原单价" width="100" align="center">
           <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
         </el-table-column>
-        <el-table-column prop="originPrice" label="优惠券折扣" width="100" align="center">
+        <el-table-column prop="discount" label="优惠券折扣" width="100" align="center">
           <template #default="{ row }">
-            <el-input v-model="row.discount" style="width: 100%;" @change="calculatePrice(row)" />
+            <el-input v-model="row.discount" style="width: 100%;" @change="handleDiscountChange(row)" />
           </template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="折后单价" width="100" align="center">
@@ -1170,7 +1182,7 @@ function extractPackageQuantity(text: string): number | null {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
-                  <el-button type="success" @click="orderPreview()">报价预览</el-button>
+                  <el-button type="success" @click="orderPreview()">补货单预览</el-button>
                   <el-button type="primary" @click="submitOrder(0)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
                   <el-button type="primary" @click="submitOrder(1)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
                   <el-button type="primary" @click="orderMateria()">物料详情</el-button>
