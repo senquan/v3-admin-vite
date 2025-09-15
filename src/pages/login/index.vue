@@ -9,6 +9,7 @@ import { getCaptchaApi, loginApi, registerApi } from "./apis"
 import Owl from "./components/Owl.vue"
 import { useFocus } from "./composables/useFocus"
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
@@ -106,7 +107,7 @@ function handleLogin() {
       } else {
         localStorage.removeItem("rememberedUsername")
       }
-      router.push("/")
+      router.push(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/")
     }).catch(() => {
       createCode()
       loginFormData.password = ""

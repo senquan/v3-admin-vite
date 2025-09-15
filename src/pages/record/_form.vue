@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import { Download } from "@element-plus/icons-vue"
 import { parseTime } from "@/common/utils/datetime"
 import { findCascaderPath, getCascaderOptions } from "@/common/utils/helper"
-import { Download } from "@element-plus/icons-vue"
 import { fetchList as fetchEventList } from "../event/apis"
 import { fetchList as fetchTags } from "../tag/apis"
 import { fetchDetail as fetchTemplateDetail } from "../template/apis"
@@ -379,6 +379,7 @@ defineExpose({
     v-model="visible"
     title="新增记账"
     width="40%"
+    :close-on-click-modal="false"
     :close-on-press-escape="false"
     :before-close="close"
   >
