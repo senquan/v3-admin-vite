@@ -1256,7 +1256,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         <el-row :gutter="10">
           <el-col :span="6">
             <div class="left-float-button">
-              <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type === 2 ? '工程单' : '普通单' }}</el-button>
+              <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type !== 2 ? '工程单' : '普通单' }}</el-button>
             </div>
           </el-col>
           <el-col :span="12">

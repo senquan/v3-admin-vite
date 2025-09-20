@@ -32,6 +32,7 @@ interface TableRowData {
   isBonus: boolean
   imageUrls: string[]
   imageUrl: string
+  repQuantity: number
 }
 
 const EMPTY_COLOR_NAME = "[默认色]"
@@ -42,7 +43,6 @@ const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bon
 const router = useRouter()
 const platformId = ref(0)
 const orderId = ref(0)
-const relatedOrderId = ref(0)
 const defaultRecord: TableRowData = {
   rowId: "",
   id: "",
@@ -66,7 +66,8 @@ const defaultRecord: TableRowData = {
   popoverVisible: false,
   isBonus: false,
   imageUrls: [],
-  imageUrl: ""
+  imageUrl: "",
+  repQuantity: 0
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
@@ -86,7 +87,7 @@ const calculatedPrice = ref<any>({
 const formData = ref({
   id: 0,
   relatedId: 0,
-  type: 3,
+  type: 4,
   status: 0,
   platformId: 0,
   name: "",
@@ -328,7 +329,8 @@ function fillRow(product: any, row: any) {
   row.basePrice = product.basePrice || "0"
   row.finalUnitPrice = product.finalUnitPrice || "0"
   row.quantity = row.quantity || 1
-  row.payPrice = (Number.parseFloat(product.finalUnitPrice || "0") * Number.parseFloat(row.quantity)).toFixed(2)
+  row.repQuantity = row.repQuantity || 0
+  row.payPrice = (Number.parseFloat(product.finalUnitPrice || "0") * Number.parseFloat(row.repQuantity)).toFixed(2)
 }
 
 function handleColorChange(color: number, row: any) {
@@ -384,8 +386,8 @@ function batchChangeModelType() {
 }
 
 function calculatePrice(row: any) {
-  if (row && row.basePrice && row.quantity) {
-    row.originPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.quantity)).toFixed(2)
+  if (row && row.basePrice && row.repQuantity) {
+    row.originPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.repQuantity)).toFixed(2)
     row.finalUnitPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.discount)).toFixed(2)
     row.payPricePrecision = Number((row.originPrice * Number.parseFloat(row.discount)).toFixed(4))
     row.payPrice = Number(row.payPricePrecision.toFixed(2))
@@ -394,8 +396,8 @@ function calculatePrice(row: any) {
   calculatedPrice.value.totalBasePrice = 0
   calculatedPrice.value.totalPayPrice = 0
   calculatedPrice.value.totalDiscountAmount = 0
-  tableData.value.filter((item: any) => item && item.quantity > 0).forEach((item: any) => {
-    calculatedPrice.value.totalBasePrice += Number.parseFloat(item.basePrice) * Number.parseFloat(item.quantity)
+  tableData.value.filter((item: any) => item && item.repQuantity > 0).forEach((item: any) => {
+    calculatedPrice.value.totalBasePrice += Number.parseFloat(item.basePrice) * Number.parseFloat(item.repQuantity)
     calculatedPrice.value.totalPayPrice += Number.parseFloat(item.payPrice)
     calculatedPrice.value.totalDiscountAmount += item.originPrice - item.payPrice
   })
@@ -483,10 +485,10 @@ function submitOrder(status: number) {
 
   formRef.value.validate((valid: any) => {
     if (!valid) return
-    const products = tableData.value.filter((item: any) => item.id !== "" && item.quantity > 0).map((item: any) => ({
+    const products = tableData.value.filter((item: any) => item.id !== "" && item.repQuantity > 0).map((item: any) => ({
       id: item.id,
       unitPrice: item.finalUnitPrice,
-      quantity: item.quantity,
+      quantity: item.repQuantity,
       materialId: item.materialId
     }))
     if (products.length === 0) {
@@ -502,7 +504,7 @@ function submitOrder(status: number) {
       materialList.value += `<${product.materialId}*${product.quantity}>`
     }
     formData.value.status = status
-    formData.value.relatedId = relatedOrderId.value
+    formData.value.relatedId = orderId.value
     formData.value.platformId = platformId.value
     formData.value.products = products
     formData.value.flashPrice = finalPrice.value || 0
@@ -832,19 +834,19 @@ function orderPreview() {
     ElMessage.warning("正在加载数据，请稍等。")
     return
   }
-  const previewData = tableData.value.filter((item: any) => item.quantity > 0).map((item: any) => {
+  const previewData = tableData.value.filter((item: any) => item.repQuantity > 0).map((item: any) => {
     const product = item
     return {
       ...product,
       rowId: getRowIdentity(),
-      returnQuantity: item.quantity,
+      returnQuantity: item.repQuantity,
       returnDiscount: item.discount,
-      refund: item.finalUnitPrice * item.quantity
+      refund: item.finalUnitPrice * item.repQuantity
     }
   })
   previewFormRef.value?.open({
     data: previewData,
-    type: formData.value?.type || 1,
+    type: 4,
     title: formData.value?.name || "",
     platformId: platformId.value || 0,
     license: licenseCode.value || "",
@@ -904,29 +906,25 @@ async function initModelCache() {
 
 onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
-  orderId.value = Number(router.currentRoute.value.query.id)
-  relatedOrderId.value = Number(router.currentRoute.value.query.relatedId)
+  orderId.value = Number(router.currentRoute.value.query.relatedId)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
-  formData.value.type = Number(router.currentRoute.value.query.type) || 3
   if (orderId.value > 0) {
     // 获取订单详情
     loading.value = true
     fetchOrder(orderId.value).then(async (response: OrderDetailResponseData) => {
       if (response.code === 0) {
         const order = response.data
-        formData.value.id = order.id
         platformId.value = order.platformId
         licenseCode.value = order.platform?.remark || ""
         formData.value.name = order.name
-        formData.value.type = order.type
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
           product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
-          const discount = Number((Number.parseFloat(item.unitPrice) / product.basePrice).toFixed(4))
-          const finalUnitPrice = Number.parseFloat(item.unitPrice)
-          const payPricePrecision = Number((finalUnitPrice * item.quantity).toFixed(4))
-          const payPrice = Number(payPricePrecision.toFixed(2))
+          const discount = 0
+          const finalUnitPrice = 0
+          const payPricePrecision = 0
+          const payPrice = 0
           productCache.value.set(product.id, product)
           const images = product.imageUrls?.split(",") || []
           return {
@@ -952,7 +950,8 @@ onMounted(async () => {
             popoverVisible: false,
             isBonus: bonusSeriesIds.value.includes(product.serie?.id),
             imageUrls: images,
-            imageUrl: images.length > 0 ? images[0] : ""
+            imageUrl: images.length > 0 ? images[0] : "",
+            repQuantity: 0
           }
         })
         tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
@@ -1109,13 +1108,13 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
           </template>
         </el-table-column>
         <el-table-column prop="name" label="名称" min-width="200" align="center" />
-        <el-table-column prop="quantity" label="数量" width="120" align="center">
+        <el-table-column prop="repQuantity" label="补货数量" width="120" align="center">
           <template #default="{ row, $index }">
             <template v-if="$index !== tableData.length - 1">
               <el-input-number
-                v-model="row.quantity"
+                v-model="row.repQuantity"
                 controls-position="right"
-                :min="1"
+                :min="0"
                 :precision="0"
                 @change="handleQuantityChange(row)"
                 @blur="handleBlurQuantity"
@@ -1136,7 +1135,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         <el-table-column prop="finalUnitPrice" label="折后单价" width="100" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ row.finalUnitPrice }}</span></template>
         </el-table-column>
-        <el-table-column prop="payPrice" label="折后总价" width="100" align="center">
+        <el-table-column prop="payPrice" label="补货金额" width="100" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ row.payPrice }}</span></template>
         </el-table-column>
       </el-table>

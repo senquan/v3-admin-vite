@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
 import { formatDateTime } from "@/common/utils/datetime"
-import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
+import { copyTextToClipboard, extractPackageQuantity, formatNumber } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
@@ -294,7 +294,7 @@ function loadDetail(id: number) {
       if (res.data.items && Array.isArray(res.data.items)) {
         materialList.value = ""
         for (const item of res.data.items) {
-          materialList.value += `<${item.product.materialId}*${item.quantity}>`
+          materialList.value += `<${item.product.materialId}*${formatNumber(item.quantity)}>`
         }
         let idx = 0
         res.data.items.forEach((item: any) => {

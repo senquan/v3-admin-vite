@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useUserStore } from "@/pinia/stores/user"
+import { fetchBulletinList } from "../bulletin/apis"
 import { fetchOrderReport } from "../quotation/apis"
 import { fetchStats } from "./apis"
 import Greeting from "./components/Greeting.vue"
@@ -13,6 +14,7 @@ const userStore = useUserStore()
 const statData = ref<any>([])
 const mySalesData = ref<any>([])
 const currentTime = ref(new Date())
+const bulletinList = ref<any>([])
 
 const greetingMessage = computed(() => {
   const hour = currentTime.value.getHours()
@@ -37,6 +39,9 @@ onMounted(() => {
   fetchOrderReport().then((res) => {
     mySalesData.value = res.data
   })
+  fetchBulletinList({ page: 1, pageSize: 5 }).then((res) => {
+    bulletinList.value = res.data.bulletins
+  })
   fetchStats().then((res) => {
     statData.value = res.data
   })
@@ -52,6 +57,11 @@ onMounted(() => {
         >
           <template #title>
             {{ greetingMessage }}
+          </template>
+          <template #description>
+            <div v-for="item in bulletinList" :key="item.id" class="flex-vcenter">
+              <SvgIcon name="bulletin" style="margin-right: 10px; font-size: 22px;" />{{ item.title }}
+            </div>
           </template>
         </Greeting>
         <div class="chart-wrapper">
@@ -99,5 +109,10 @@ onMounted(() => {
 
 .el-col {
   height: 100%;
+}
+
+.flex-vcenter {
+  display: flex;
+  align-items: center;
 }
 </style>

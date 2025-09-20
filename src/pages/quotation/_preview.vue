@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { extractPackageQuantity } from "@/common/utils/helper"
+import { extractPackageQuantity, formatNumber } from "@/common/utils/helper"
 import html2canvas from "html2canvas"
 
 const emit = defineEmits(["success", "close"])
@@ -12,7 +12,7 @@ const title = ref("")
 const platform = ref(0)
 const license = ref("")
 const platformBackgroundColor = ref("#4b8f88")
-const type = ref(1) // 1: 普通报价单 2: 工程报价单 3: 退货单
+const type = ref(1) // 1: 普通报价单 2: 工程报价单 3: 新版报价单 4: 补货单 5: 退货单
 const perkSum = ref(0)
 const otherSum = ref(0)
 
@@ -46,6 +46,7 @@ function open(options = {
   visible.value = true
   platform.value = options.platformId
   type.value = options.type
+  console.log("type", type.value)
   if (options.platformId === 2 || options.platformId === 6) {
     platformBackgroundColor.value = "#a30c1a"
   } else if (options.platformId === 3 || options.platformId === 4) {
@@ -170,7 +171,7 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 2 ? 0 : 2)
+        }, 0)}`).toFixed(index === 2 ? 1 : 2)
         sums[index] = formatPrice(sums[index])
       }
     } else {
@@ -194,6 +195,7 @@ function getReturnSummaries(param: any) {
     let values
     if (index === 5) {
       values = data.map((item: Record<string, any>) => {
+        console.log(item)
         if (item.serie?.includes("套装") || item.serie?.includes("预售")) {
           const q = extractPackageQuantity(item.name) || 10
           return item.returnQuantity * q
@@ -249,7 +251,7 @@ function formatPrice(price: string) {
         </div>
         <div class="intro"><span>10</span>户中国家庭  <span>7</span>户用公牛</div>
       </div>
-      <div class="header-container" v-else-if="type === 3">
+      <div class="header-container" v-else-if="type === 5">
         <div class="logo"><img src="@@/assets/images/layouts/bull-logo.png"></div>
         <div class="intro" style="width: 800px;">退货单 (不拆包装! 不影响二次销售)</div>
       </div>
@@ -258,7 +260,7 @@ function formatPrice(price: string) {
       </div>
 
       <el-table
-        v-if="type === 3 || type === 4"
+        v-if="type === 5 || type === 4"
         :data="orderData"
         :summary-method="getReturnSummaries"
         show-summary
@@ -305,10 +307,10 @@ function formatPrice(price: string) {
         <el-table-column prop="finalUnitPrice" label="折后单价" width="120" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ (row.finalUnitPrice * row.returnDiscount).toFixed(2) }}</span></template>
         </el-table-column>
-        <el-table-column prop="returnQuantity" :label="type === 3 ? '退回数量' : '补货数量'" width="120" align="center">
-          <template #default="{ row }"><span class="highlight-price">{{ row.returnQuantity }}</span></template>
+        <el-table-column prop="returnQuantity" :label="type === 5 ? '退回数量' : '补货数量'" width="120" align="center">
+          <template #default="{ row }"><span class="highlight-price">{{ formatNumber(row.returnQuantity) }}</span></template>
         </el-table-column>
-        <el-table-column prop="refund" :label="type === 3 ? '退款金额' : '补货金额'" width="120" align="center">
+        <el-table-column prop="refund" :label="type === 5 ? '退款金额' : '补货金额'" width="120" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ row.refund.toFixed(2) }}</span></template>
         </el-table-column>
       </el-table>
@@ -363,7 +365,7 @@ function formatPrice(price: string) {
       </el-table>
 
       <div class="footer-container">
-        <el-row :gutter="10" v-if="type !== 3 && type !== 4">
+        <el-row :gutter="10" v-if="type !== 4 && type !== 5">
           <el-col :span="24">
             <div class="price-summary-table" :class="perkSum > 0 ? 'with-perk' : ''">
               <el-descriptions
@@ -437,7 +439,7 @@ function formatPrice(price: string) {
             <span>{{ title }}</span>
           </el-col>
           <el-col :span="8">
-            {{ type === 3 ? "退货时间" : type === 4 ? "补货时间" : "报价时间" }}：
+            {{ type === 5 ? "退货时间" : type === 4 ? "补货时间" : "报价时间" }}：
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">

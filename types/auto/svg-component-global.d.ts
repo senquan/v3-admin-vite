@@ -9,18 +9,18 @@ declare module 'vue' {
   export interface GlobalComponents {
     SvgIcon: import("vue").DefineComponent<{
         name: {
-            type: import("vue").PropType<"call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu">;
+            type: import("vue").PropType<"bulletin" | "call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu">;
             default: string;
             required: true;
         };
     }, {}, unknown, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").VNodeProps & import("vue").AllowedComponentProps & import("vue").ComponentCustomProps, Readonly<import("vue").ExtractPropTypes<{
         name: {
-            type: import("vue").PropType<"call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu">;
+            type: import("vue").PropType<"bulletin" | "call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu">;
             default: string;
             required: true;
         };
     }>>, {
-        name: "call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu";
+        name: "bulletin" | "call" | "charts" | "coupon" | "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "list" | "orders" | "permission" | "product" | "projectorders" | "projects" | "promotion" | "replenishment" | "report" | "returns" | "search" | "settings" | "tags" | "ticket" | "user" | "preserve-color/platform-douyin" | "preserve-color/platform-jingdong" | "preserve-color/platform-pdd" | "preserve-color/platform-taobao" | "preserve-color/platform-tianmao" | "preserve-color/platform-xianyu" | "preserve-color/platform-xiaohongshu";
     }>;
   }
 }

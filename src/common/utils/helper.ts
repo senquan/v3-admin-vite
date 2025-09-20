@@ -284,3 +284,16 @@ export function extractPackageQuantity(text: string): number | null {
   }
   return null
 }
+
+export function formatNumber(num: number, decimalPlaces: number = 1): string {
+  const parts = num.toString().split(".")
+  if (parts.length === 1) {
+    return num.toString()
+  } else {
+    if (Number(parts[1]) > 0) {
+      return Number(num).toFixed(decimalPlaces)
+    } else {
+      return parts[0]
+    }
+  }
+}

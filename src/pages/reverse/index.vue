@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { formatDateTime } from "@/common/utils/datetime"
-import { copyTextToClipboard } from "@/common/utils/helper"
+import { copyTextToClipboard, formatNumber } from "@/common/utils/helper"
 import PreviewForm from "../quotation/_preview.vue"
 import { fetchList, fetchReturnOrder, fetchReturnOrderStatusLog } from "./apis"
 
@@ -124,7 +124,7 @@ function loadDetail(id: number) {
     orderDetail.value = order
     materialList.value = ""
     for (const item of order.items) {
-      materialList.value += `<${item.product.materialId}*${item.quantity}>`
+      materialList.value += `<${item.product.materialId}*${formatNumber(item.quantity)}>`
     }
   })
 }
@@ -192,9 +192,10 @@ function handlePreviewReturn(id: number) {
         refund: Number(item.totalPrice)
       }
     })
+    console.log("previewData", previewData)
     previewFormRef.value?.open({
       data: previewData,
-      type: 3,
+      type: 5,
       title: order.name,
       platformId: order.platformId,
       license: ""
@@ -241,7 +242,9 @@ onMounted(() => {
         <vxe-column field="reason" min-width="200" title="退款原因" align="left" />
         <vxe-column field="user" width="100" title="制单人" />
         <vxe-column field="reviewer" width="100" title="审核人" />
-        <vxe-column field="quantity" width="80" title="数量" />
+        <vxe-column field="quantity" width="80" title="数量">
+          <template #default="{ row }">{{ formatNumber(row.quantity) }}</template>
+        </vxe-column>
         <vxe-column field="returnAmount" width="100" title="退货金额" />
         <vxe-column field="status" width="100" title="支付状态" :filters="payStatusOptions" :filter-multiple="true" :filter-method="({ option, row }) => row.status === option.value">
           <template #default="{ row }">
