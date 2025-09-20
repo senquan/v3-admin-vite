@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import type { ContentData } from "@/common/components/ContentViewer/types"
+import type { BulletinListData } from "@/pages/bulletin/apis/type"
+import ContentViewer from "@/common/components/ContentViewer/index.vue"
 import { useUserStore } from "@/pinia/stores/user"
 import { fetchBulletinList } from "../bulletin/apis"
 import { fetchOrderReport } from "../quotation/apis"
@@ -35,6 +38,20 @@ const greetingMessage = computed(() => {
   }
 })
 
+// ContentViewer 相关状态
+const contentViewerVisible = ref(false)
+const contentData = ref<ContentData>()
+
+function handleNoticeClick(notice: BulletinListData) {
+  contentData.value = {
+    title: notice.title,
+    datetime: notice.published_at || "",
+    author: notice.creator?.username || "",
+    content: notice.content
+  }
+  contentViewerVisible.value = true
+}
+
 onMounted(() => {
   fetchOrderReport().then((res) => {
     mySalesData.value = res.data
@@ -59,7 +76,7 @@ onMounted(() => {
             {{ greetingMessage }}
           </template>
           <template #description>
-            <div v-for="item in bulletinList" :key="item.id" class="flex-vcenter">
+            <div v-for="item in bulletinList" :key="item.id" class="flex-vcenter notice-item" @click="handleNoticeClick(item)">
               <SvgIcon name="bulletin" style="margin-right: 10px; font-size: 22px;" />{{ item.title }}
             </div>
           </template>
@@ -81,6 +98,12 @@ onMounted(() => {
       </el-col>
     </el-row>
   </div>
+
+  <!-- 内容查看器 -->
+  <ContentViewer
+    v-model:visible="contentViewerVisible"
+    :data="contentData"
+  />
 </template>
 
 <style scoped>
@@ -114,5 +137,10 @@ onMounted(() => {
 .flex-vcenter {
   display: flex;
   align-items: center;
+}
+
+.notice-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 </style>
