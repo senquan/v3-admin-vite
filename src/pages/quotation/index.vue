@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import FileSaver from "file-saver"
+import * as XLSX from "xlsx"
 import { formatDateTime } from "@/common/utils/datetime"
 import { copyTextToClipboard, extractPackageQuantity, formatNumber } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import FileSaver from "file-saver"
-import * as XLSX from "xlsx"
 import PreviewForm from "./_preview.vue"
 import { createReturnOrder, fetchList, fetchOrder, fetchOrderStatusLog, updateOrderStatus } from "./apis"
 
@@ -243,6 +243,7 @@ function handlePreview(id: number) {
           color: product.color?.value || "",
           name: product.name || "",
           quantity: item.quantity || 1,
+          discount: item.discount || 1,
           basePrice: product.basePrice || 0,
           originPrice: originPrice || 0,
           finalUnitPrice: item.unitPrice || 0,
@@ -256,6 +257,15 @@ function handlePreview(id: number) {
           imageUrl: images.length > 0 ? images[0] : ""
         }
       })
+      if (order.type === 4) {
+        previewData.forEach((item: any) => {
+          // 补货订单倒推 finalUnitPrice
+          item.finalUnitPrice = Number((item.finalUnitPrice / item.discount).toFixed(2))
+          item.returnQuantity = item.quantity
+          item.returnDiscount = item.discount
+          item.refund = Number((item.finalUnitPrice * item.discount * item.quantity).toFixed(2))
+        })
+      }
       previewFormRef.value?.open({
         data: previewData,
         type: Number(listQuery.type) || 1,

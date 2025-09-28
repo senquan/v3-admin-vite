@@ -71,7 +71,6 @@ const defaultRecord: TableRowData = {
 }
 const loading = ref(false)
 const tableData = ref<TableRowData[]>([
-  { ...defaultRecord },
   { ...defaultRecord }
 ])
 // 添加型号选项数据
@@ -153,35 +152,6 @@ const cacheInitialized = ref(false)
 const cacheExpiry = 30 * 60 * 1000 // 30分钟缓存过期
 const lastCacheTime = ref(0)
 const productCache = ref<Map<number, ProductListData>>(new Map())
-
-// 添加行函数
-function addRow() {
-  const newRow = { ...defaultRecord, rowId: getRowIdentity() }
-  tableData.value.splice(tableData.value.length - 1, 0, newRow)
-  nextTick(() => {
-    const newRowIndex = tableData.value.length - 2
-    focusInput(newRowIndex)
-  })
-}
-
-function addRowNext(row: any) {
-  const newRowIndex = tableData.value.indexOf(row)
-  const newRow = { ...defaultRecord, rowId: getRowIdentity() }
-  tableData.value.splice(newRowIndex, 0, newRow)
-  nextTick(() => {
-    focusInput(newRowIndex)
-  })
-}
-
-function focusInput(index: number) {
-  const inputs = tableRef.value?.$el.querySelectorAll(".el-table__row")
-  if (inputs && inputs[index]) {
-    const firstInput = inputs[index].querySelector("input")
-    if (firstInput) {
-      firstInput.focus()
-    }
-  }
-}
 
 function handelSearchId(query: any, row: TableRowData | null = null) {
   if (query === "" || query.length < 2) return
@@ -294,9 +264,6 @@ async function handleIdChange(value: any, row: any) {
   const selectedOption = modelOptions.value.find((option: { value: any, label: string }) => option.value === value)
   const label = selectedOption ? selectedOption.label : ""
   await handelSearchProduct(label, row)
-  if (tableData.value.indexOf(row) === tableData.value.length - 2) {
-    addRow()
-  }
 }
 
 async function handelReloadColors(visible: boolean, row: any) {
@@ -356,13 +323,6 @@ function handleColorChange(color: number, row: any) {
   }
 }
 
-function handleReplace() {
-  replaceFormVisible.value = true
-  setTimeout(() => {
-    oldInputRef.value?.input?.focus()
-  }, 200)
-}
-
 function batchChangeModelType() {
   replaceFormVisible.value = false
   const search = replaceForm.value.old.toUpperCase()
@@ -386,9 +346,9 @@ function batchChangeModelType() {
 }
 
 function calculatePrice(row: any) {
-  if (row && row.basePrice && row.repQuantity) {
-    row.originPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.repQuantity)).toFixed(2)
-    row.finalUnitPrice = (Number.parseFloat(row.basePrice) * Number.parseFloat(row.discount)).toFixed(2)
+  if (row && row.unitPrice) {
+    row.originPrice = (Number.parseFloat(row.unitPrice) * Number.parseFloat(row.repQuantity)).toFixed(2)
+    row.finalUnitPrice = row.repQuantity ? (Number.parseFloat(row.unitPrice) * Number.parseFloat(row.discount)).toFixed(2) : 0
     row.payPricePrecision = Number((row.originPrice * Number.parseFloat(row.discount)).toFixed(4))
     row.payPrice = Number(row.payPricePrecision.toFixed(2))
   }
@@ -403,33 +363,6 @@ function calculatePrice(row: any) {
   })
 }
 
-interface SpanMethodProps {
-  _row?: ProductListData
-  _column?: any
-  rowIndex: number
-  columnIndex: number
-}
-
-function arraySpanMethod({ _row, _column, rowIndex, columnIndex }: SpanMethodProps) {
-  if (rowIndex === tableData.value.length - 1) {
-    if (columnIndex === 0) {
-      return {
-        rowspan: 1,
-        colspan: 11
-      }
-    } else {
-      return {
-        rowspan: 0,
-        colspan: 0
-      }
-    }
-  }
-  return {
-    rowspan: 1,
-    colspan: 1
-  }
-}
-
 function getSummaries(param: any) {
   const { columns, data } = param
   const sums: (string | VNode)[] = []
@@ -441,7 +374,7 @@ function getSummaries(param: any) {
       return
     }
     let values
-    if (index === 5) {
+    if (index === 4) {
       values = data.map((item: Record<string, any>) => {
         if (item.serie.includes("套装") || item.serie.includes("预售")) {
           const q = extractPackageQuantity(item.name) || 10
@@ -452,12 +385,12 @@ function getSummaries(param: any) {
           return Number(item[column.property])
         }
       })
-    } else if (index === 9) {
+    } else if (index === 8) {
       values = data.map((item: Record<string, any>) => Number(item.payPricePrecision))
     } else {
       values = data.map((item: Record<string, any>) => Number(item[column.property]))
     }
-    if (index === 5 || index === 9) {
+    if (index === 4 || index === 8) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
           const value = Number(curr)
@@ -466,7 +399,7 @@ function getSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 5 ? 0 : 2)
+        }, 0)}`).toFixed(index === 4 ? 0 : 2)
       }
     } else {
       sums[index] = ""
@@ -489,7 +422,8 @@ function submitOrder(status: number) {
       id: item.id,
       unitPrice: item.finalUnitPrice,
       quantity: item.repQuantity,
-      materialId: item.materialId
+      materialId: item.materialId,
+      discount: item.discount
     }))
     if (products.length === 0) {
       ElMessage.warning("请添加商品")
@@ -541,14 +475,6 @@ function submitOrder(status: number) {
   })
 }
 
-function handleDelete(row: any) {
-  const index = tableData.value.indexOf(row)
-  if (index !== -1) {
-    tableData.value.splice(index, 1)
-  }
-  calculatePrice(null)
-}
-
 // 处理数量变化
 function handleQuantityChange(row: any) {
   calculatePrice(row)
@@ -562,10 +488,12 @@ function handleDiscountChange(row: any) {
   if (tableData.value.indexOf(row) === 0) {
     tableData.value.forEach((item: any) => {
       item.discount = row.discount
+      calculatePrice(item)
     })
     defaultRecord.discount = row.discount
+  } else {
+    calculatePrice(row)
   }
-  calculatePrice(row)
 }
 
 function handleBlurQuantity() {
@@ -610,12 +538,8 @@ function handleKeyDown(event: KeyboardEvent) {
             quantityInputs[nextRowIndex].select()
           }
         })
-      } else {
-        addRow()
       }
       onFocusQuantity.value = ""
-    } else {
-      addRow()
     }
   }
 
@@ -658,7 +582,7 @@ function handleKeyDown(event: KeyboardEvent) {
       for (let r = startRow; r <= endRow; r++) {
         for (let c = startCol; c <= endCol; c++) {
           if (r < tableData.value.length - 1) { // 排除最后一行
-            selectedCells.value.push({ rowIndex: r, columnIndex: c })
+            // selectedCells.value.push({ rowIndex: r, columnIndex: c })
           }
         }
       }
@@ -736,11 +660,6 @@ function handleCellClick(row: any, column: any, _cell: any, event: any) {
   // 只处理颜色一列
   if (column.property !== "color") return
 
-  // 最后一行不参与选中
-  if (tableData.value.indexOf(row) === tableData.value.length - 1) {
-    return
-  }
-
   const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
   const columnIndex = event.target.parentElement.cellIndex || 3
   const cellInfo = { rowIndex, columnIndex }
@@ -761,21 +680,6 @@ function handleCellClick(row: any, column: any, _cell: any, event: any) {
   } else if (event.shiftKey && lastSelectedCell.value) {
     // 清除之前的选择
     selectedCells.value = []
-
-    // 计算选择范围
-    const startRow = Math.min(lastSelectedCell.value.rowIndex, rowIndex)
-    const endRow = Math.max(lastSelectedCell.value.rowIndex, rowIndex)
-    const startCol = Math.min(lastSelectedCell.value.columnIndex, columnIndex)
-    const endCol = Math.max(lastSelectedCell.value.columnIndex, columnIndex)
-
-    // 选择范围内的所有单元格
-    for (let r = startRow; r <= endRow; r++) {
-      for (let c = startCol; c <= endCol; c++) {
-        if (r < tableData.value.length - 1) { // 排除最后一行
-          selectedCells.value.push({ rowIndex: r, columnIndex: c })
-        }
-      }
-    }
   } else {
     selectedCells.value = [cellInfo]
     lastSelectedCell.value = cellInfo
@@ -812,12 +716,7 @@ function isCellHovered(rowIndex: number, columnIndex: number): boolean {
     && hoveredCell.value.columnIndex === columnIndex
 }
 
-function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
-  // 最后一行不参与选中
-  if (rowIndex === tableData.value.length - 1) {
-    return ""
-  }
-
+function cellClassName({ row, _column, _rowIndex, columnIndex }: any) {
   // 获取实际的行索引（考虑到可能有删除行的情况）
   const actualRowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
 
@@ -921,10 +820,10 @@ onMounted(async () => {
           const product = item.product
           const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
           product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
-          const discount = 0
-          const finalUnitPrice = 0
+          const discount = 1
           const payPricePrecision = 0
           const payPrice = 0
+          const unitPrice = Number(item.unitPrice) || 0
           productCache.value.set(product.id, product)
           const images = product.imageUrls?.split(",") || []
           return {
@@ -941,7 +840,8 @@ onMounted(async () => {
             discount,
             basePrice: product.basePrice || 0,
             originPrice: originPrice || 0,
-            finalUnitPrice,
+            unitPrice,
+            finalUnitPrice: payPrice,
             payPrice,
             payPricePrecision,
             colorOptions: [],
@@ -951,14 +851,15 @@ onMounted(async () => {
             isBonus: bonusSeriesIds.value.includes(product.serie?.id),
             imageUrls: images,
             imageUrl: images.length > 0 ? images[0] : "",
-            repQuantity: 0
+            repQuantity: 0,
+            returnQuantity: 0,
+            returnDiscount: discount,
+            refund: 0
           }
         })
-        tableData.value.push({ ...defaultRecord, rowId: getRowIdentity() })
         tableData.value.forEach((row: any) => {
           handelReloadColors(true, row)
         })
-        console.log(tableData.value)
         calculatePrice(null)
         loading.value = false
       }
@@ -1012,7 +913,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
       <el-table
         ref="tableRef"
         :data="tableData"
-        :span-method="arraySpanMethod"
         border
         height="100%"
         :summary-method="getSummaries"
@@ -1025,26 +925,6 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         @cell-mouse-leave="handleCellMouseLeave"
         :cell-class-name="cellClassName"
       >
-        <el-table-column prop="action" label="操作" width="80" align="center">
-          <template #default="{ row, $index }">
-            <template v-if="$index === tableData.length - 1">
-              <div class="last-row-action">
-                <el-button @click="addRow" style="width: 200px;">
-                  <el-icon style="margin-right: 20px;"><Plus /></el-icon>添加商品
-                </el-button>
-                <el-button type="primary" @click="handleReplace">批量修改型号</el-button>
-              </div>
-            </template>
-            <template v-else>
-              <el-button @click="handleDelete(row)" link>
-                <el-icon :size="18" color="red"><CloseBold /></el-icon>
-              </el-button>
-              <el-button @click="addRowNext(row)" link>
-                <el-icon :size="18" color="red"><Plus /></el-icon>
-              </el-button>
-            </template>
-          </template>
-        </el-table-column>
         <el-table-column prop="id" label="型号" width="150" align="center">
           <template #default="{ row }">
             <el-popover
@@ -1053,6 +933,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               trigger="contextmenu"
               v-model:visible="row.popoverVisible"
               popper-class="model-search-popover"
+              disabled
             >
               <template #reference>
                 <el-input
@@ -1109,23 +990,26 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
         </el-table-column>
         <el-table-column prop="name" label="名称" min-width="200" align="center" />
         <el-table-column prop="repQuantity" label="补货数量" width="120" align="center">
-          <template #default="{ row, $index }">
-            <template v-if="$index !== tableData.length - 1">
-              <el-input-number
-                v-model="row.repQuantity"
-                controls-position="right"
-                :min="0"
-                :precision="0"
-                @change="handleQuantityChange(row)"
-                @blur="handleBlurQuantity"
-                @focus="handleFocusQuantity(row)"
-                style="width: 100%;"
-              />
-            </template>
+          <template #default="{ row }">
+            <el-input-number
+              v-model="row.repQuantity"
+              controls-position="right"
+              :min="0"
+              :precision="0"
+              @change="handleQuantityChange(row)"
+              @blur="handleBlurQuantity"
+              @focus="handleFocusQuantity(row)"
+              style="width: 100%;"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="basePrice" label="原单价" width="100" align="center">
-          <template #default="{ row }"><del>{{ row.basePrice }}</del></template>
+        <el-table-column prop="basePrice" label="到手单价" width="100" align="center">
+          <template #default="{ row }">
+            <el-text line-clamp="2">
+              <el-text tag="del">{{ row.basePrice }}</el-text><br>
+              <el-text>{{ row.unitPrice }}</el-text>
+            </el-text>
+          </template>
         </el-table-column>
         <el-table-column prop="discount" label="优惠券折扣" width="100" align="center">
           <template #default="{ row }">
@@ -1319,6 +1203,10 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
 }
 .image-slot .el-icon {
   font-size: 20px;
+}
+
+:deep(.el-text.is-line-clamp) {
+  line-height: 1.2;
 }
 </style>
 

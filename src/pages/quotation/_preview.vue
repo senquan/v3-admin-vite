@@ -1,12 +1,13 @@
 <script lang="ts" setup>
+import type { PreviewData } from "./apis/type"
+import html2canvas from "html2canvas"
 import { formatDateTime } from "@/common/utils/datetime"
 import { extractPackageQuantity, formatNumber } from "@/common/utils/helper"
-import html2canvas from "html2canvas"
 
 const emit = defineEmits(["success", "close"])
 
 const visible = ref(false)
-const orderData = ref<any>([])
+const orderData = ref<PreviewData[]>([])
 const summaryData = reactive<any>({})
 const title = ref("")
 const platform = ref(0)
@@ -21,11 +22,11 @@ const btnSubmit = reactive({
 })
 
 const project = computed(() => {
-  return type.value === 1 ? "" : "工程"
+  return type.value === 2 ? "工程" : ""
 })
 
 function open(options = {
-  data: Array<any>,
+  data: Array<PreviewData>,
   platformId: 0,
   type: 1,
   title: "",
@@ -76,6 +77,8 @@ function open(options = {
       })
     }
   }
+
+  console.log("orderData", orderData.value)
 }
 
 function close() {
@@ -193,7 +196,7 @@ function getReturnSummaries(param: any) {
       return
     }
     let values
-    if (index === 5) {
+    if (index === 4) {
       values = data.map((item: Record<string, any>) => {
         console.log(item)
         if (item.serie?.includes("套装") || item.serie?.includes("预售")) {
@@ -208,7 +211,7 @@ function getReturnSummaries(param: any) {
     } else {
       values = data.map((item: Record<string, any>) => Number(item[column.property]))
     }
-    if (index === 5 || index === 6) {
+    if (index === 4 || index === 5) {
       if (!values.every((value: number) => Number.isNaN(value))) {
         sums[index] = Number(`${values.reduce((prev: number, curr: number) => {
           const value = Number(curr)
@@ -217,7 +220,7 @@ function getReturnSummaries(param: any) {
           } else {
             return prev
           }
-        }, 0)}`).toFixed(index === 5 ? 0 : 2)
+        }, 0)}`).toFixed(index === 4 ? 0 : 2)
       }
     } else {
       sums[index] = ""
@@ -266,25 +269,6 @@ function formatPrice(price: string) {
         show-summary
         border
       >
-        <el-table-column prop="imageUrl" label="产品主图" width="120" align="center">
-          <template #default="{ row }">
-            <div class="product-image-container">
-              <el-image
-                style="width: 80px; height: 80px"
-                :src="row.imageUrl?.replace('uploads', 'uploads/thumb/')"
-                :preview-src-list="row.imageUrls"
-                :preview-teleported="true"
-                fit="cover"
-              >
-                <template #error>
-                  <div class="image-slot">
-                    <el-icon><Picture /></el-icon>
-                  </div>
-                </template>
-              </el-image>
-            </div>
-          </template>
-        </el-table-column>
         <el-table-column prop="name" label="商品信息" min-width="200" align="center">
           <template #default="{ row }">
             <div class="product-info">

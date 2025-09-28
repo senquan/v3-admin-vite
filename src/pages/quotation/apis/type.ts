@@ -44,6 +44,7 @@ export interface OrderItemsData {
   quantity: number
   totalPrice: string
   unitPrice: string
+  discount: number
 }
 
 export interface OrderCreateData {
@@ -190,4 +191,21 @@ export interface ReturnOrderStatusLogResponseData {
 export interface OrderChangeTypeData {
   id: number
   type: number
+}
+
+export interface PreviewData {
+  id: number
+  name: string
+  modelType: string
+  serie: string
+  color: string
+  basePrice: string
+  finalUnitPrice: number
+  originPrice: string
+  unitPrice: string
+  payPrice: string
+  imageUrl: string
+  imageUrls: string[]
+  quantity: number
+  discount: number
 }

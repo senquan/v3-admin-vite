@@ -286,6 +286,7 @@ export function extractPackageQuantity(text: string): number | null {
 }
 
 export function formatNumber(num: number, decimalPlaces: number = 1): string {
+  if (!num) return "-"
   const parts = num.toString().split(".")
   if (parts.length === 1) {
     return num.toString()
