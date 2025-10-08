@@ -10,7 +10,7 @@ const visible = ref(false)
 const orderData = ref<PreviewData[]>([])
 const summaryData = reactive<any>({})
 const title = ref("")
-const platform = ref(0)
+const platformId = ref(0)
 const license = ref("")
 const platformBackgroundColor = ref("#4b8f88")
 const type = ref(1) // 1: 普通报价单 2: 工程报价单 3: 新版报价单 4: 补货单 5: 退货单
@@ -45,14 +45,13 @@ function open(options = {
   title.value = options.title
   license.value = options.license
   visible.value = true
-  platform.value = options.platformId
+  platformId.value = options.platformId
   type.value = options.type
-  console.log("type", type.value)
-  if (options.platformId === 2 || options.platformId === 6) {
+  if (platformId.value === 2 || platformId.value === 6) {
     platformBackgroundColor.value = "#a30c1a"
-  } else if (options.platformId === 3 || options.platformId === 4) {
+  } else if (platformId.value === 3 || platformId.value === 4) {
     platformBackgroundColor.value = "#3d7fff"
-  } else if (options.platformId === 7) {
+  } else if (platformId.value === 7) {
     platformBackgroundColor.value = "#e53953"
   }
 
@@ -60,7 +59,7 @@ function open(options = {
   if (type.value !== 3) {
     perkSum.value = 0
     otherSum.value = 0
-    if (options.platformId !== 2 && options.platformId !== 6) {
+    if (platformId.value !== 2 && platformId.value !== 6) {
       orderData.value.forEach((item: any) => {
         if (item.serie && (
           item.serie?.indexOf("G70") > -1
@@ -273,7 +272,7 @@ function formatPrice(price: string) {
           <template #default="{ row }">
             <div class="product-info">
               <span>{{ row.modelType }} · {{ row.serie }}</span>
-              <el-text truncated>{{ row.name }} · {{ row.color }}</el-text>
+              <el-text truncated>{{ row.name }} · {{ row.color ? row.color : '默认色' }}</el-text>
             </div>
           </template>
         </el-table-column>
@@ -329,7 +328,7 @@ function formatPrice(price: string) {
           <template #default="{ row }">
             <div class="product-info">
               <span>{{ row.modelType }} · {{ row.serie }}</span>
-              <el-text truncated>{{ row.name }} · {{ row.color }}</el-text>
+              <el-text truncated>{{ row.name }} · {{ row.color ? row.color : '默认色' }}</el-text>
             </div>
           </template>
         </el-table-column>
@@ -427,7 +426,7 @@ function formatPrice(price: string) {
             <span>{{ formatDateTime(new Date(), "YYYY-MM-DD HH:mm") }}</span>
           </el-col>
           <el-col :span="8">
-            <div v-if="(platform === 1 || platform === 7) && type === 1">
+            <div v-if="(platformId === 1 || platformId === 7 || platformId === 8) && type === 1">
               <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
               <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>

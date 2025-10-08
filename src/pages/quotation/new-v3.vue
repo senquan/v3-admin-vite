@@ -2,9 +2,9 @@
 import type { ProductListData } from "../product/apis/type"
 import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotionv3/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import { calculateOrderPriceV3 as calculateOrderPrice, getUsedBonusPointV3 as getUsedBonusPoint, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
 import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { calculateOrderPriceV3 as calculateOrderPrice, getUsedBonusPointV3 as getUsedBonusPoint, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotionv3/apis"
 import PreviewForm from "./_preview.vue"
@@ -90,7 +90,8 @@ const rulesInitialized = ref(false)
 const calculateQuested = ref<boolean>(false)
 const formData = ref({
   id: 0,
-  type: 3,
+  type: 1,
+  priceVersion: 3,
   status: 0,
   platformId: 0,
   name: "",
@@ -992,7 +993,7 @@ onMounted(async () => {
   platformId.value = Number(router.currentRoute.value.query.platform)
   orderId.value = Number(router.currentRoute.value.query.id)
   licenseCode.value = String(router.currentRoute.value.query.code) || ""
-  formData.value.type = Number(router.currentRoute.value.query.type) || 3
+  formData.value.type = Number(router.currentRoute.value.query.type) || 1
   if (orderId.value > 0) {
     // 获取订单详情
     loading.value = true
@@ -1006,8 +1007,8 @@ onMounted(async () => {
         formData.value.type = order.type
         tableData.value = order.items.map((item: OrderItemsData) => {
           const product = item.product
-          const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
           product.basePrice = formData.value.type === 2 ? Math.round(product.basePrice * 0.9 * 100) / 100 : product.basePrice
+          const originPrice = Number((product.basePrice * item.quantity).toFixed(2))
           productCache.value.set(product.id, product)
           const images = product.imageUrls?.split(",") || []
           return {

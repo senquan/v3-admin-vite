@@ -88,6 +88,7 @@ export interface SeriesListOptResponseData {
 
 export interface OrderListRequestParams {
   type?: string
+  priceVersion?: number
   platformId?: number
   keyword?: string
   username?: string

@@ -12,6 +12,7 @@ const router = useRouter()
 const loading = ref(false)
 const listQuery = reactive({
   type: "",
+  priceVersion: 1,
   platformIds: [] as number[],
   username: "",
   keyword: "",
@@ -69,7 +70,7 @@ const previewFormRef = ref()
 const previewFormVisible = ref(false)
 const systemParamsStore = useSystemParamsStore()
 const bonusSeriesIds = computed(() => systemParamsStore.getNumberArrayParam("bonus_series_ids"))
-const orderVersion = ref(1)
+const priceVersion = ref(1)
 
 function getMatchedStatus(statusValue: number) {
   return statusOptions.value.find((status: { value: number }) => status.value === statusValue)
@@ -89,6 +90,7 @@ async function fetchOrders() {
           return {
             id: item.id,
             type: item.type,
+            priceVersion: item.priceVersion,
             name: item.name,
             platformId: item.platformId,
             authCode: item.authCode,
@@ -177,7 +179,7 @@ function handleNewReplenishment(row: any) {
 }
 
 function handleNewV3() {
-  orderVersion.value = 3
+  priceVersion.value = 3
   newDialogVisibility.value = true
 }
 
@@ -196,8 +198,8 @@ function platformSelection() {
 
 function navto(platform: string, code: string) {
   newDialogVisibility.value = false
-  if (orderVersion.value === 3) {
-    router.push(`/quotation/new-v3?platform=${platform}&code=${code}&type=3`)
+  if (priceVersion.value === 3) {
+    router.push(`/quotation/new-v3?platform=${platform}&code=${code}`)
   } else {
     router.push(`/quotation/new?platform=${platform}&code=${code}&type=${listQuery.type}`)
   }
@@ -213,13 +215,13 @@ function handleDetail(id: number) {
   activeTab.value = "materia"
 }
 
-function handleEdit(id: number, type: number) {
-  if (type === 3) {
-    router.push(`/quotation/new-v3?id=${id}`)
-  } else if (type === 4) {
-    router.push(`/quotation/new-replenishment?id=${id}`)
+function handleEdit(row: any) {
+  if (row.priceVersion === 3) {
+    router.push(`/quotation/new-v3?id=${row.id}`)
+  } else if (row.type === 4) {
+    router.push(`/quotation/new-replenishment?id=${row.id}`)
   } else {
-    router.push(`/quotation/new?id=${id}`)
+    router.push(`/quotation/new?id=${row.id}`)
   }
 }
 
@@ -402,7 +404,7 @@ function handlePreviewReturn() {
   })
   previewFormRef.value?.open({
     data: previewData,
-    type: 3,
+    type: 5,
     title: returnForm.title,
     platformId: returnForm.platformId,
     license: ""
@@ -587,7 +589,7 @@ function getOrderType(path: string) {
   } else if (path === "project") {
     return "2"
   } else if (path === "v3") {
-    return "3"
+    return "1"
   } else if (path === "replenishment") {
     return "4"
   }
@@ -614,6 +616,7 @@ function getPrecision(row: any) {
 onMounted(() => {
   const path = router.currentRoute.value.path.split("/").pop() || ""
   listQuery.type = getOrderType(path)
+  listQuery.priceVersion = Number(path === "v3" ? 3 : 1)
   fetchOrders()
 })
 </script>
@@ -626,8 +629,8 @@ onMounted(() => {
       <el-date-picker v-model="listQuery.endDate" placeholder="选择结束日期" value-format="YYYY-MM-DD" @change="handleFilter" style="width: 180px; margin-right: 6px;" />
       <el-input v-model="listQuery.username" placeholder="制单人" class="filter-item" style="width: 150px;" @keyup.enter="handleFilter" @clear="handleFilter" clearable />
       <el-button type="primary" @click="handleFilter">搜索</el-button>
-      <el-button type="primary" v-if="listQuery.type !== '3' && listQuery.type !== '4'" @click="handleNew">新增订单</el-button>
-      <el-button type="primary" v-if="listQuery.type === '2' || listQuery.type === '3'" @click="handleNewV3">新增订单(新版)</el-button>
+      <el-button type="primary" v-if="listQuery.priceVersion !== 3 && listQuery.type !== '4'" @click="handleNew">新增订单</el-button>
+      <el-button type="primary" v-if="listQuery.priceVersion === 3" @click="handleNewV3">新增订单(新版)</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
@@ -651,7 +654,7 @@ onMounted(() => {
           <template #default="data">
             <span style="margin-right: 8px;">{{ data.row.name }}</span>
             <el-tag v-if="data.row.remark">{{ data.row.remark }}</el-tag>
-            <el-tag v-if="data.row.type === 3" type="danger" effect="dark" round>v3</el-tag>
+            <el-tag v-if="data.row.priceVersion === 3" type="danger" effect="dark" round>v3</el-tag>
           </template>
         </vxe-column>
         <vxe-column field="user" width="120" title="制单人" />
@@ -682,7 +685,7 @@ onMounted(() => {
         <vxe-column field="actions" title="操作" width="260">
           <template #default="data">
             <el-button type="success" @click="handlePreview(data.row.id)">报价预览</el-button>
-            <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row.id, data.row.type)">继续报价</el-button>
+            <el-button type="primary" v-if="data.row.status === -1" @click="handleEdit(data.row)">继续报价</el-button>
             <el-button type="primary" v-if="data.row.status > -1 && listQuery.type !== '4'" @click="handleNewReplenishment(data.row)">补货</el-button>
             <!-- <el-button type="success" v-if="data.row.status > -1" @click="handleDetail(data.row.id)">详情</el-button> -->
             <el-button type="primary" v-if="data.row.status > -1" @click="handleReturn(data.row.id)">售后</el-button>
