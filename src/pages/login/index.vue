@@ -185,6 +185,7 @@ onMounted(() => {
           <img src="@@/assets/images/layouts/logo-text-2.png">
         </div>
         <span class="login-title">岗位培训系统登录</span>
+        <div class="login-sub-title">CRSC Position-Based Training System</div>
       </div>
       <div class="content">
         <!-- 登录表单 -->
@@ -483,9 +484,14 @@ p {
         width: 100%;
       }
       .login-title {
-        line-height: 100px;
+        line-height: 70px;
         font-size: 30px;
         font-weight: bold;
+      }
+      .login-sub-title {
+        line-height: 20px;
+        font-size: 16px;
+        font-weight: normal;
       }
     }
     .content {
