@@ -1,4 +1,18 @@
-export type CurrentUserResponseData = ApiResponseData<{ username: string, roles: string[] }>
+import type { Permission } from "@/types/permission"
+
+export type CurrentUserResponseData = ApiResponseData<{
+  id: number
+  username: string
+  name: string
+  email: string
+  phone: string
+  avatar: string
+  last_login_time: string
+  last_login_ip: string
+  roles: string[]
+  platforms: number[]
+  permissions: string[]
+}>
 
 export interface BranchUserListParams {
   id?: string
@@ -21,3 +35,8 @@ export interface User {
 export interface BranchUserListData {
   users: User[]
 }
+
+export type UserPermissionsResponseData = ApiResponseData<{
+  id: number
+  permissions: Permission[]
+}>

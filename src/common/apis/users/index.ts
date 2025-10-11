@@ -21,3 +21,11 @@ export function getBranchUserList(params?: Users.BranchUserListParams) {
     }
   })
 }
+
+/** 获取当前登录用户的权限 */
+export function getUserPermissions() {
+  return request<Users.UserPermissionsResponseData>({
+    url: "user/permissions",
+    method: "get"
+  })
+}
