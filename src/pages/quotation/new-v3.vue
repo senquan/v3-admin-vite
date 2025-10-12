@@ -904,6 +904,10 @@ function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
 }
 
 async function handleChangeType() {
+  if (formData.value.id < 1) {
+    ElMessage.error("先保存订单再转换。")
+    return
+  }
   const res = await changeOrderType({
     id: formData.value.id,
     type: formData.value.type
@@ -911,6 +915,8 @@ async function handleChangeType() {
   if (res.code === 0) {
     formData.value.type = res.data
     ElMessage.success("变更成功")
+    const currentRoute = router.currentRoute.value
+    await router.replace({ path: `/redirect${currentRoute.path}`, query: currentRoute.query })
   } else {
     ElMessage.error("变更失败")
   }

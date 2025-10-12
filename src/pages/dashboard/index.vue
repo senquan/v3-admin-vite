@@ -97,13 +97,13 @@ onMounted(() => {
         </div>
       </el-col>
     </el-row>
-  </div>
 
-  <!-- 内容查看器 -->
-  <ContentViewer
-    v-model:visible="contentViewerVisible"
-    :data="contentData"
-  />
+    <!-- 内容查看器 -->
+    <ContentViewer
+      v-model:visible="contentViewerVisible"
+      :data="contentData"
+    />
+  </div>
 </template>
 
 <style scoped>

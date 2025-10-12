@@ -893,6 +893,10 @@ function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
 }
 
 async function handleChangeType() {
+  if (formData.value.id < 1) {
+    ElMessage.error("先保存订单再转换。")
+    return
+  }
   const res = await changeOrderType({
     id: formData.value.id,
     type: formData.value.type

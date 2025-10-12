@@ -77,7 +77,7 @@ function open(options = {
     }
   }
 
-  console.log("orderData", orderData.value)
+  // console.log("orderData", orderData.value)
 }
 
 function close() {
@@ -197,7 +197,7 @@ function getReturnSummaries(param: any) {
     let values
     if (index === 4) {
       values = data.map((item: Record<string, any>) => {
-        console.log(item)
+        // console.log(item)
         if (item.serie?.includes("套装") || item.serie?.includes("预售")) {
           const q = extractPackageQuantity(item.name) || 10
           return item.returnQuantity * q
@@ -285,7 +285,7 @@ function formatPrice(price: string) {
           </template>
         </el-table-column>
         <el-table-column prop="returnDiscount" label="折扣" width="120" align="center">
-          <template #default="{ row }">{{ row.returnDiscount }}</template>
+          <template #default="{ row }">{{ Number(row.returnDiscount).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column prop="finalUnitPrice" label="折后单价" width="120" align="center">
           <template #default="{ row }"><span class="highlight-price">{{ (row.finalUnitPrice * row.returnDiscount).toFixed(2) }}</span></template>

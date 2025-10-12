@@ -616,7 +616,8 @@ function getPrecision(row: any) {
 onMounted(() => {
   const path = router.currentRoute.value.path.split("/").pop() || ""
   listQuery.type = getOrderType(path)
-  listQuery.priceVersion = Number(path === "v3" ? 3 : 1)
+  console.log("path", path)
+  listQuery.priceVersion = Number(path === "v3" ? 3 : (path === "quotation" ? 1 : 0))
   fetchOrders()
 })
 </script>
