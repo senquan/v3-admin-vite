@@ -37,7 +37,9 @@ function open(options = {
     promotionDiscount: 0,
     promotionPrice: 0,
     flashDiscount: 0,
-    flashPrice: 0
+    flashPrice: 0,
+    excludePrice: 0,
+    bonusUsed: 0
   }
 }) {
   orderData.value = Array.isArray(options.data) ? options.data.filter(item => item.modelType && item.quantity > 0) : []
@@ -427,9 +429,9 @@ function formatPrice(price: string) {
           </el-col>
           <el-col :span="8">
             <div v-if="(platformId === 1 || platformId === 7 || platformId === 8) && type === 1">
-              <span class="bonus">{{ formatPrice((summaryData.dailyPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
-              <span class="bonus">{{ formatPrice((summaryData.promotionPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
-              <span class="bonus">{{ formatPrice((summaryData.flashPrice * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
+              <span class="bonus">{{ formatPrice(((summaryData.dailyPrice - summaryData.excludePrice) * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
+              <span class="bonus">{{ formatPrice(((summaryData.promotionPrice - summaryData.excludePrice) * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
+              <span class="bonus">{{ formatPrice(((summaryData.flashPrice - summaryData.excludePrice) * 0.03 - summaryData.bonusUsed).toFixed(2)) }}</span>
             </div>
           </el-col>
         </el-row>

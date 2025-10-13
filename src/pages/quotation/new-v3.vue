@@ -144,11 +144,17 @@ const flashDiscount = computed(() => {
 const flashPrice = computed(() => {
   return Number((Math.min(dailyPrice.value, promotionPrice.value) - flashDiscount.value).toFixed(2))
 })
+// 排除在外的商品价格
+const excludePrice = ref(0)
+// 可计入的赠品额度总额
+const boundPrice = computed(() => {
+  return (flashPrice.value - excludePrice.value) * 0.03 || 0
+})
 const bonusUsed = computed(() => {
   return calculatedPrice.value?.usedBonusPoint || 0
 })
 const bonusLeft = computed(() => {
-  return flashPrice.value * 0.03 - calculatedPrice.value?.usedBonusPoint || 0
+  return boundPrice.value - calculatedPrice.value?.usedBonusPoint || 0
 })
 
 const project = computed(() => {
@@ -438,6 +444,7 @@ function calculatePrice(row: any) {
   calculatedPrice.value.totalBasePrice = calculatedPrice.value.resultMap.get(PROMOTION_TYPE_DAILY)?.originalTotalPrice || 0
   calculatedPrice.value.usedBonusPoint = getUsedBonusPoint()
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
+    excludePrice.value = 0
     tableData.value.forEach((row: TableRowData) => {
       if (row.id) {
         const dailyPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_DAILY)?.products.find((p: any) => p.id === Number(row.id))
@@ -451,6 +458,10 @@ function calculatePrice(row: any) {
         row.finalUnitPrice = Number((totalPrice / row.quantity).toFixed(2))
         row.payPricePrecision = Number((totalPrice * (row.quantity / matchedProduct.quantity)).toFixed(4))
         row.payPrice = Number(row.payPricePrecision.toFixed(2))
+      }
+
+      if (row.serie.includes("公牛轨道插座")) {
+        excludePrice.value += Number(row.payPrice)
       }
     })
     formData.value.matchLogs = calculatedPrice.value.resultMap
@@ -948,6 +959,7 @@ function orderPreview() {
       promotionPrice,
       flashDiscount,
       flashPrice,
+      excludePrice,
       bonusUsed
     }
   })
