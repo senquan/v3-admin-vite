@@ -42,10 +42,10 @@ const discountStrategy = reactive<{
 })
 
 // 商品条件
-const productConditions = reactive<any>({})
+const productConditions = reactive<Record<string, Record<string, string>>>({})
 
 // 订单条件
-const orderConditions = reactive<any>({})
+const orderConditions = reactive<Record<string, Record<string, string>>>({})
 
 // 添加条件的临时数据
 const addCondition = reactive({
@@ -205,7 +205,7 @@ function open(options = {
           contents: data.contents || {} as PromotionRule
         })
 
-        console.log("formData", formData)
+        // console.log("formData", formData)
 
         // 如果有contents字段，解析JSON并填充表单
         if (formData.contents) {
@@ -239,7 +239,7 @@ function close() {
 
 // 从规则数据加载表单
 function loadFromRuleData(ruleData: PromotionRule) {
-  console.log("ruleData", ruleData)
+  // console.log("ruleData", ruleData)
   // 更新基本信息
   if (ruleData.scope) formData.scope = ruleData.scope
   if (ruleData.startTime) formData.startTime = ruleData.startTime
@@ -305,7 +305,7 @@ function handleAddProductCondition() {
 }
 
 // 删除商品条件
-function handleDeleteProductCondition(attr: string, operator: string) {
+function handleRemoveProductCondition(attr: string, operator: string) {
   if (productConditions[attr]) {
     delete productConditions[attr][operator]
     if (Object.keys(productConditions[attr]).length === 0) {
@@ -334,7 +334,7 @@ function handleAddOrderCondition() {
 }
 
 // 删除订单条件
-function handleDeleteOrderCondition(attr: string, operator: string) {
+function handleRemoveOrderCondition(attr: string, operator: string) {
   if (orderConditions && orderConditions[attr]) {
     delete orderConditions[attr][operator]
     if (Object.keys(orderConditions[attr]).length === 0) {
@@ -1007,16 +1007,17 @@ defineExpose({
             </el-col>
           </el-row>
         </div>
-        <div v-for="(conditions, attr) in productConditions" :key="attr">
-          <el-tag
-            v-for="(value, operator) in conditions"
-            :key="`${attr}-${operator}`"
-            closable
-            style="margin: 4px"
-            @close="handleDeleteProductCondition(String(attr), String(operator))"
-          >
-            {{ attr }} {{ operator }} {{ value }}
-          </el-tag>
+        <div v-for="(items, attr) in productConditions" :key="attr">
+          <div v-for="(_, operator) in items" :key="operator">
+            {{ attr }} {{ operator }}
+            <el-input
+              v-model="items[operator]"
+              style="width: 65%; margin-bottom: 8px;"
+            />
+            <el-button type="danger" size="small" circle @click="handleRemoveProductCondition(attr, operator)" style="margin-left: 8px; margin-bottom: 8px;">
+              <el-icon><Close /></el-icon>
+            </el-button>
+          </div>
         </div>
       </el-card>
 
@@ -1057,16 +1058,17 @@ defineExpose({
             </el-col>
           </el-row>
         </div>
-        <div v-for="(conditions, attr) in orderConditions" :key="attr">
-          <el-tag
-            v-for="(value, operator) in conditions"
-            :key="`${attr}-${operator}`"
-            closable
-            style="margin: 4px"
-            @close="handleDeleteOrderCondition(String(attr), String(operator))"
-          >
-            {{ attr }} {{ operator }} {{ value }}
-          </el-tag>
+        <div v-for="(items, attr) in orderConditions" :key="attr">
+          <div v-for="(_, operator) in items" :key="operator">
+            {{ attr }} {{ operator }}
+            <el-input
+              v-model="items[operator]"
+              style="width: 65%; margin-bottom: 8px;"
+            />
+            <el-button type="danger" size="small" circle @click="handleRemoveOrderCondition(attr, operator)" style="margin-left: 8px; margin-bottom: 8px;">
+              <el-icon><Close /></el-icon>
+            </el-button>
+          </div>
         </div>
       </el-card>
     </el-form>
@@ -1121,5 +1123,9 @@ defineExpose({
   font-size: 14px;
   line-height: 20px;
   white-space: wrap;
+}
+
+.warning-border {
+  --el-input-border-color: #e6a23c !important;
 }
 </style>
