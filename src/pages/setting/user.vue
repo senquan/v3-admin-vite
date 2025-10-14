@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { formatDateTime } from "@/common/utils/datetime"
 import RoleForm from "./_role.vue"
 import { fetchList } from "./apis"
 
@@ -27,6 +26,7 @@ async function fetchUsers() {
         tableData.value = res.data.users.map((item: any) => {
           return {
             id: item.id,
+            profile_id: item.profile_id,
             oaId: item.oa_id,
             name: item.realname || item.name || "",
             gender: item.gender,
@@ -98,7 +98,7 @@ onMounted(() => {
         <vxe-column field="name" width="100" title="用户姓名" />
         <vxe-column field="gender" width="80" title="性别">
           <template #default="{ row }">
-            {{ row.gender === "M" ? "男" : "女" }}
+            {{ row.gender === "F" ? "女" : "男" }}
           </template>
         </vxe-column>
         <vxe-column field="remark" min-width="200" title="备注" align="left">
@@ -108,7 +108,6 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="phone" width="120" title="联系电话" />
         <vxe-column field="role" width="280" title="角色" />
-        <vxe-column field="points" width="80" title="积分" />
         <vxe-column field="status" width="80" title="状态">
           <template #default="{ row }">
             <el-tag v-if="row.status === 1" type="success">在职</el-tag>

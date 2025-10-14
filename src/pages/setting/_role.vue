@@ -5,7 +5,7 @@ import { fetchUserRole, updateUserRole } from "./apis"
 const emit = defineEmits(["success", "close"])
 
 const formData = ref({
-  id: 0,
+  profile_id: 0,
   roles: [] as number[]
 })
 
@@ -40,10 +40,10 @@ function open(options = {
       }
     })
   }
-  fetchUserRole(formData.value.id).then((response: any) => {
+  fetchUserRole(formData.value.profile_id).then((response: any) => {
     if (response.code === 0) {
       formData.value.roles = response.data.map((item: any) => {
-        return item.id
+        return item.roleId
       })
     } else {
       ElMessage({
@@ -72,7 +72,7 @@ function open(options = {
 
 function resetForm() {
   formData.value = {
-    id: 0,
+    profile_id: 0,
     roles: []
   }
 }
@@ -92,7 +92,7 @@ function handleSubmit() {
     if (!valid) return
 
     btnSubmit.loading = true
-    updateUserRole(formData.value.id, formData.value).then((response: any) => {
+    updateUserRole(formData.value.profile_id, formData.value).then((response: any) => {
       btnSubmit.loading = false
       if (response.code === 0) {
         visible.value = false
