@@ -460,9 +460,9 @@ function calculatePrice(row: any) {
         row.payPrice = Number(row.payPricePrecision.toFixed(2))
       }
 
-      if (row.serie.includes("公牛轨道插座")) {
-        excludePrice.value += Number(row.payPrice)
-      }
+      // if (row.serie.includes("公牛轨道插座")) {
+      //   excludePrice.value += Number(row.payPrice)
+      // }
     })
     formData.value.matchLogs = calculatedPrice.value.resultMap
   }
