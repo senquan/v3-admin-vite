@@ -2,6 +2,7 @@
 import type { ProductListData } from "../product/apis/type"
 import type { PromotionListData, RulesWithPromotionType, TypeListData } from "../promotionv3/apis/type"
 import type { OrderDetailResponseData, OrderItemsData } from "./apis/type"
+import type { ProductWithQuantity } from "@@/utils/pricing-types"
 import { calculateOrderPriceV3 as calculateOrderPrice, getUsedBonusPointV3 as getUsedBonusPoint, initPromotionRulesV3 as initPromotionRules } from "@@/utils/pricing-engine-v3"
 import { copyTextToClipboard, extractPackageQuantity } from "@/common/utils/helper"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
@@ -438,9 +439,9 @@ function calculatePrice(row: any) {
   }
 
   // calculatedPrice.value = calculateOrderPrice({ products })
-  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_DAILY, calculateOrderPrice(products, PROMOTION_TYPE_DAILY))
-  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_PROMOTION, calculateOrderPrice(products, PROMOTION_TYPE_PROMOTION))
-  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_FLASH, calculateOrderPrice(products, PROMOTION_TYPE_FLASH))
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_DAILY, calculateOrderPrice(products as ProductWithQuantity[], PROMOTION_TYPE_DAILY))
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_PROMOTION, calculateOrderPrice(products as ProductWithQuantity[], PROMOTION_TYPE_PROMOTION))
+  calculatedPrice.value.resultMap.set(PROMOTION_TYPE_FLASH, calculateOrderPrice(products as ProductWithQuantity[], PROMOTION_TYPE_FLASH))
   calculatedPrice.value.totalBasePrice = calculatedPrice.value.resultMap.get(PROMOTION_TYPE_DAILY)?.originalTotalPrice || 0
   calculatedPrice.value.usedBonusPoint = getUsedBonusPoint()
   if (calculatedPrice.value && calculatedPrice.value.resultMap) {
