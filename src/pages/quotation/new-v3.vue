@@ -235,7 +235,7 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
 
   searchLoading.value = true
   const results: any[] = []
-  modelCache.value.forEach((model: any, id: number) => {
+  modelCache.value.forEach((model: any, id: any) => {
     if (model.name.toLowerCase().includes(query.toLowerCase())) {
       results.push({
         value: id,
@@ -432,7 +432,7 @@ function calculatePrice(row: any) {
     }
   }).filter((product: any) => product !== null)
 
-  if (products.length === 0) {
+  if (!products || products.length === 0) {
     calculatedPrice.value = {}
     return
   }
