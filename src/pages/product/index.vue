@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { getCascaderOptions } from "@/common/utils/helper"
-// import { useUserStore } from "@/pinia/stores/user"
+import { useUserStore } from "@/pinia/stores/user"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
 import ProductForm from "./_form.vue"
@@ -10,8 +10,9 @@ import ProductPrice from "./_price.vue"
 import ProductTag from "./_tag.vue"
 import { batchDeleteProduct, deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
 
-// const userStore = useUserStore()
-// const isAdmin = userStore.roles.includes("ADMIN")
+const userStore = useUserStore()
+const isAdmin = userStore.roles.includes("ADMIN")
+console.log("isAdmin", isAdmin)
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -61,6 +62,7 @@ async function fetchProducts() {
             label: item.value
           }))
           // 返回处理后的数据
+          const images = item.imageUrls?.split(",") || []
           return {
             id: item.id,
             materialId: item.materialId,
@@ -69,6 +71,8 @@ async function fetchProducts() {
             serie: item.serie?.name || "",
             color: item.color?.value || "",
             name: item.name,
+            imageUrls: images,
+            imageUrl: images.length > 0 ? images[0] : "",
             basePrice: item.basePrice,
             projectPrice: item.projectPrice,
             factoryPrice: item.factoryPrice,
@@ -334,8 +338,8 @@ onMounted(() => {
         <el-option label="无" value="2" />
       </el-select>
       <el-button type="primary" @click="handleFilter" style="margin-left: 12px;">搜索</el-button>
-      <el-button type="primary" @click="handleNew">新增商品</el-button>
-      <el-button type="primary" @click="handleImport">批量导入商品</el-button>
+      <el-button v-if="isAdmin" type="primary" @click="handleNew">新增商品</el-button>
+      <el-button v-if="isAdmin" type="primary" @click="handleImport">批量导入商品</el-button>
       <el-button type="primary" @click="handleExport">导出Excel</el-button>
     </div>
 
@@ -344,6 +348,7 @@ onMounted(() => {
         ref="tableRef"
         :data="tableData"
         :loading
+        :cell-config="{ height: 80 }"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
         @checkbox-all="handleSelectionChange"
@@ -372,6 +377,25 @@ onMounted(() => {
             <el-tag v-if="data.row.remark">{{ data.row.remark }}</el-tag>
           </template>
         </vxe-column>
+        <vxe-column field="images" title="产品主图" width="80">
+          <template #default="data">
+            <div class="product-image-container">
+              <el-image
+                class="product-image"
+                :src="data.row.imageUrl?.replace('uploads', 'uploads/thumb/')"
+                :preview-src-list="data.row.imageUrls"
+                :preview-teleported="true"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="image-slot">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
+          </template>
+        </vxe-column>
         <vxe-column field="basePrice" title="日常价" width="80" />
         <vxe-column field="projectPrice" title="工程价" width="80" />
         <vxe-column field="factoryPrice" title="出厂价" width="80">
@@ -383,8 +407,8 @@ onMounted(() => {
         <vxe-column field="actions" title="操作" width="250">
           <template #default="data">
             <el-button type="success" @click="handlePriceHistory(data.row.id)">价格</el-button>
-            <el-button type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
-            <el-button type="danger" @click="handleDelete(data.row.id)">删除</el-button>
+            <el-button v-if="isAdmin" type="primary" @click="handleEdit(data.row.id)">编辑</el-button>
+            <el-button v-if="isAdmin" type="danger" @click="handleDelete(data.row.id)">删除</el-button>
           </template>
         </vxe-column>
       </vxe-table>
@@ -470,5 +494,13 @@ onMounted(() => {
 .pagination-container {
   padding: 10px;
   background: #fff;
+}
+.product-image {
+  width: 40px; 
+  height: 40px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

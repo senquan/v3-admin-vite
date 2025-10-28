@@ -235,7 +235,7 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
 
   searchLoading.value = true
   const results: any[] = []
-  modelCache.value.forEach((model, id) => {
+  modelCache.value.forEach((model: any, id: number) => {
     if (model.name.toLowerCase().includes(query.toLowerCase())) {
       results.push({
         value: id,
@@ -370,7 +370,7 @@ function handleColorChange(color: number, row: any) {
   if (selectedProduct) {
     fillRowAndPrice(selectedProduct, row)
     if (tableData.value.indexOf(row) === 0) {
-      tableData.value.forEach((otherRow, index) => {
+      tableData.value.forEach((otherRow: any, index: number) => {
         if (index !== 0 && index !== tableData.value.length - 1 && otherRow.backupProducts && otherRow.backupProducts.length > 0) {
           const sameColorProduct = otherRow.backupProducts.find((product: any) =>
             product.color?.value === (defaultColor.value === "" ? undefined : defaultColor.value)
@@ -400,7 +400,7 @@ function batchChangeModelType() {
     if (row.modelType) {
       if (row.modelType.includes(search)) {
         const newModel = row.modelType.replace(search, replace)
-        modelCache.value.forEach((model) => {
+        modelCache.value.forEach((model: any) => {
           if (model.name === newModel) {
             row.modelType = model.name
             handelSearchProduct(row.modelType, row)
@@ -430,7 +430,7 @@ function calculatePrice(row: any) {
       ...product,
       quantity: item.quantity
     }
-  }).filter(product => product !== null)
+  }).filter((product: any) => product !== null)
 
   if (products.length === 0) {
     calculatedPrice.value = {}
@@ -451,12 +451,13 @@ function calculatePrice(row: any) {
         const promotionPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_PROMOTION)?.products.find((p: any) => p.id === Number(row.id))
         const flashPromotion = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_FLASH)?.products.find((p: any) => p.id === Number(row.id))
         const matchedProduct = calculatedPrice.value?.resultMap.get(PROMOTION_TYPE_DAILY)?.products.find((p: any) => p.id === Number(row.id))
+
         // 非零最小值
         const maxDiscount = Math.max(dailyPromotion?.totalDiscount || 0, promotionPromotion?.totalDiscount || 0)
         const flashDiscount = Number((flashPromotion?.totalDiscount || 0).toFixed(2))
-        const totalPrice = Number((row.basePrice * matchedProduct.quantity - maxDiscount - flashDiscount).toFixed(4))
+        const totalPrice = Number((row.basePrice * (matchedProduct?.quantity  || 0) - maxDiscount - flashDiscount).toFixed(4))
         row.finalUnitPrice = Number((totalPrice / row.quantity).toFixed(2))
-        row.payPricePrecision = Number((totalPrice * (row.quantity / matchedProduct.quantity)).toFixed(4))
+        row.payPricePrecision = Number((totalPrice * (row.quantity / (matchedProduct?.quantity || 0))).toFixed(4))
         row.payPrice = Number(row.payPricePrecision.toFixed(2))
       }
 
@@ -784,7 +785,7 @@ function copySelectedCells() {
 
 async function pasteSelectedCells() {
   // 创建一个 Promise 数组来跟踪所有异步操作
-  const promises = selectedCells.value.map(async (cell) => {
+  const promises = selectedCells.value.map(async (cell: any) => {
     const row = tableData.value[cell.rowIndex]
 
     const columnProps = ["action", "modelType", "serie", "color", "name", "quantity", "basePrice", "originPrice", "finalUnitPrice", "payPrice"]
@@ -826,13 +827,13 @@ function handleCellClick(row: any, column: any, _cell: any, event: any) {
     return
   }
 
-  const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+  const rowIndex = tableData.value.findIndex((item: any) => item.rowId === row.rowId)
   const columnIndex = event.target.parentElement.cellIndex || 3
   const cellInfo = { rowIndex, columnIndex }
   // Ctrl/Command键多选不连续单元格
   if (event.ctrlKey || event.metaKey) {
     const existingIndex = selectedCells.value.findIndex(
-      cell => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
+      (cell: any) => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
     )
 
     if (existingIndex >= 0) {
@@ -875,7 +876,7 @@ function handleCellDoubleClick(row: any, column: any, _cell: any, _event: any) {
 }
 
 function handleCellMouseEnter(row: any, column: any, cell: any, event: any) {
-  const rowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+  const rowIndex = tableData.value.findIndex((item: any) => item.rowId === row.rowId)
   const columnIndex = event.target.parentElement.cellIndex
 
   hoveredCell.value = { rowIndex, columnIndex }
@@ -887,7 +888,7 @@ function handleCellMouseLeave() {
 
 function isCellSelected(rowIndex: number, columnIndex: number): boolean {
   return selectedCells.value.some(
-    cell => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
+    (cell: any) => cell.rowIndex === rowIndex && cell.columnIndex === columnIndex
   )
 }
 
@@ -904,7 +905,7 @@ function cellClassName({ row, _column, rowIndex, columnIndex }: any) {
   }
 
   // 获取实际的行索引（考虑到可能有删除行的情况）
-  const actualRowIndex = tableData.value.findIndex(item => item.rowId === row.rowId)
+  const actualRowIndex = tableData.value.findIndex((item: any) => item.rowId === row.rowId)
 
   if (isCellSelected(actualRowIndex, columnIndex)) {
     return "selected-cell"
@@ -1191,7 +1192,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                 <el-input
                   v-model="row.modelType"
                   placeholder="请输入型号搜索"
-                  @input="(val) => handelSearchId(val, row)"
+                  @input="(val: any) => handelSearchId(val, row)"
                   @focus="() => handleModelFocus(row)"
                   @blur="() => handelModelTypeBlur(row)"
                   @keydown.enter="(e: Event | KeyboardEvent) => handleModelEnter(e, row)"
@@ -1226,8 +1227,8 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                 v-if="row.colorEditable"
                 v-model="row.color"
                 placeholder="选择颜色"
-                @change="(val) => handleColorChange(val, row)"
-                @visible-change="(val) => handelReloadColors(val, row)"
+                @change="(val: any) => handleColorChange(val, row)"
+                @visible-change="(val: any) => handelReloadColors(val, row)"
                 style="width: 100%"
               >
                 <el-option
