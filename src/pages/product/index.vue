@@ -9,10 +9,10 @@ import ProductImport from "./_import.vue"
 import ProductPrice from "./_price.vue"
 import ProductTag from "./_tag.vue"
 import { batchDeleteProduct, deleteProduct, fetchList, fetchSeriesOpt } from "./apis"
+import { fetchTagsList } from "../tags/apis"
 
 const userStore = useUserStore()
 const isAdmin = userStore.roles.includes("ADMIN")
-console.log("isAdmin", isAdmin)
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -23,6 +23,7 @@ const listQuery = reactive({
   images: "",
   sort: "+id",
   limit: 0,
+  tags: [],
   page: 1,
   pageSize: 20
 })
@@ -45,6 +46,8 @@ const series = ref<any>([])
 const cascaderOptions = ref({
   serie: [] as number[]
 })
+const tagsLoading = ref(false)
+const tagOptions = ref<any>([])
 const totalPages = computed(() => Math.ceil(totalProducts.value / listQuery.pageSize))
 const selectedRows = ref<any>([])
 const currentProductId = ref<number>(0)
@@ -132,7 +135,7 @@ function handleDelete(id: number) {
     inputPattern: /^确认删除商品$/,
     inputErrorMessage: "请输入\"确认删除商品\"",
     type: "warning"
-  }).then(({ value }) => {
+  }).then(({ value }: { value: string}) => {
     if (value === "确认删除商品") {
       deleteProduct(id).then(() => {
         ElMessage.success("删除成功")
@@ -192,7 +195,7 @@ function handleBatchDelete() {
     inputPattern: /^确认删除商品$/,
     inputErrorMessage: "请输入\"确认删除商品\"",
     type: "warning"
-  }).then(({ value }) => {
+  }).then(({ value }: { value: string}) => {
     if (value === "确认删除商品") {
       const ids = selectedRows.value.map((row: any) => row.id)
       batchDeleteProduct({ ids }).then(() => {
@@ -318,9 +321,23 @@ function handleFormClose(id: number) {
   tableRef.value?.clearCheckboxRow()
 }
 
+function loadTags() {
+  if (tagOptions.value.length > 0) return
+  tagsLoading.value = true
+  fetchTagsList({}).then((response) => {
+    if (response.code === 0) {
+      tagOptions.value = response.data.tags
+      tagsLoading.value = false
+    } else {
+      ElMessage.error(`获取标签列表失败: ${response.message}`)
+    }
+  })
+}
+
 onMounted(() => {
   handleFilter()
   loadSeries()
+  loadTags()
 })
 </script>
 
@@ -336,6 +353,22 @@ onMounted(() => {
       <el-select v-model="listQuery.images" placeholder="是否有产品图" class="filter-item" style="width: 150px;" :empty-values="['']" @change="handleFilter" value-on-clear="" clearable>
         <el-option label="有" value="1" />
         <el-option label="无" value="2" />
+      </el-select>
+      <el-select
+        v-model="listQuery.tags"
+        multiple
+        collapse-tags
+        placeholder="选择标签"
+        style="width: 200px"
+      >
+        <el-option
+          v-for="item in tagOptions"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        >
+          <span :style="{ color: item.color }">{{ item.name }}</span>
+        </el-option>
       </el-select>
       <el-button type="primary" @click="handleFilter" style="margin-left: 12px;">搜索</el-button>
       <el-button v-if="isAdmin" type="primary" @click="handleNew">新增商品</el-button>
@@ -414,7 +447,7 @@ onMounted(() => {
       </vxe-table>
     </div>
 
-    <div class="footer-container">
+    <div v-if="isAdmin" class="footer-container">
       <el-button type="success" @click="handleBatchTag">批量标签</el-button>
       <el-button type="warning" @click="handleBatchPrice">批量调价</el-button>
       <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
@@ -496,7 +529,7 @@ onMounted(() => {
   background: #fff;
 }
 .product-image {
-  width: 40px; 
+  width: 40px;
   height: 40px;
   border-radius: 5px;
   display: flex;

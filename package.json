@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "2.3.1",
-    "@types/file-saver": "2.0.7",
     "@vueuse/core": "13.1.0",
     "@wangeditor/editor": "5.1.23",
     "@wangeditor/editor-for-vue": "5.1.12",
@@ -44,6 +43,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "4.11.0",
+    "@types/file-saver": "2.0.7",
     "@types/js-cookie": "3.0.6",
     "@types/lodash-es": "4.17.12",
     "@types/node": "22.13.14",
