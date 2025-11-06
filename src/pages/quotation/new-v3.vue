@@ -9,7 +9,7 @@ import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { fetchModels as fetchIds, fetchList as fetchProducts } from "../product/apis"
 import { fetchPromotionRules } from "../promotionv3/apis"
 import PreviewForm from "./_preview.vue"
-import { changeOrderType, createOrder, fetchOrder, updateOrder } from "./apis"
+import { changeOrderType, changeOrderVersion, createOrder, fetchOrder, updateOrder } from "./apis"
 
 // 定义表格行的接口
 interface TableRowData {
@@ -93,7 +93,7 @@ const formData = ref({
   id: 0,
   type: 1,
   priceVersion: 3,
-  status: 0,
+  status: -1,
   platformId: 0,
   name: "",
   originPrice: 0,
@@ -457,9 +457,9 @@ function calculatePrice(row: any) {
         const maxDiscount = Math.max(dailyPromotion?.totalDiscount || 0, promotionPromotion?.totalDiscount || 0)
         const flashDiscount = Number((flashPromotion?.totalDiscount || 0).toFixed(2))
         const totalPrice = Number((row.basePrice * (matchedProduct?.quantity  || 0) - maxDiscount - flashDiscount).toFixed(4))
-        row.finalUnitPrice = Number((totalPrice / row.quantity).toFixed(2))
+        row.finalUnitPrice = Number((totalPrice / matchedProduct.quantity).toFixed(2))
         row.payPricePrecision = Number((totalPrice * (row.quantity / (matchedProduct?.quantity || 0))).toFixed(4))
-        row.payPrice = Number(row.payPricePrecision.toFixed(2))
+        row.payPrice = Number((totalPrice * (row.quantity / matchedProduct.quantity)).toFixed(2))
       }
 
       // if (row.serie.includes("公牛轨道插座")) {
@@ -578,7 +578,7 @@ function getSummaries(param: any) {
   return sums
 }
 
-function submitOrder(status: number) {
+function submitOrder(status: number, silent: boolean = false) {
   // 防重复提交检查
   if (isSubmitting.value) {
     ElMessage.warning("正在提交中，请勿重复操作")
@@ -626,10 +626,15 @@ function submitOrder(status: number) {
             }
           })
         } else {
-          ElMessage.success("暂存草稿成功")
-          router.push({
-            path: "/quotation/quotation/v3"
-          })
+          if (!silent) {
+            ElMessage.success("暂存草稿成功")
+            router.push({
+              path: "/quotation/quotation"
+            })
+          } else {
+            formData.value.id = response.data.id
+            ElMessage.success("已自动暂存草稿")
+          }
         }
       } else {
         ElMessage.error(`提交订单失败: ${response.message}`)
@@ -935,6 +940,25 @@ async function handleChangeType() {
   }
 }
 
+async function handleChangeVersion() {
+  if (formData.value.id < 1) {
+    ElMessage.error("先保存订单再转换。")
+    return
+  }
+  const res = await changeOrderVersion({
+    id: formData.value.id,
+    version: 1
+  })
+  if (res.code === 0) {
+    formData.value.type = res.data
+    ElMessage.success("变更成功")
+    const currentRoute = router.currentRoute.value
+    await router.replace({ path: `/redirect${currentRoute.path}`, query: currentRoute.query })
+  } else {
+    ElMessage.error("变更失败")
+  }
+}
+
 function orderPreview() {
   if (topAlertVisible.value) {
     ElMessage.warning("系统错误，暂停预览。")
@@ -948,6 +972,7 @@ function orderPreview() {
     ElMessage.warning("正在加载数据，请稍等。")
     return
   }
+  submitOrder(-1, true)
   previewFormRef.value?.open({
     data: tableData.value,
     type: formData.value?.type || 1,
@@ -1278,6 +1303,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
           <el-col :span="6">
             <div class="left-float-button">
               <el-button type="primary" @click="handleChangeType">一键转换为{{ formData.type !== 2 ? '工程单' : '普通单' }}</el-button>
+              <el-button type="primary" @click="handleChangeVersion">一键转换为普通价格</el-button>
             </div>
           </el-col>
           <el-col :span="12">
@@ -1355,10 +1381,10 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
               </el-form-item>
               <el-form-item>
                 <div class="button-container">
-                  <el-button type="success" @click="orderPreview()">报价预览</el-button>
-                  <el-button type="primary" @click="submitOrder(0)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
-                  <el-button type="primary" @click="submitOrder(1)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
-                  <el-button type="primary" @click="orderMateria()">物料详情</el-button>
+                  <el-button type="success" @click="orderPreview()" :loading="isSubmitting" :disabled="isSubmitting">报价预览</el-button>
+                  <el-button type="primary" @click="submitOrder(-1, false)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
+                  <el-button type="primary" @click="submitOrder(1, false)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
+                  <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情{{ formData.status }}</el-button>
                 </div>
               </el-form-item>
               <div class="bonus-item">

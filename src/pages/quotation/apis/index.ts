@@ -109,3 +109,11 @@ export function changeOrderType(data: Order.OrderChangeTypeData) {
     data
   })
 }
+
+export function changeOrderVersion(data: Order.OrderChangeVersionData) {
+  return request<Order.OrderActionResponseData>({
+    url: `order/${data.id}/version`,
+    method: "put",
+    data
+  })
+}

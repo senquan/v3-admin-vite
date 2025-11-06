@@ -192,7 +192,7 @@ function handleDelete(id: number) {
     inputPattern: /^确认删除活动$/,
     inputErrorMessage: "请输入\"确认删除活动\"",
     type: "warning"
-  }).then(({ value }) => {
+  }).then(({ value }: any) => {
     if (value === "确认删除活动") {
       deletePromotion(id).then(() => {
         ElMessage.success("删除成功")

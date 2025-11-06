@@ -194,6 +194,11 @@ export interface OrderChangeTypeData {
   type: number
 }
 
+export interface OrderChangeVersionData {
+  id: number
+  version: number
+}
+
 export interface PreviewData {
   id: number
   name: string

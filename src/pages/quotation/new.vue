@@ -227,7 +227,7 @@ function handelSearchId(query: any, row: TableRowData | null = null) {
 
   searchLoading.value = true
   const results: any[] = []
-  modelCache.value.forEach((model, id) => {
+  modelCache.value.forEach((model: any, id: any) => {
     if (model.name.toLowerCase().includes(query.toLowerCase())) {
       results.push({
         value: id,
@@ -1345,7 +1345,7 @@ function handleModelEnter(event: Event | KeyboardEvent, row: any) {
                   <el-button type="success" @click="orderPreview()" :loading="isSubmitting" :disabled="isSubmitting">报价预览</el-button>
                   <el-button type="primary" @click="submitOrder(-1, false)" :loading="isSubmitting" :disabled="isSubmitting">暂存草稿</el-button>
                   <el-button type="primary" @click="submitOrder(1, false)" :loading="isSubmitting" :disabled="isSubmitting">提交订单</el-button>
-                  <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情 {{ formData.status }}</el-button>
+                  <el-button type="primary" v-if="formData.status > -1" @click="orderMateria()">物料详情</el-button>
                 </div>
               </el-form-item>
               <div class="bonus-item">
