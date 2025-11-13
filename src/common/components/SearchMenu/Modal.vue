@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import type { ElScrollbar } from "element-plus"
 import type { RouteRecordNameGeneric, RouteRecordRaw } from "vue-router"
-import { usePermissionStore } from "@/pinia/stores/permission"
 import { useDevice } from "@@/composables/useDevice"
 import { isExternal } from "@@/utils/validate"
 import { cloneDeep, debounce } from "lodash-es"
+import { usePermissionStore } from "@/pinia/stores/permission"
 import Footer from "./Footer.vue"
 import Result from "./Result.vue"
 
@@ -14,9 +13,9 @@ const modelValue = defineModel<boolean>({ required: true })
 const router = useRouter()
 const { isMobile } = useDevice()
 
-const inputRef = ref<HTMLInputElement | null>(null)
-const scrollbarRef = ref<InstanceType<typeof ElScrollbar> | null>(null)
-const resultRef = ref<InstanceType<typeof Result> | null>(null)
+const inputRef = useTemplateRef("inputRef")
+const scrollbarRef = useTemplateRef("scrollbarRef")
+const resultRef = useTemplateRef("resultRef")
 
 const keyword = ref<string>("")
 const result = shallowRef<RouteRecordRaw[]>([])
