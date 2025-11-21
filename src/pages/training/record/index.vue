@@ -25,6 +25,14 @@ const categories = reactive([
   { label: "安全技术培训", value: 3 },
   { label: "三级教育", value: 4 }
 ])
+const questionTypes = reactive([
+  { label: "全部", value: "" },
+  { label: "单选题", value: "单选" },
+  { label: "多选题", value: "多选" },
+  { label: "判断题", value: "判断" },
+  { label: "填空题", value: "填空" },
+  { label: "简答题", value: "简答" }
+])
 const branchName = ref("")
 const recordFormRef = ref<any>([])
 const recordFormVisibility = ref(false)
@@ -38,6 +46,7 @@ const examSettingsForm = reactive({
   totalScore: 100,
   passScore: 60,
   questionCount: 50,
+  questionCountDettail: [] as string[],
   level: 2,
   duration: 120,
   categories: [] as number[]
@@ -50,6 +59,10 @@ const examSettingsRules = {
 }
 const isRegenerateExam = ref(false)
 const currentRecordId = ref(0)
+const currentBranchId = ref(0)
+const currentCount = ref(50)
+const currentQuestionType = ref("")
+const questionTypesAmounts = reactive<any>({})
 
 function fetchList() {
   loading.value = true
@@ -67,7 +80,7 @@ function handleFilter() {
 function handleDetail(id: number, name: string) {
   recordDrawer.value = true
   branchName.value = name
-  currentRecordId.value = id
+  currentBranchId.value = id
   loadDetail(id)
 }
 
@@ -94,7 +107,7 @@ function openDetail(row: any) {
 
 function handleCreateExam(id: number) {
   examSettingsDialogVisible.value = true
-  currentExamId.value = id
+  currentRecordId.value = id
   isRegenerateExam.value = false
 }
 
@@ -113,9 +126,9 @@ function handleCategoryClear() {
   examSettingsForm.categories = []
 }
 
-function handlePublish(id: number) {
-  console.log(`课件发布${id}`)
-}
+// function handlePublish(id: number) {
+//   console.log(`课件发布${id}`)
+// }
 
 function handleRegenerateExam() {
   previewDialogVisible.value = false
@@ -140,6 +153,7 @@ function handlePublishExam() {
 
 async function handlePreviewExam(id: number) {
   previewDialogVisible.value = true
+  resetExamSettingsForm()
   loading.value = true
   try {
     const response = await getExamDetailByRecord(id)
@@ -182,6 +196,11 @@ async function handleGenerateExam() {
     }
   ).then(async () => {
     try {
+      if (Object.keys(questionTypesAmounts).length > 0) {
+        for (const key in questionTypesAmounts) {
+          examSettingsForm.questionCountDettail.push(`${key}:${questionTypesAmounts[key]}`)
+        }
+      }
       await examSettingsFormRef.value.validate()
 
       generationLoading.value = true
@@ -195,7 +214,7 @@ async function handleGenerateExam() {
             message: "生成试卷成功"
           })
           resetExamSettingsForm()
-          loadDetail(currentRecordId.value)
+          loadDetail(currentBranchId.value)
         }
       }).catch((error) => {
         console.error("生成考卷失败:", error)
@@ -206,15 +225,24 @@ async function handleGenerateExam() {
     } finally {
       examSettingsDialogVisible.value = false
     }
-  }).catch(() => {})
+  }).catch((error) => {
+    console.error("生成考卷失败:", error)
+  })
 }
 
 function resetExamSettingsForm() {
   examSettingsForm.totalScore = 100
   examSettingsForm.passScore = 60
   examSettingsForm.questionCount = 50
+  examSettingsForm.questionCountDettail = []
   examSettingsForm.level = 2
   examSettingsForm.duration = 120
+  // 清空题目类型数量
+  questionTypesAmounts.value = {}
+  const keys = Object.keys(questionTypesAmounts)
+  keys.forEach((key: string) => {
+    delete questionTypesAmounts[key]
+  })
   handleCategoryClear()
 }
 
@@ -397,6 +425,25 @@ async function handleDownloadExam() {
   }
 }
 
+function handleTypeAmount() {
+  if (currentQuestionType.value === "") {
+    examSettingsForm.questionCount = currentCount.value
+    return
+  }
+
+  questionTypesAmounts[currentQuestionType.value] = currentCount.value
+  examSettingsForm.questionCount = sumArray(questionTypesAmounts)
+}
+
+function handleQuestionAmountRemove(type: any) {
+  delete questionTypesAmounts[type]
+  examSettingsForm.questionCount = sumArray(questionTypesAmounts)
+}
+
+function sumArray(arr: any[]) {
+  return Number(Object.values(arr).reduce((acc, cur) => Number(acc) + Number(cur), 0))
+}
+
 onMounted(() => {
   handleFilter()
   loadExamCategories()
@@ -461,12 +508,12 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actual_participants" title="实际参培人数" width="110" />
         <vxe-column field="passed" title="合格人数" width="80" />
-        <vxe-column title="操作" width="300">
+        <vxe-column title="操作" width="200">
           <template #default="data">
-            <el-button type="success" @click="handleRecordDetail(data)">详情</el-button>
+            <el-button type="primary" @click="handleRecordDetail(data)">详情</el-button>
             <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 0" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
             <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 1" type="success" @click="handlePreviewExam(data.row.id)">试卷预览</el-button>
-            <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button>
+            <!-- <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button> -->
           </template>
         </vxe-column>
       </vxe-table>
@@ -528,15 +575,39 @@ onMounted(() => {
         </el-row>
         <el-row>
           <el-col :span="12">
-            <el-form-item label="题量" prop="questionCount">
-              <el-input-number v-model="examSettingsForm.questionCount" :min="1" :max="1000" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="考试时长" prop="duration">
               <el-input-number v-model="examSettingsForm.duration" :min="1" :max="360" style="width: 80%" />&nbsp;分钟
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="总题量" prop="questionCount">
+              <el-input v-model="examSettingsForm.questionCount" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="题量设置">
+              <el-select v-model="currentQuestionType" placeholder="全部" style="width: 20%">
+                <el-option v-for="item in questionTypes" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+              <el-form-item label="题量" prop="currentCount">
+                <el-input-number v-model="currentCount" :min="1" :max="500" style="width: 150px; margin-right: 20px;" />
+              </el-form-item>
+              <el-button type="primary" @click="handleTypeAmount">添加</el-button>
+            </el-form-item>
+          </el-col>
+          <el-tag
+            v-for="(value, key) in questionTypesAmounts"
+            :key="key"
+            status="primary"
+            size="large"
+            closable
+            @close="handleQuestionAmountRemove(key)"
+            class="question-amount-items"
+          >
+            {{ key }}：{{ value }}
+          </el-tag>
         </el-row>
       </el-form>
 
@@ -729,6 +800,13 @@ onMounted(() => {
 
 .question-options {
   padding-left: 20px;
+}
+
+.question-amount-items {
+  width: 50%;
+  margin-left: 100px;
+  margin-bottom: 10px;
+  justify-content: space-between;
 }
 
 .option-item {
