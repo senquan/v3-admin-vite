@@ -4,7 +4,7 @@ import { getCascaderOptions } from "@/common/utils/helper"
 // @ts-expect-error - Ignore type checking for html2pdf.js module
 import html2pdf from "html2pdf.js"
 import { fetchCategoryListOpt } from "../../setting/apis"
-import { generateExam, getExamDetail, publishExam, regenerateExam } from "../../skill/apis/exam"
+import { generateExam, getExamDetailByRecord, publishExam, regenerateExam } from "../../skill/apis/exam"
 import DetailForm from "./_detail.vue"
 import { fetchList as fetchListByBranch, fetchListGroup } from "./apis"
 
@@ -82,7 +82,7 @@ function loadDetail(id: number) {
 }
 
 function handleRecordDetail(data: any) {
-  if (data.columnIndex < 6) openDetail(data.row)
+  openDetail(data.row)
 }
 
 function openDetail(row: any) {
@@ -140,13 +140,13 @@ function handlePublishExam() {
 
 async function handlePreviewExam(id: number) {
   previewDialogVisible.value = true
-  currentExamId.value = id
   loading.value = true
   try {
-    const response = await getExamDetail(id)
+    const response = await getExamDetailByRecord(id)
     if (response.code === 0) {
       examPreviewData.value = response.data.exam
       examQuestions.value = response.data.exam.examQuestions || []
+      currentExamId.value = response.data.exam._id || 0
     } else {
       ElMessage.error(response.message || "获取试卷详情失败")
     }
@@ -187,7 +187,7 @@ async function handleGenerateExam() {
       generationLoading.value = true
       const request = isRegenerateExam.value
         ? regenerateExam(currentExamId.value, examSettingsForm)
-        : generateExam({ recordId: currentExamId.value, settings: examSettingsForm })
+        : generateExam({ recordId: currentRecordId.value, settings: examSettingsForm })
       request.then((res) => {
         if (res.code === 0) {
           ElMessage({
@@ -439,10 +439,9 @@ onMounted(() => {
       />
     </div>
 
-    <el-drawer v-model="recordDrawer" :title="`${branchName}培训记录`" size="55%" direction="rtl">
+    <el-drawer v-model="recordDrawer" :title="`${branchName}培训记录`" size="58%" direction="rtl">
       <vxe-table
         :data="recordData"
-        @cell-click="handleRecordDetail"
       >
         <vxe-column title="培训计划名称" min-width="180" align="left">
           <template #default="data">
@@ -462,8 +461,9 @@ onMounted(() => {
         </vxe-column>
         <vxe-column field="actual_participants" title="实际参培人数" width="110" />
         <vxe-column field="passed" title="合格人数" width="80" />
-        <vxe-column title="操作" width="220">
+        <vxe-column title="操作" width="300">
           <template #default="data">
+            <el-button type="success" @click="handleRecordDetail(data)">详情</el-button>
             <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 0" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
             <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 1" type="success" @click="handlePreviewExam(data.row.id)">试卷预览</el-button>
             <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button>

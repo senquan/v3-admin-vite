@@ -159,6 +159,14 @@ export function getExamDetail(id: number) {
   })
 }
 
+// 通过培训记录获取考试详情
+export function getExamDetailByRecord(id: number) {
+  return request<ExamDetailResponse>({
+    url: `exam/record/${id}`,
+    method: "get"
+  })
+}
+
 // 生成考试
 export function generateExam(data: GenerateExamParams) {
   return request<GenerateExamResponse>({

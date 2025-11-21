@@ -96,11 +96,6 @@ onMounted(() => {
         <vxe-column field="id" width="80" title="编号" />
         <vxe-column field="oaId" width="100" title="内部编号" />
         <vxe-column field="name" width="100" title="用户姓名" />
-        <vxe-column field="gender" width="80" title="性别">
-          <template #default="{ row }">
-            {{ row.gender === "F" ? "女" : "男" }}
-          </template>
-        </vxe-column>
         <vxe-column field="remark" min-width="200" title="备注" align="left">
           <template #default="data">
             <el-text truncated style="margin-right: 8px;">{{ data.row.remark }}</el-text>
