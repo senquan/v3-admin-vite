@@ -4,7 +4,7 @@ import { getCascaderOptions } from "@/common/utils/helper"
 // @ts-expect-error - Ignore type checking for html2pdf.js module
 import html2pdf from "html2pdf.js"
 import { fetchCategoryListOpt } from "../../setting/apis"
-import { generateExam, getExamDetailByRecord, publishExam, regenerateExam } from "../../skill/apis/exam"
+import { generateExam, getExamDetailByRecord, getExamSettingsByRecord, publishExam, regenerateExam } from "../../skill/apis/exam"
 import DetailForm from "./_detail.vue"
 import { fetchList as fetchListByBranch, fetchListGroup } from "./apis"
 
@@ -23,7 +23,10 @@ const categories = reactive([
   { label: "制度学习", value: 1 },
   { label: "会议传达", value: 2 },
   { label: "安全技术培训", value: 3 },
-  { label: "三级教育", value: 4 }
+  { label: "三级教育", value: 4 },
+  { label: "专业技能", value: 5 },
+  { label: "管理培训", value: 6 },
+  { label: "知识竞赛", value: 7 }
 ])
 const questionTypes = reactive([
   { label: "全部", value: "" },
@@ -33,11 +36,11 @@ const questionTypes = reactive([
   { label: "填空题", value: "填空" },
   { label: "简答题", value: "简答" }
 ])
+const examCheckList = ref<string[]>([])
 const branchName = ref("")
 const recordFormRef = ref<any>([])
 const recordFormVisibility = ref(false)
 
-const categoryOptions = ref<number[]>([])
 const examCategories = ref<any>([])
 const generationLoading = ref(false)
 const examSettingsDialogVisible = ref(false)
@@ -46,15 +49,16 @@ const examSettingsForm = reactive({
   totalScore: 100,
   passScore: 60,
   questionCount: 50,
-  questionCountDettail: [] as string[],
-  level: 2,
+  questionCountDetail: [] as string[],
+  difficulty: 2,
   duration: 120,
+  dynamicGeneration: false,
   categories: [] as number[]
 })
 const examSettingsFormRef = ref()
 const examSettingsRules = {
   totalScore: [{ required: true, message: "请输入总分", trigger: "blur" }],
-  level: [{ required: true, message: "请选择难度级别", trigger: "change" }],
+  difficulty: [{ required: true, message: "请选择难度级别", trigger: "change" }],
   categories: [{ required: true, message: "请选择考试分类", trigger: "change" }]
 }
 const isRegenerateExam = ref(false)
@@ -106,7 +110,7 @@ function openDetail(row: any) {
 }
 
 function handleCreateExam(id: number) {
-  examSettingsDialogVisible.value = true
+  loadSettings(id)
   currentRecordId.value = id
   isRegenerateExam.value = false
 }
@@ -122,7 +126,6 @@ function handleCategoryChange(value: number[]) {
 }
 
 function handleCategoryClear() {
-  categoryOptions.value = []
   examSettingsForm.categories = []
 }
 
@@ -187,8 +190,8 @@ function getQuestionTypeName(type: string) {
 // 生成试卷
 async function handleGenerateExam() {
   ElMessageBox.confirm(
-    "确定要生成试卷吗？",
-    "生成试卷",
+    `确定要保存设置${examCheckList.value.includes("dq") ? "" : "并生成试卷"}吗？`,
+    "保存设置",
     {
       confirmButtonText: "是的",
       cancelButtonText: "取消",
@@ -197,11 +200,13 @@ async function handleGenerateExam() {
   ).then(async () => {
     try {
       if (Object.keys(questionTypesAmounts).length > 0) {
+        examSettingsForm.questionCountDetail = []
         for (const key in questionTypesAmounts) {
-          examSettingsForm.questionCountDettail.push(`${key}:${questionTypesAmounts[key]}`)
+          examSettingsForm.questionCountDetail.push(`${key}:${questionTypesAmounts[key]}`)
         }
       }
       await examSettingsFormRef.value.validate()
+      examSettingsForm.dynamicGeneration = examCheckList.value.includes("dq")
 
       generationLoading.value = true
       const request = isRegenerateExam.value
@@ -211,7 +216,7 @@ async function handleGenerateExam() {
         if (res.code === 0) {
           ElMessage({
             type: "success",
-            message: "生成试卷成功"
+            message: "保存设置成功"
           })
           resetExamSettingsForm()
           loadDetail(currentBranchId.value)
@@ -234,8 +239,9 @@ function resetExamSettingsForm() {
   examSettingsForm.totalScore = 100
   examSettingsForm.passScore = 60
   examSettingsForm.questionCount = 50
-  examSettingsForm.questionCountDettail = []
-  examSettingsForm.level = 2
+  examSettingsForm.questionCountDetail = []
+  examSettingsForm.difficulty = 2
+  examSettingsForm.dynamicGeneration = false
   examSettingsForm.duration = 120
   // 清空题目类型数量
   questionTypesAmounts.value = {}
@@ -261,6 +267,39 @@ function loadExamCategories() {
       examCategories.value = getCascaderOptions(categoryOptData, 0, 0, 3)
     }
   })
+}
+
+async function loadSettings(id: number) {
+  try {
+    const response = await getExamSettingsByRecord(id)
+    if (response.code === 0) {
+      examSettingsForm.totalScore = response.data.settings.total_score
+      examSettingsForm.passScore = response.data.settings.pass_score
+      examSettingsForm.questionCount = response.data.settings.question_count
+      examSettingsForm.questionCountDetail = response.data.settings.question_count_detail
+      examSettingsForm.difficulty = response.data.settings.difficulty
+      examSettingsForm.dynamicGeneration = response.data.settings.dynamic_generation
+      examSettingsForm.duration = response.data.settings.duration
+      examSettingsForm.categories = response.data.settings.categories
+
+      if (examSettingsForm.dynamicGeneration) {
+        examCheckList.value.push("dq")
+      }
+      if (examSettingsForm.questionCountDetail.length > 0) {
+        for (const item of examSettingsForm.questionCountDetail) {
+          const [type, count] = item.split(":")
+          questionTypesAmounts[type] = Number(count)
+        }
+        if (Object.keys(questionTypesAmounts).length > 0) {
+          examCheckList.value.push("qc")
+        }
+      }
+      examSettingsDialogVisible.value = true
+    }
+  } catch (error) {
+    console.error("获取试卷设置失败:", error)
+    ElMessage.error("获取试卷设置失败")
+  }
 }
 
 async function handleDownloadExam() {
@@ -511,7 +550,7 @@ onMounted(() => {
         <vxe-column title="操作" width="200">
           <template #default="data">
             <el-button type="primary" @click="handleRecordDetail(data)">详情</el-button>
-            <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 0" type="primary" @click="handleCreateExam(data.row.id)">试卷生成</el-button>
+            <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 0" type="primary" @click="handleCreateExam(data.row.id)">试卷设置</el-button>
             <el-button v-if="data.row.assessment_method === 1 && data.row.exam_status === 1" type="success" @click="handlePreviewExam(data.row.id)">试卷预览</el-button>
             <!-- <el-button type="primary" @click="handlePublish(data.row.id)">课件发布</el-button> -->
           </template>
@@ -532,7 +571,7 @@ onMounted(() => {
           <el-col :span="24">
             <el-form-item label="考卷分类" prop="categories">
               <el-cascader
-                v-model="categoryOptions"
+                v-model="examSettingsForm.categories"
                 multiple
                 placeholder="选择考题分类"
                 filterable
@@ -550,8 +589,8 @@ onMounted(() => {
         </el-row>
         <el-row>
           <el-col :span="24">
-            <el-form-item label="难度级别" prop="level">
-              <el-select v-model="examSettingsForm.level" placeholder="请选择难度" style="width: 100%">
+            <el-form-item label="难度级别" prop="difficulty">
+              <el-select v-model="examSettingsForm.difficulty" placeholder="请选择难度" style="width: 100%">
                 <el-option label="很简单" :value="1" />
                 <el-option label="简单" :value="2" />
                 <el-option label="中等" :value="3" />
@@ -587,6 +626,16 @@ onMounted(() => {
         </el-row>
         <el-row>
           <el-col :span="24">
+            <el-form-item label="考试选项">
+              <el-checkbox-group v-model="examCheckList">
+                <el-checkbox label="指定题型题量" value="qc" />
+                <el-checkbox label="动态出题" value="dq" />
+              </el-checkbox-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="examCheckList.includes('qc')">
+          <el-col :span="24">
             <el-form-item label="题量设置">
               <el-select v-model="currentQuestionType" placeholder="全部" style="width: 20%">
                 <el-option v-for="item in questionTypes" :key="item.value" :label="item.label" :value="item.value" />
@@ -615,7 +664,7 @@ onMounted(() => {
         <div class="dialog-footer">
           <el-button @click="examSettingsDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="handleGenerateExam" :loading="generationLoading">
-            生成试卷
+            保存设置
           </el-button>
         </div>
       </template>

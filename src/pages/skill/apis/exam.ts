@@ -2,17 +2,17 @@ import { request } from "@/http/axios"
 
 // 考试设置接口
 export interface ExamSettings {
-  totalScore: number
-  examCategory: number // 考试分类
-  level: number // 难度级别
-  coverage: number // 知识点覆盖率
+  total_score: number
+  knowledge_coverage: number // 知识点覆盖率
   difficulty: number // 难易度
-  fairness: number // 公平性指标
-  questionCount: number // 题目数量
-  questionTypes: string[] // 题目类型
+  fairness_index: number // 公平性指标
+  question_count: number // 题目数量
+  question_types: string[] // 题目类型
   categories: number[] // 知识分类
-  passScore: number // 及格分数
+  pass_score: number // 及格分数
   duration: number // 考试时长
+  question_count_detail: string[] // 题型数量
+  dynamic_generation: boolean // 动态生成考试
 }
 
 // 考试信息接口
@@ -163,6 +163,14 @@ export function getExamDetail(id: number) {
 export function getExamDetailByRecord(id: number) {
   return request<ExamDetailResponse>({
     url: `exam/record/${id}`,
+    method: "get"
+  })
+}
+
+// 通过培训记录获取考试设置
+export function getExamSettingsByRecord(id: number) {
+  return request<{ code: number, message: string, data: { settings: ExamSettings } }>({
+    url: `exam/record/${id}/settings`,
     method: "get"
   })
 }

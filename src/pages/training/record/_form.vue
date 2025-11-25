@@ -231,6 +231,8 @@ defineExpose({
     v-model="visible"
     title="新增培训记录"
     width="680px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
     :before-close="close"
   >
     <el-form

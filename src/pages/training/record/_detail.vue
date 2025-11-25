@@ -20,7 +20,10 @@ const categoryOptions = ref([
   { label: "制度学习", value: 1 },
   { label: "会议传达", value: 2 },
   { label: "安全技术培训", value: 3 },
-  { label: "三级教育", value: 4 }
+  { label: "三级教育", value: 4 },
+  { label: "专业技能", value: 5 },
+  { label: "管理培训", value: 6 },
+  { label: "知识竞赛", value: 7 }
 ])
 const visible = ref(false)
 const recordData = ref<any>([])
@@ -258,7 +261,7 @@ defineExpose({
         {{ formatDate(formData.actual_time) }}
       </el-descriptions-item>
     </el-descriptions>
-    <el-table :data="recordData" style="margin-top: 20px;">
+    <el-table :data="recordData">
       <el-table-column property="id" label="序号" width="60" align="center" />
       <el-table-column property="name" label="姓名" width="120" align="center" />
       <el-table-column property="gender" label="性别" width="60" align="center">

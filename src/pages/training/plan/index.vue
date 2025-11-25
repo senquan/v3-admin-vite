@@ -32,7 +32,10 @@ const searchOptions = reactive({
     { label: "制度学习", value: 1 },
     { label: "会议传达", value: 2 },
     { label: "安全技术培训", value: 3 },
-    { label: "三级教育", value: 4 }
+    { label: "三级教育", value: 4 },
+    { label: "专业技能", value: 5 },
+    { label: "管理培训", value: 6 },
+    { label: "知识竞赛", value: 7 }
   ],
   methods: [
     { label: "考试", value: 1 },

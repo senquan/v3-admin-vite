@@ -202,6 +202,8 @@ defineExpose({
     v-model="visible"
     :title="isEdit ? '编辑培训计划' : '新增培训计划'"
     width="680px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
     :before-close="close"
   >
     <el-form
@@ -273,6 +275,9 @@ defineExpose({
               <el-option :key="2" label="会议传达" :value="2" />
               <el-option :key="3" label="安全技术培训" :value="3" />
               <el-option :key="4" label="三级教育" :value="4" />
+              <el-option :key="5" label="专业技能" :value="5" />
+              <el-option :key="6" label="管理培训" :value="6" />
+              <el-option :key="7" label="知识竞赛" :value="7" />
             </el-select>
           </el-form-item>
         </el-col>

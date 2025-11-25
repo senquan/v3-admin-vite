@@ -7,20 +7,20 @@
 declare module '~virtual/svg-component' {
   const SvgIcon: import("vue").DefineComponent<{
       name: {
-          type: import("vue").PropType<"dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "search" | "skill" | "preserve-color/complete" | "preserve-color/incomplete">;
+          type: import("vue").PropType<"courseware" | "dashboard" | "exam" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "permission" | "radar" | "safety" | "search" | "skill" | "teacher" | "preserve-color/complete" | "preserve-color/incomplete">;
           default: string;
           required: true;
       };
   }, {}, unknown, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").VNodeProps & import("vue").AllowedComponentProps & import("vue").ComponentCustomProps, Readonly<import("vue").ExtractPropTypes<{
       name: {
-          type: import("vue").PropType<"dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "search" | "skill" | "preserve-color/complete" | "preserve-color/incomplete">;
+          type: import("vue").PropType<"courseware" | "dashboard" | "exam" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "permission" | "radar" | "safety" | "search" | "skill" | "teacher" | "preserve-color/complete" | "preserve-color/incomplete">;
           default: string;
           required: true;
       };
   }>>, {
-      name: "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "search" | "skill" | "preserve-color/complete" | "preserve-color/incomplete";
+      name: "courseware" | "dashboard" | "exam" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "permission" | "radar" | "safety" | "search" | "skill" | "teacher" | "preserve-color/complete" | "preserve-color/incomplete";
   }>;
-  export const svgNames: ["dashboard", "fullscreen-exit", "fullscreen", "keyboard-down", "keyboard-enter", "keyboard-esc", "keyboard-up", "knowledge", "search", "skill", "preserve-color/complete", "preserve-color/incomplete"];
-  export type SvgName = "dashboard" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "search" | "skill" | "preserve-color/complete" | "preserve-color/incomplete";
+  export const svgNames: ["courseware", "dashboard", "exam", "fullscreen-exit", "fullscreen", "keyboard-down", "keyboard-enter", "keyboard-esc", "keyboard-up", "knowledge", "permission", "radar", "safety", "search", "skill", "teacher", "preserve-color/complete", "preserve-color/incomplete"];
+  export type SvgName = "courseware" | "dashboard" | "exam" | "fullscreen-exit" | "fullscreen" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "knowledge" | "permission" | "radar" | "safety" | "search" | "skill" | "teacher" | "preserve-color/complete" | "preserve-color/incomplete";
   export default SvgIcon;
 }
