@@ -9,16 +9,14 @@ const loading = ref(false)
 const categoryOptions = ref<number[]>([])
 const examCategories = ref<any>([])
 const examSettings = reactive<Partial<ExamSettings>>({
-  totalScore: 100,
-  examCategory: 1,
-  level: 2,
-  coverage: 80,
-  difficulty: 5,
-  fairness: 5,
-  questionCount: 20,
-  questionTypes: ["single_choice", "multiple_choice"],
+  total_score: 100,
+  difficulty: 2,
+  knowledge_coverage: 80,
+  fairness_index: 5,
+  question_count: 20,
+  question_types: ["single_choice", "multiple_choice"],
   categories: [] as number[],
-  passScore: 60,
+  pass_score: 60,
   duration: 60
 })
 const formData = reactive<GenerateExamParams>({
@@ -164,9 +162,9 @@ defineExpose({
       </el-row>
       <el-row>
         <el-col :span="12">
-          <el-form-item label="题目数量" prop="questionCount">
+          <el-form-item label="题目数量" prop="question_count">
             <el-input-number
-              v-model="examSettings.questionCount"
+              v-model="examSettings.question_count"
               :min="5"
               :max="100"
               placeholder="请输入题目数量"
@@ -191,21 +189,21 @@ defineExpose({
 
       <el-row>
         <el-col :span="12">
-          <el-form-item label="总分" prop="totalScore">
-            <el-input-number v-model="examSettings.totalScore" :min="1" :max="1000" style="width: 90%" />
+          <el-form-item label="总分" prop="total_score">
+            <el-input-number v-model="examSettings.total_score" :min="1" :max="1000" style="width: 90%" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="合格分" prop="passScore">
-            <el-input-number v-model="examSettings.passScore" :min="1" :max="1000" style="width: 90%" />
+          <el-form-item label="合格分" prop="pass_score">
+            <el-input-number v-model="examSettings.pass_score" :min="1" :max="1000" style="width: 90%" />
           </el-form-item>
         </el-col>
       </el-row>
 
       <el-row>
         <el-col :span="24">
-          <el-form-item label="难度等级" prop="level">
-            <el-select v-model="examSettings.level" placeholder="请选择难度等级" style="width: 30%">
+          <el-form-item label="难度等级" prop="difficulty">
+            <el-select v-model="examSettings.difficulty" placeholder="请选择难度等级" style="width: 30%">
               <el-option
                 v-for="item in difficultyOptions"
                 :key="item.value"
@@ -219,8 +217,8 @@ defineExpose({
 
       <el-row>
         <el-col :span="24">
-          <el-form-item label="题目类型" prop="questionTypes">
-            <el-checkbox-group v-model="examSettings.questionTypes">
+          <el-form-item label="题目类型" prop="question_types">
+            <el-checkbox-group v-model="examSettings.question_types">
               <el-checkbox
                 v-for="item in questionTypeOptions"
                 :key="item.value"

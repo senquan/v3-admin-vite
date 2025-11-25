@@ -13,6 +13,7 @@ export interface ExamSettings {
   duration: number // 考试时长
   question_count_detail: string[] // 题型数量
   dynamic_generation: boolean // 动态生成考试
+  [key: string]: any
 }
 
 // 考试信息接口

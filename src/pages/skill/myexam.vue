@@ -32,13 +32,13 @@ const generateForm = reactive<GenerateExamParams>({
   description: "",
   examType: 1,
   settings: {
-    totalScore: 100,
-    examCategory: 1,
+    total_score: 100,
+    exam_category: 1,
     level: 2,
     coverage: 80,
     difficulty: 5,
     fairness: 5,
-    questionCount: 20,
+    question_count: 20,
     questionTypes: ["single_choice", "multiple_choice"],
     categories: [1],
     duration: 60
@@ -49,10 +49,10 @@ const generateForm = reactive<GenerateExamParams>({
 const generateRules = {
   "title": [{ required: true, message: "请输入考试名称", trigger: "blur" }],
   "examType": [{ required: true, message: "请选择考试类型", trigger: "change" }],
-  "settings.totalScore": [{ required: true, message: "请输入总分", trigger: "blur" }],
-  "settings.questionCount": [{ required: true, message: "请输入题目数量", trigger: "blur" }],
+  "settings.total_score": [{ required: true, message: "请输入总分", trigger: "blur" }],
+  "settings.question_count": [{ required: true, message: "请输入题目数量", trigger: "blur" }],
   "settings.level": [{ required: true, message: "请选择难度级别", trigger: "change" }],
-  "settings.examCategory": [{ required: true, message: "请选择考试分类", trigger: "change" }]
+  "settings.exam_category": [{ required: true, message: "请选择考试分类", trigger: "change" }]
 }
 
 // 获取考试列表
@@ -134,13 +134,13 @@ async function handleGenerateExam() {
         description: "",
         examType: 1,
         settings: {
-          totalScore: 100,
-          examCategory: 1,
+          total_score: 100,
+          exam_category: 1,
           level: 2,
           coverage: 80,
           difficulty: 5,
           fairness: 5,
-          questionCount: 20,
+          question_count: 20,
           questionTypes: ["single_choice", "multiple_choice"],
           categories: [1]
         }
@@ -359,7 +359,6 @@ onMounted(() => {
       <el-table
         v-loading="loading"
         :data="tableData"
-        style="width: 100%"
         @sort-change="handleSortChange"
       >
         <el-table-column prop="title" label="考试名称" min-width="200">
@@ -465,13 +464,13 @@ onMounted(() => {
 
         <el-row :gutter="20">
           <el-col :span="8">
-            <el-form-item label="总分" prop="settings.totalScore">
-              <el-input-number v-model="generateForm.settings!.totalScore" :min="1" :max="1000" style="width: 100%" />
+            <el-form-item label="总分" prop="settings.total_score">
+              <el-input-number v-model="generateForm.settings!.total_score" :min="1" :max="1000" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="题目数量" prop="settings.questionCount">
-              <el-input-number v-model="generateForm.settings!.questionCount" :min="1" :max="200" style="width: 100%" />
+            <el-form-item label="题目数量" prop="settings.question_count">
+              <el-input-number v-model="generateForm.settings!.question_count" :min="1" :max="200" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -487,8 +486,8 @@ onMounted(() => {
 
         <el-row :gutter="20">
           <el-col :span="8">
-            <el-form-item label="考试分类" prop="settings.examCategory">
-              <el-select v-model="generateForm.settings!.examCategory" placeholder="请选择分类" style="width: 100%">
+            <el-form-item label="考试分类" prop="settings.exam_category">
+              <el-select v-model="generateForm.settings!.exam_category" placeholder="请选择分类" style="width: 100%">
                 <el-option label="技能考试" :value="1" />
                 <el-option label="安全考试" :value="2" />
                 <el-option label="管理考试" :value="3" />
@@ -560,7 +559,7 @@ onMounted(() => {
 
         <div class="exam-questions" style="margin-top: 20px;">
           <h4>题目列表</h4>
-          <el-table :data="currentExam.examQuestions" style="width: 100%" max-height="400">
+          <el-table :data="currentExam.examQuestions" max-height="400">
             <el-table-column prop="question_order" label="序号" width="80" />
             <el-table-column prop="questionEntity.content" label="题目内容" min-width="300">
               <template #default="{ row }">
