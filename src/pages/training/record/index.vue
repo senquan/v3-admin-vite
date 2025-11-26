@@ -36,7 +36,7 @@ const questionTypes = reactive([
   { label: "填空题", value: "填空" },
   { label: "简答题", value: "简答" }
 ])
-const examCheckList = ref<string[]>([])
+const examCheckList = ref<string[]>(["ar", "sq"])
 const branchName = ref("")
 const recordFormRef = ref<any>([])
 const recordFormVisibility = ref(false)
@@ -53,6 +53,8 @@ const examSettingsForm = reactive({
   difficulty: 2,
   duration: 120,
   dynamicGeneration: false,
+  allowRetry: true,
+  shuffleQuestion: true,
   categories: [] as number[]
 })
 const examSettingsFormRef = ref()
@@ -123,10 +125,6 @@ const examQuestions = ref<any>([])
 function handleCategoryChange(value: number[]) {
   if (!value || value.length === 0) return
   examSettingsForm.categories = value.map((item: any) => Number(item[item.length - 1]))
-}
-
-function handleCategoryClear() {
-  examSettingsForm.categories = []
 }
 
 // function handlePublish(id: number) {
@@ -207,6 +205,8 @@ async function handleGenerateExam() {
       }
       await examSettingsFormRef.value.validate()
       examSettingsForm.dynamicGeneration = examCheckList.value.includes("dq")
+      examSettingsForm.allowRetry = examCheckList.value.includes("ar")
+      examSettingsForm.shuffleQuestion = examCheckList.value.includes("sq")
 
       generationLoading.value = true
       const request = isRegenerateExam.value
@@ -242,7 +242,11 @@ function resetExamSettingsForm() {
   examSettingsForm.questionCountDetail = []
   examSettingsForm.difficulty = 2
   examSettingsForm.dynamicGeneration = false
+  examSettingsForm.allowRetry = true
+  examSettingsForm.shuffleQuestion = true
+
   examSettingsForm.duration = 120
+  examCheckList.value = ["ar", "sq"]
   // 清空题目类型数量
   questionTypesAmounts.value = {}
   const keys = Object.keys(questionTypesAmounts)
@@ -250,6 +254,10 @@ function resetExamSettingsForm() {
     delete questionTypesAmounts[key]
   })
   handleCategoryClear()
+}
+
+function handleCategoryClear() {
+  examSettingsForm.categories = []
 }
 
 function loadExamCategories() {
@@ -272,7 +280,6 @@ function loadExamCategories() {
 async function loadSettings(id: number) {
   try {
     const response = await getExamSettingsByRecord(id)
-    console.log("response", response)
     if (response.code === 0) {
       if (response.data.settings && response.data.settings.categories) {
         examSettingsForm.totalScore = response.data.settings.total_score
@@ -281,11 +288,19 @@ async function loadSettings(id: number) {
         examSettingsForm.questionCountDetail = response.data.settings.question_count_detail
         examSettingsForm.difficulty = response.data.settings.difficulty
         examSettingsForm.dynamicGeneration = response.data.settings.dynamic_generation
+        examSettingsForm.allowRetry = response.data.settings.allow_retry
+        examSettingsForm.shuffleQuestion = response.data.settings.shuffle_question
         examSettingsForm.duration = response.data.settings.duration
         examSettingsForm.categories = response.data.settings.categories
 
         if (examSettingsForm.dynamicGeneration) {
           examCheckList.value.push("dq")
+        }
+        if (examSettingsForm.allowRetry) {
+          examCheckList.value.push("ar")
+        }
+        if (examSettingsForm.shuffleQuestion) {
+          examCheckList.value.push("sq")
         }
         if (examSettingsForm.questionCountDetail.length > 0) {
           for (const item of examSettingsForm.questionCountDetail) {
@@ -633,6 +648,8 @@ onMounted(() => {
               <el-checkbox-group v-model="examCheckList">
                 <el-checkbox label="指定题型题量" value="qc" />
                 <el-checkbox label="动态出题" value="dq" />
+                <el-checkbox label="允许重考" value="ar" />
+                <el-checkbox label="打乱题目" value="sq" />
               </el-checkbox-group>
             </el-form-item>
           </el-col>
