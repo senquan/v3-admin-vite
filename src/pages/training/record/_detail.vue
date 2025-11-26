@@ -264,11 +264,6 @@ defineExpose({
     <el-table :data="recordData">
       <el-table-column property="id" label="序号" width="60" align="center" />
       <el-table-column property="name" label="姓名" width="120" align="center" />
-      <el-table-column property="gender" label="性别" width="60" align="center">
-        <template #default="scope">
-          {{ scope.row.gender === true ? "男" : (scope.row.gender === false ? "女" : "未知") }}
-        </template>
-      </el-table-column>
       <el-table-column property="age" label="年龄" width="60" align="center" />
       <el-table-column property="organization" label="所属单位" min-width="120" />
       <el-table-column property="idcard" label="身份证号码" width="120" align="center" />
