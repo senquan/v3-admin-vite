@@ -272,26 +272,29 @@ function loadExamCategories() {
 async function loadSettings(id: number) {
   try {
     const response = await getExamSettingsByRecord(id)
+    console.log("response", response)
     if (response.code === 0) {
-      examSettingsForm.totalScore = response.data.settings.total_score
-      examSettingsForm.passScore = response.data.settings.pass_score
-      examSettingsForm.questionCount = response.data.settings.question_count
-      examSettingsForm.questionCountDetail = response.data.settings.question_count_detail
-      examSettingsForm.difficulty = response.data.settings.difficulty
-      examSettingsForm.dynamicGeneration = response.data.settings.dynamic_generation
-      examSettingsForm.duration = response.data.settings.duration
-      examSettingsForm.categories = response.data.settings.categories
+      if (response.data.settings && response.data.settings.categories) {
+        examSettingsForm.totalScore = response.data.settings.total_score
+        examSettingsForm.passScore = response.data.settings.pass_score
+        examSettingsForm.questionCount = response.data.settings.question_count
+        examSettingsForm.questionCountDetail = response.data.settings.question_count_detail
+        examSettingsForm.difficulty = response.data.settings.difficulty
+        examSettingsForm.dynamicGeneration = response.data.settings.dynamic_generation
+        examSettingsForm.duration = response.data.settings.duration
+        examSettingsForm.categories = response.data.settings.categories
 
-      if (examSettingsForm.dynamicGeneration) {
-        examCheckList.value.push("dq")
-      }
-      if (examSettingsForm.questionCountDetail.length > 0) {
-        for (const item of examSettingsForm.questionCountDetail) {
-          const [type, count] = item.split(":")
-          questionTypesAmounts[type] = Number(count)
+        if (examSettingsForm.dynamicGeneration) {
+          examCheckList.value.push("dq")
         }
-        if (Object.keys(questionTypesAmounts).length > 0) {
-          examCheckList.value.push("qc")
+        if (examSettingsForm.questionCountDetail.length > 0) {
+          for (const item of examSettingsForm.questionCountDetail) {
+            const [type, count] = item.split(":")
+            questionTypesAmounts[type] = Number(count)
+          }
+          if (Object.keys(questionTypesAmounts).length > 0) {
+            examCheckList.value.push("qc")
+          }
         }
       }
       examSettingsDialogVisible.value = true
