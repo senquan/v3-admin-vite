@@ -2,17 +2,17 @@ import { request } from "@/http/axios"
 
 // 考试设置接口
 export interface ExamSettings {
-  total_score: number
-  knowledge_coverage: number // 知识点覆盖率
+  totalScore: number
+  knowledgeCoverage: number // 知识点覆盖率
   difficulty: number // 难易度
-  fairness_index: number // 公平性指标
-  question_count: number // 题目数量
-  question_types: string[] // 题目类型
+  fairnessIndex: number // 公平性指标
+  questionCount: number // 题目数量
+  questionTypes: string[] // 题目类型
   categories: number[] // 知识分类
-  pass_score: number // 及格分数
+  passScore: number // 及格分数
   duration: number // 考试时长
-  question_count_detail: string[] // 题型数量
-  dynamic_generation: boolean // 动态生成考试
+  questionCountDetail: string[] // 题型数量
+  dynamicGeneration: boolean // 动态生成考试
   [key: string]: any
 }
 

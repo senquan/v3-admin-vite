@@ -9,14 +9,14 @@ const loading = ref(false)
 const categoryOptions = ref<number[]>([])
 const examCategories = ref<any>([])
 const examSettings = reactive<Partial<ExamSettings>>({
-  total_score: 100,
+  totalScore: 100,
   difficulty: 2,
-  knowledge_coverage: 80,
-  fairness_index: 5,
-  question_count: 20,
-  question_types: ["single_choice", "multiple_choice"],
+  knowledgeCoverage: 80,
+  fairnessIndex: 5,
+  questionCount: 20,
+  questionTypes: [],
   categories: [] as number[],
-  pass_score: 60,
+  passScore: 60,
   duration: 60
 })
 const formData = reactive<GenerateExamParams>({
@@ -52,11 +52,11 @@ const difficultyOptions = [
 ]
 
 const questionTypeOptions = [
-  { label: "单选题", value: "single_choice" },
-  { label: "多选题", value: "multiple_choice" },
-  { label: "判断题", value: "true_false" },
-  { label: "填空题", value: "fill_blank" },
-  { label: "简答题", value: "short_answer" }
+  { label: "单选题", value: "单选" },
+  { label: "多选题", value: "多选" },
+  { label: "判断题", value: "判断" },
+  { label: "填空题", value: "填空" },
+  { label: "简答题", value: "简答" }
 ]
 
 function open(options: any) {
@@ -93,7 +93,7 @@ function handleCategoryClear() {
 
 function handleCategoryChange(value: number[]) {
   if (!value || value.length === 0) return
-  if (formData.settings) formData.settings.categories = value.map((item: any) => Number(item[item.length - 1]))
+  examSettings.categories = value.map((item: any) => Number(item[item.length - 1]))
 }
 
 function handleSubmit() {
@@ -162,9 +162,9 @@ defineExpose({
       </el-row>
       <el-row>
         <el-col :span="12">
-          <el-form-item label="题目数量" prop="question_count">
+          <el-form-item label="题目数量" prop="questionCount">
             <el-input-number
-              v-model="examSettings.question_count"
+              v-model="examSettings.questionCount"
               :min="5"
               :max="100"
               placeholder="请输入题目数量"
@@ -189,13 +189,13 @@ defineExpose({
 
       <el-row>
         <el-col :span="12">
-          <el-form-item label="总分" prop="total_score">
-            <el-input-number v-model="examSettings.total_score" :min="1" :max="1000" style="width: 90%" />
+          <el-form-item label="总分" prop="totalScore">
+            <el-input-number v-model="examSettings.totalScore" :min="1" :max="1000" style="width: 90%" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="合格分" prop="pass_score">
-            <el-input-number v-model="examSettings.pass_score" :min="1" :max="1000" style="width: 90%" />
+          <el-form-item label="合格分" prop="passScore">
+            <el-input-number v-model="examSettings.passScore" :min="1" :max="1000" style="width: 90%" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -217,8 +217,8 @@ defineExpose({
 
       <el-row>
         <el-col :span="24">
-          <el-form-item label="题目类型" prop="question_types">
-            <el-checkbox-group v-model="examSettings.question_types">
+          <el-form-item label="题目类型" prop="questionTypes">
+            <el-checkbox-group v-model="examSettings.questionTypes">
               <el-checkbox
                 v-for="item in questionTypeOptions"
                 :key="item.value"
