@@ -42,6 +42,7 @@ function transformPermissionToRoute(permissions: Permission[]): AppRouteRecordRa
         meta.svgIcon = permission.icon
       }
       const route: AppRouteRecordRaw = {
+        name: permission.name || "",
         path: permission.path || "",
         component: permission.component ? componentPath : () => import("@/layouts/index.vue"),
         redirect: permission.redirect,

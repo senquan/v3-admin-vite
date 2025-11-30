@@ -17,7 +17,7 @@ export interface ExamSettings {
 }
 
 // 考试信息接口
-export interface Exam {
+export interface ExamRecord {
   _id?: number
   title: string
   description?: string
@@ -41,24 +41,35 @@ export interface Exam {
     _id: number
     username: string
   }
-  examEntity?: {
-    _id: number
-    title: string
-    description?: string
-    type: number
-    category_id: number
-    training_category: number
-    level: number
-    total_score: number
-    pass_score: number
-    duration: number
-    status: boolean
-    creator?: number
-    updater?: number
-    create_time?: string
-    update_time?: string
-  }
+  examEntity?: Exam
+}
+
+export interface Exam {
+  _id: number
+  title: string
+  description?: string
+  type: number
+  category_id: number
+  training_category: number
+  level: number
+  total_score: number
+  pass_score: number
+  duration: number
+  status: boolean
+  creator?: number
+  updater?: number
+  create_time?: string
+  update_time?: string
   examQuestions?: ExamQuestion[]
+}
+
+export interface ExamAnswer {
+  exam_record_id: number
+  question_id: number
+  user_answer: string
+  score: number
+  is_correct: boolean
+  created_at?: string
 }
 
 // 考试题目关联接口
@@ -108,6 +119,16 @@ export interface ExamDetailResponse {
   message: string
   data: {
     exam: Exam
+  }
+}
+
+// 考试答卷响应
+export interface ExamPaperResponse {
+  code: number
+  message: string
+  data: {
+    examAnswers: ExamAnswer
+    examRecord: any
   }
 }
 
@@ -161,9 +182,9 @@ export function getExamDetail(id: number) {
 }
 
 // 通过培训记录获取考试详情
-export function getExamDetailByRecord(id: number) {
+export function getExamDetailByRecord(id: number, uid: number = 0) {
   return request<ExamDetailResponse>({
-    url: `exam/record/${id}`,
+    url: `exam/record/${id}/${uid}`,
     method: "get"
   })
 }
@@ -191,6 +212,14 @@ export function updateExamSettings(id: number, settings: Partial<ExamSettings>) 
     url: `exam/${id}/settings`,
     method: "put",
     data: { settings }
+  })
+}
+
+// 查看用户答卷
+export function getUserPaper(id: number, uid: number = 0) {
+  return request<ExamPaperResponse>({
+    url: `exam/${id}/paper/${uid}`,
+    method: "get"
   })
 }
 

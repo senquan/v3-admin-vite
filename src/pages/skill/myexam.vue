@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Exam, ExamListParams, GenerateExamParams } from "./apis/exam"
+import type { Exam, ExamListParams, ExamRecord, GenerateExamParams } from "./apis/exam"
 import { generateExam, getMyExamList } from "./apis/exam"
 
 const router = useRouter()
@@ -10,7 +10,7 @@ const generateLoading = ref(false)
 const tableData = ref<Exam[]>([])
 const generateDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
-const currentExam = ref<Exam | null>(null)
+const currentExamRecord = ref<ExamRecord | null>(null)
 const generateFormRef = ref()
 const totalExams = ref(0)
 
@@ -159,7 +159,7 @@ async function handleGenerateExam() {
 //   try {
 //     const response = await getExamDetail(exam._id!)
 //     if (response.code === 200) {
-//       currentExam.value = response.data.exam
+//       currentExamRecord.value = response.data.exam
 //       detailDialogVisible.value = true
 //     }
 //   } catch (error) {
@@ -169,14 +169,14 @@ async function handleGenerateExam() {
 // }
 
 // 开始考试
-function handleStartExam(exam: Exam) {
+function handleStartExam(exam: ExamRecord) {
   if (!exam.examEntity?._id) {
     ElMessage.error("考试ID无效")
     return
   }
 
   ElMessageBox.confirm(
-    `确定要开始考试「${exam.examEntity.title}」吗？\n考试时长：${exam.examEntity.duration}分钟\n题目数量：${exam.examQuestions?.length || 0}题`,
+    `确定要开始考试「${exam.examEntity.title}」吗？\n考试时长：${exam.examEntity.duration}分钟\n题目数量：${exam.examEntity.examQuestions?.length || 0}题`,
     "开始考试",
     {
       confirmButtonText: "开始答题",
@@ -200,9 +200,9 @@ function handleStartExam(exam: Exam) {
 // 获取考试类型名称
 function getExamTypeName(type: number) {
   const typeMap: Record<number, string> = {
-    1: "练习考试",
-    2: "正式考试",
-    3: "模拟考试"
+    1: "正式考试",
+    2: "模拟考试",
+    3: "正式考试"
   }
   return typeMap[type] || "未知"
 }
@@ -220,9 +220,11 @@ function getExamTypeTagType(type: number): "success" | "warning" | "info" | "pri
 // 获取难度级别名称
 function getLevelName(level: number) {
   const levelMap: Record<number, string> = {
-    1: "简单",
-    2: "中等",
-    3: "困难"
+    1: "很简单",
+    2: "简单",
+    3: "中等",
+    4: "困难",
+    5: "很困难"
   }
   return levelMap[level] || "未知"
 }
@@ -231,8 +233,10 @@ function getLevelName(level: number) {
 function getLevelTagType(level: number): "success" | "warning" | "info" | "primary" | "danger" {
   const typeMap: Record<number, "success" | "warning" | "info" | "primary" | "danger"> = {
     1: "success",
-    2: "warning",
-    3: "danger"
+    2: "success",
+    3: "primary",
+    4: "warning",
+    5: "danger"
   }
   return typeMap[level] || "info"
 }
@@ -388,7 +392,11 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="total_score" label="总分" width="80" align="center" />
+        <el-table-column prop="total_score" label="总分" width="80" align="center">
+          <template #default="{ row }">
+            {{ row.examEntity?.total_score }}分
+          </template>
+        </el-table-column>
 
         <el-table-column prop="duration" label="考试时长" width="100" align="center">
           <template #default="{ row }">
@@ -413,7 +421,7 @@ onMounted(() => {
             <!-- <el-button type="primary" @click="handleViewDetail(row)">
               查看详情
             </el-button> -->
-            <el-button type="success" @click="handleStartExam(row)">
+            <el-button v-if="!row.trainingRecordEntity?.settings || row.trainingRecordEntity?.settings.allow_retry" type="success" @click="handleStartExam(row)">
               开始考试
             </el-button>
           </template>
@@ -539,27 +547,27 @@ onMounted(() => {
 
     <!-- 考试详情对话框 -->
     <el-dialog v-model="detailDialogVisible" title="考试详情" width="900px">
-      <div v-if="currentExam" class="exam-detail">
+      <div v-if="currentExamRecord" class="exam-detail">
         <el-descriptions :column="3" border>
-          <el-descriptions-item label="考试名称">{{ currentExam.title }}</el-descriptions-item>
-          <el-descriptions-item label="考试类型">{{ getExamTypeName(currentExam.type) }}</el-descriptions-item>
-          <el-descriptions-item label="考试分类">{{ currentExam.categoryEntity?.name || "-" }}</el-descriptions-item>
-          <el-descriptions-item label="难度级别">{{ getLevelName(currentExam.level) }}</el-descriptions-item>
-          <el-descriptions-item label="总分">{{ currentExam.total_score }}分</el-descriptions-item>
-          <el-descriptions-item label="及格分">{{ currentExam.pass_score }}分</el-descriptions-item>
-          <el-descriptions-item label="考试时长">{{ currentExam.duration }}分钟</el-descriptions-item>
-          <el-descriptions-item label="题目数量">{{ currentExam.examQuestions?.length || 0 }}题</el-descriptions-item>
-          <el-descriptions-item label="创建者">{{ currentExam.creatorEntity?.username || "-" }}</el-descriptions-item>
+          <el-descriptions-item label="考试名称">{{ currentExamRecord.title }}</el-descriptions-item>
+          <el-descriptions-item label="考试类型">{{ getExamTypeName(currentExamRecord.examEntity?.type || 0) }}</el-descriptions-item>
+          <el-descriptions-item label="考试分类">{{ currentExamRecord.categoryEntity?.name || "-" }}</el-descriptions-item>
+          <el-descriptions-item label="难度级别">{{ getLevelName(currentExamRecord.level) }}</el-descriptions-item>
+          <el-descriptions-item label="总分">{{ currentExamRecord.total_score }}分</el-descriptions-item>
+          <el-descriptions-item label="及格分">{{ currentExamRecord.pass_score }}分</el-descriptions-item>
+          <el-descriptions-item label="考试时长">{{ currentExamRecord.duration }}分钟</el-descriptions-item>
+          <el-descriptions-item label="题目数量">{{ currentExamRecord.examEntity?.examQuestions?.length || 0 }}题</el-descriptions-item>
+          <el-descriptions-item label="创建者">{{ currentExamRecord.creatorEntity?.username || "-" }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="exam-description" style="margin-top: 20px;" v-if="currentExam.description">
+        <div class="exam-description" style="margin-top: 20px;" v-if="currentExamRecord.description">
           <h4>考试描述</h4>
-          <p>{{ currentExam.description }}</p>
+          <p>{{ currentExamRecord.description }}</p>
         </div>
 
         <div class="exam-questions" style="margin-top: 20px;">
           <h4>题目列表</h4>
-          <el-table :data="currentExam.examQuestions" max-height="400">
+          <el-table :data="currentExamRecord.examEntity?.examQuestions" max-height="400">
             <el-table-column prop="question_order" label="序号" width="80" />
             <el-table-column prop="questionEntity.content" label="题目内容" min-width="300">
               <template #default="{ row }">

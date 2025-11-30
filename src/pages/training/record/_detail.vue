@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { request } from "@/http/axios"
 import { formatDate } from "@/utils/date"
+import FileSaver from "file-saver"
+import * as XLSX from "xlsx"
 import { reportScore } from "../../skill/apis/exam"
+import ExamPreview from "./_preview.vue"
 import { generateQRCode, loadParticipants } from "./apis"
 
 const emit = defineEmits(["success", "close", "refresh"])
@@ -13,7 +16,8 @@ const formData = reactive({
   training_mode: 0,
   trainer: "",
   actual_time: "",
-  hours: 0
+  hours: 0,
+  exam_dynamic: false
 })
 
 const categoryOptions = ref([
@@ -29,6 +33,7 @@ const visible = ref(false)
 const recordData = ref<any>([])
 const scoreReportDialogVisible = ref(false)
 const fileList = ref([])
+const examPreviewRef = ref<any>([])
 const scoreFormRef = ref()
 const scoreForm = reactive({
   exam_record_id: 0,
@@ -49,6 +54,7 @@ function resetForm() {
   formData.training_mode = 0
   formData.trainer = ""
   formData.hours = 0
+  formData.exam_dynamic = false
 }
 
 function open(options = {
@@ -63,10 +69,11 @@ function open(options = {
   formData.hours = options.data?.training_hours
   formData.actual_time = options.data?.actual_time
   formData.qr_code_path = options.data?.qr_code_path
+  formData.exam_dynamic = options.data?.exam_dynamic
 
   loadParticipants(options.data?.id).then((res) => {
     if (res.code === 0) {
-      recordData.value = res.data
+      recordData.value = res.data.participants
     } else {
       ElMessage.error(res.message)
       recordData.value = []
@@ -167,6 +174,9 @@ function handleExamView(row: any) {
     if (paper && paper.length > 0) {
       window.open(paper[0].url)
     }
+  } else if (formData.exam_dynamic) {
+    // 动态考卷
+    examPreviewRef.value?.open({ id: recordId.value, userId: row.userId })
   }
 }
 
@@ -180,6 +190,67 @@ function handleRegenerate() {
       ElMessage.error(res.message)
     }
   })
+}
+
+async function exportData() {
+  try {
+    // 获取所有数据（不分页）
+    const res = await loadParticipants(recordId.value)
+
+    if (res.data) {
+      // 准备导出数据
+      const exportData = res.data.participants.map((item: any) => {
+        return {
+          编号: item.id || "",
+          姓名: item.name || "",
+          年龄: item.age || "",
+          单位: item.organization || "",
+          身份证号码: item.idcard || "",
+          学时: item.hours || "",
+          是否合格: item.passed ? "合格" : "不合格",
+          分数: item.score || "",
+          考试开始时间: item.examStartTime || "",
+          考试结束时间: item.examEndTime || ""
+        }
+      })
+
+      // 创建工作簿和工作表
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "培训人员详情")
+
+      // 设置列宽
+      const colWidth = [
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 20 },
+        { wch: 20 }
+      ]
+      worksheet["!cols"] = colWidth
+
+      // 生成Excel文件并下载
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+
+      // 生成文件名（包含当前日期）
+      const now = new Date()
+      const fileName = `培训人员详情${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}.xlsx`
+
+      FileSaver.saveAs(blob, fileName)
+      ElMessage.success("导出成功")
+    } else {
+      ElMessage.warning("没有数据可导出")
+    }
+  } catch (error) {
+    console.error("导出失败:", error)
+    ElMessage.error("导出失败，请稍后重试")
+  }
 }
 
 defineExpose({
@@ -261,7 +332,8 @@ defineExpose({
         {{ formatDate(formData.actual_time) }}
       </el-descriptions-item>
     </el-descriptions>
-    <el-table :data="recordData">
+    <el-button type="success" @click="exportData" style="margin: 8px 0;">导出Excel</el-button>
+    <el-table :data="recordData" height="450">
       <el-table-column property="id" label="序号" width="60" align="center" />
       <el-table-column property="name" label="姓名" width="120" align="center" />
       <el-table-column property="age" label="年龄" width="60" align="center" />
@@ -278,10 +350,10 @@ defineExpose({
         </template>
       </el-table-column>
       <el-table-column property="score" label="成绩" width="60" />
-      <el-table-column label="操作" width="180" align="center">
+      <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="handleReport(scope.row)">成绩上报</el-button>
-          <el-button v-if="scope.row.score" type="primary" size="small" @click="handleExamView(scope.row)">考卷查看</el-button>
+          <el-button v-if="scope.row.score && (scope.row.paperUrl || formData.exam_dynamic)" type="primary" size="small" @click="handleExamView(scope.row)">考卷查看</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -292,12 +364,12 @@ defineExpose({
     <el-form :model="scoreForm" ref="scoreFormRef" label-width="120px">
       <el-row>
         <el-col :span="24">
-          <el-form-item label="线下考卷" prop="categories">
+          <el-form-item label="线下考卷" prop="categories" style="align-items: center;">
             <el-upload
               v-model:file-list="fileList"
               class="uploader"
               :http-request="customUploadRequest"
-              style="width: 380px; margin-top: 20px;"
+              style="width: 380px; margin-top: 10px;"
             >
               <el-button type="primary">上传考卷</el-button>
             </el-upload>
@@ -322,6 +394,9 @@ defineExpose({
       </div>
     </template>
   </el-dialog>
+
+  <!-- 试卷预览对话框 -->
+  <ExamPreview ref="examPreviewRef" />
 </template>
 
 <style scoped>
