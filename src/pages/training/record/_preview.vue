@@ -249,6 +249,14 @@ async function handleDownloadExam() {
   }
 }
 
+function getMyAnswer(question: any) {
+  if (question.userAnswer.user_answer === null || question.userAnswer.user_answer === null) {
+    return "未作答"
+  } else {
+    return question.questionEntity.question_type === "判断" ? (question.userAnswer.user_answer ? "正确" : "错误") : question.userAnswer.user_answer
+  }
+}
+
 defineExpose({
   open
 })
@@ -321,7 +329,7 @@ defineExpose({
               <!-- 答案区域 -->
               <div class="question-answer" v-if="userId > 0 && question.userAnswer">
                 <span class="answer-label">我的答案：</span>
-                <span class="answer-content">{{ question.questionEntity.question_type === '判断' ? (question.userAnswer.user_answer ? '正确' : '错误') : question.userAnswer.user_answer }}</span>
+                <span class="answer-content">{{ getMyAnswer(question) }}</span>
                 <span class="answer-correct-answer">参考答案：{{ question.questionEntity.answer }}</span>
                 <span class="answer-is-correct">是否正确：<b :color="question.userAnswer.is_correct ? 'green' : 'red'">{{ question.userAnswer.is_correct ? '正确' : '错误' }}</b></span>
                 <span class="answer-score">本题得分：{{ question.userAnswer.score }}</span>

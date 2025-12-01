@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { request } from "@/http/axios"
-import { formatDate } from "@/utils/date"
+import { formatDate, getTimeDiff } from "@/utils/date"
 import FileSaver from "file-saver"
 import * as XLSX from "xlsx"
 import { reportScore } from "../../skill/apis/exam"
@@ -210,7 +210,8 @@ async function exportData() {
           是否合格: item.passed ? "合格" : "不合格",
           分数: item.score || "",
           考试开始时间: item.examStartTime || "",
-          考试结束时间: item.examEndTime || ""
+          考试结束时间: item.examEndTime || "",
+          总用时: getTimeDiff(item.examStartTime, item.examEndTime)
         }
       })
 
@@ -229,6 +230,7 @@ async function exportData() {
         { wch: 10 },
         { wch: 10 },
         { wch: 10 },
+        { wch: 20 },
         { wch: 20 },
         { wch: 20 }
       ]
@@ -349,7 +351,7 @@ defineExpose({
           {{ scope.row.passed ? "合格" : "不合格" }}
         </template>
       </el-table-column>
-      <el-table-column property="score" label="成绩" width="60" />
+      <el-table-column property="score" label="成绩" width="80" />
       <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
           <el-button type="primary" size="small" @click="handleReport(scope.row)">成绩上报</el-button>
