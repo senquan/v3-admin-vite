@@ -250,7 +250,7 @@ async function handleDownloadExam() {
 }
 
 function getMyAnswer(question: any) {
-  if (question.userAnswer.user_answer === null || question.userAnswer.user_answer === null) {
+  if (question.userAnswer.user_answer === "" || question.userAnswer.user_answer === null) {
     return "未作答"
   } else {
     return question.questionEntity.question_type === "判断" ? (question.userAnswer.user_answer ? "正确" : "错误") : question.userAnswer.user_answer
