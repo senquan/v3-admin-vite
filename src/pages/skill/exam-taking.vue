@@ -142,7 +142,7 @@ function returnToMain() {
     cancelButtonText: "取消",
     type: "warning"
   }).then(() => {
-    router.push("/skill/myexam")
+    router.push("/myexam")
   })
 }
 

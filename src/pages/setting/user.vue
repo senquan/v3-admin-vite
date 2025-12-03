@@ -6,7 +6,6 @@ const loading = ref(false)
 const listQuery = reactive({
   type: "",
   keyword: "",
-  color: "",
   sort: "+id",
   page: 1,
   pageSize: 20

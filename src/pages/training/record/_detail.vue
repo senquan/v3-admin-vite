@@ -348,7 +348,7 @@ defineExpose({
       </el-table-column>
       <el-table-column property="passed" label="是否合格" width="80" align="center">
         <template #default="scope">
-          {{ scope.row.passed ? "合格" : "不合格" }}
+          {{ scope.row.score === null ? "未考试" : (scope.row.passed ? "合格" : "不合格") }}
         </template>
       </el-table-column>
       <el-table-column property="score" label="成绩" width="80" />
