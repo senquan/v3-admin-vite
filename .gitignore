@@ -17,3 +17,6 @@ vite.config.*.timestamp*
 package-lock.json
 yarn.lock
 types/auto
+
+#cert
+cer/

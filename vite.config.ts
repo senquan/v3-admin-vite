@@ -34,9 +34,13 @@ export default defineConfig(({ mode }) => {
       // 是否监听所有地址
       host: true,
       // 端口号
-      port: 3333,
+      port: 4173,
       // 端口被占用时，是否直接退出
       strictPort: false,
+      https: {
+        cert: resolve(__dirname, "cer/fullchain.pem"),
+        key: resolve(__dirname, "cer/privkey.pem")
+      },
       // 是否自动打开浏览器
       open: true,
       // 反向代理
