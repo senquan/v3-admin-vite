@@ -14,6 +14,7 @@ const formData = reactive({
   tagcode: "",
   remark: "",
   isDefault: false,
+  isLedger: false,
   isHidden: false
 })
 
@@ -133,7 +134,7 @@ defineExpose({
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑账户' : '新增账户'"
-    width="500px"
+    width="550px"
     :before-close="close"
   >
     <el-form
@@ -206,14 +207,19 @@ defineExpose({
       </el-row>
 
       <el-row>
-        <el-col :span="12">
+        <el-col :span="8">
           <el-form-item label="默认账户" prop="isDefault">
             <el-switch v-model="formData.isDefault" />
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col :span="8">
           <el-form-item label="是否隐藏" prop="isHidden">
             <el-switch v-model="formData.isHidden" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="建立台账" prop="isLedger">
+            <el-switch v-model="formData.isLedger" />
           </el-form-item>
         </el-col>
       </el-row>

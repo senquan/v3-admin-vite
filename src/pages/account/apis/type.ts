@@ -25,6 +25,7 @@ export interface AccountListData {
   isDebt: number
   isDeleted: number
   isDefault: number
+  isLedger: number
   isHidden: number
   is_notified: number
   liquidity: number
@@ -64,6 +65,7 @@ export interface AccountListRequestParams {
   keyword?: string
   liquidity?: number | string
   hideEmpty?: boolean
+  isLedger?: boolean
   sort?: string
   page?: number
   pageSize?: number

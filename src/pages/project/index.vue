@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { fetchList as fetchProjectList, fetchDetail } from "./apis"
-import { fetchList as fetchAccountList } from "../account/apis"
+import type { LedgerAccountData } from "./apis/type"
 import { parseTime } from "@/common/utils/datetime"
+import { fetchList as fetchAccountList } from "../account/apis"
+import { fetchDetail, fetchList as fetchProjectList } from "./apis"
 
 const loading = ref(false)
 const accountLoading = ref(false)
@@ -25,54 +26,48 @@ const detailTotalPages = computed(() => {
   return Math.ceil(detailTotal.value / detailQuery.pageSize)
 })
 
-const defaultAccountList = [
-  { id: 70, name: "过渡账户" },
-  { id: 115, name: "有价票券" },
-  { id: 130, name: "预算" }
-]
-
-const accountList = ref([...defaultAccountList])
+const accountList = ref<LedgerAccountData[]>([])
 const tableData = ref<any>([])
 
-const fetchData = () => {
+function fetchData() {
   loading.value = true
   try {
     fetchProjectList(listQuery).then((res) => {
       if (res.data && res.data.projects) {
         tableData.value = res.data.projects
+        accountList.value = res.data.accounts || []
       } else {
         tableData.value = []
       }
     })
   } catch (error) {
-    ElMessage.error("获取数据失败，请稍后重试")
+    ElMessage.error(`获取数据失败，请稍后重试: ${error}`)
     tableData.value = []
   } finally {
     loading.value = false
   }
 }
 
-const handleSearchAccount = (keyword: any) => {
-  if (keyword.length < 3) return
+function handleSearchAccount(keyword: any) {
+  if (keyword.length < 2) return
   accountLoading.value = true
-  fetchAccountList({keyword}).then((res) => {
+  fetchAccountList({ keyword, isLedger: true }).then((res) => {
     if (res.data && res.data.accounts) {
-      const accountData = res.data.accounts.map((acc) => ({
+      accountList.value = res.data.accounts.map(acc => ({
         id: acc.id,
         name: acc.name
-      }))
-      accountList.value.push(...accountData)
+      })) || []
     }
   }).finally(() => {
     accountLoading.value = false
   })
 }
 
-const handleFilter = () => {
+function handleFilter() {
   fetchData()
 }
 
-const handleDetail = (row: any) => {
+function handleDetail(row: any) {
   detailDrawer.value = true
   detailQuery.id = row.id
   detailQuery.carrier = listQuery.carrier
@@ -81,7 +76,7 @@ const handleDetail = (row: any) => {
   loadDetail()
 }
 
-const loadDetail = () => {
+function loadDetail() {
   fetchDetail(detailQuery).then((res) => {
     if (res.data && res.data.records) {
       detailTotal.value = res.data.total
@@ -156,7 +151,7 @@ onMounted(() => {
         </vxe-column>
         <vxe-column title="事项" min-width="200" align="left">
           <template #default="data">
-            <el-text truncated>{{ data.row.title }}{{ data.row.remark ? ' - ' + data.row.remark : '' }}</el-text>
+            <el-text truncated>{{ data.row.title }}{{ data.row.remark ? ` - ${data.row.remark}` : '' }}</el-text>
           </template>
         </vxe-column>
         <vxe-column field="amount" title="金额" width="100" />

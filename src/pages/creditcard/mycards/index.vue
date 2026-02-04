@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type * as Cards from "./apis/type"
 import { BellFilled } from "@element-plus/icons-vue"
-import { fetchList, updateCardBill, deleteCard } from "./apis"
+import SvgIcon from "@/common/components/SvgIcon/index.vue"
 import { parseTime, addDate } from "@/common/utils/datetime"
+import { fetchList, updateCardBill, deleteCard } from "./apis"
 import "./iconfont"
-import SvgIcon from '@/common/components/SvgIcon/index.vue'
 
 const loading = ref(false)
 const listQuery = reactive({
@@ -13,7 +13,7 @@ const listQuery = reactive({
   grade: "",
   organization: "",
   page: 1,
-  pageSize: 20,
+  pageSize: 20
 })
 const totalPages = ref(0)
 
@@ -30,23 +30,23 @@ const billForm = reactive({
 })
 const dialogBillFormVisible = ref(false)
 
-const fetchMycards = async () => {
+async function fetchMycards() {
   loading.value = true
   try {
     fetchList(listQuery).then((res) => {
       // 处理后端返回的数据，转换为前端需要的格式
       if (res.data && res.data.cards) {
         totalPages.value = res.data.total
-        tableData.value = res.data.cards.map(item => {
+        tableData.value = res.data.cards.map((item) => {
           return {
             id: item.id,
-            name: item.name + '(' + item.tagcode + ')',
+            name: `${item.name}${item.tagcode ? `(${item.tagcode})` : ""}`,
             tagcode: item.tagcode,
             grade: getGradeName(item.grade),
             organization: item.organization,
             secondOrg: item.secondOrg,
             billingDate: item.billingDate,
-            currentDueDate: parseTime(item.currentDueDate, '{m}-{d}'),
+            currentDueDate: parseTime(item.currentDueDate, "{m}-{d}"),
             creditLimit: item.creditLimit,
             bill: item.bill,
             isBill: item.isBill,
@@ -63,7 +63,7 @@ const fetchMycards = async () => {
             name: "全部",
             logo: ""
           })
-          treeData.value = res.data.banks.map(item => {
+          treeData.value = res.data.banks.map((item) => {
             return {
               id: item.id,
               label: item.name,
@@ -85,21 +85,21 @@ const fetchMycards = async () => {
 }
 
 // 搜索方法
-const handleFilter = () => {
+function handleFilter() {
   fetchMycards()
 }
 
 // 选择银行
-const handleMenuClick = (node: any) => {
+function handleMenuClick(node: any) {
   listQuery.bankId = node.index
   fetchMycards()
 }
 
-const renderEmpty = () => {
+function renderEmpty() {
   return loading.value ? "加载中..." : "暂无数据"
 }
 
-const handleBill = (row: any) => {
+function handleBill(row: any) {
   billForm.id = row.id
   billForm.type = row.isBill
   if (row.isBill !== 1) {

@@ -51,6 +51,7 @@ async function fetchAccounts() {
             currency: item.currency?.name || "",
             currencyId: item.currencyId,
             isDefault: item.isDefault === 1,
+            isLedger: item.isLedger === 1,
             isHidden: item.isHidden === 1,
             remark: item.remark || ""
           }

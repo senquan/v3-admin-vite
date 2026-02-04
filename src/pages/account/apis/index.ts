@@ -14,7 +14,7 @@ export function fetchListOpt() {
     url: "account/list",
     method: "get",
     params: {
-      format: 'opt'
+      format: "opt"
     }
   })
 }

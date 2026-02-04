@@ -41,11 +41,17 @@ export interface ProjectDetailResponseData {
   }
 }
 
+export interface LedgerAccountData {
+  id: number
+  name: string
+}
+
 export interface ProjectListResponseData {
   code: number
   message: string
   data: {
     projects: ProjectListData[]
+    accounts: LedgerAccountData[]
     total: number
     page: number
     pageSize: number
