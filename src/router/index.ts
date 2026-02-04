@@ -100,7 +100,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/project/index.vue"),
         name: "Project",
         meta: {
-          title: "项目审计"
+          title: "项目台账"
         }
       }
     ]

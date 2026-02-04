@@ -26,9 +26,9 @@ export default defineConfig(({ mode }) => {
         "@@": resolve(__dirname, "src/common")
       }
     },
-    define: {
-      "process.env": { ...process.env }
-    },
+    // define: {
+    //   "process.env": { ...process.env }
+    // },
     // 开发环境服务器配置
     server: {
       // 是否监听所有地址
@@ -37,10 +37,12 @@ export default defineConfig(({ mode }) => {
       port: 4173,
       // 端口被占用时，是否直接退出
       strictPort: false,
-      https: {
-        cert: resolve(__dirname, "cer/fullchain.pem"),
-        key: resolve(__dirname, "cer/privkey.pem")
-      },
+      https: mode === "production"
+        ? {
+            cert: resolve(__dirname, "cer/fullchain.pem"),
+            key: resolve(__dirname, "cer/privkey.pem")
+          }
+        : undefined,
       // 是否自动打开浏览器
       open: true,
       // 反向代理
