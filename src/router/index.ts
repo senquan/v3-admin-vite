@@ -1,7 +1,7 @@
 import type { RouteRecordRaw } from "vue-router"
+import { createRouter } from "vue-router"
 import { routerConfig } from "@/router/config"
 import { registerNavigationGuard } from "@/router/guard"
-import { createRouter } from "vue-router"
 import { flatMultiLevelRoutes } from "./helper"
 
 const Layouts = () => import("@/layouts/index.vue")
@@ -73,7 +73,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "AccountRecord",
         meta: {
           title: "查账记账",
-          elIcon: "DataBoard",
+          elIcon: "Notebook",
           affix: true
         }
       }
@@ -84,7 +84,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "财务中心",
-      elIcon: "DataBoard"
+      elIcon: "Wallet"
     },
     children: [
       {
@@ -92,7 +92,8 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/account/index.vue"),
         name: "Account",
         meta: {
-          title: "账户管理"
+          title: "账户管理",
+          elIcon: "Money"
         }
       },
       {
@@ -100,7 +101,17 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/project/index.vue"),
         name: "Project",
         meta: {
-          title: "项目台账"
+          title: "项目台账",
+          elIcon: "DocumentCopy"
+        }
+      },
+      {
+        path: "tag",
+        component: () => import("@/pages/tag/index.vue"),
+        name: "Tag",
+        meta: {
+          title: "记账项目",
+          elIcon: "PriceTag"
         }
       }
     ]
@@ -112,7 +123,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     name: "Creditcard",
     meta: {
       title: "信用卡",
-      elIcon: "DataBoard"
+      elIcon: "CreditCard"
     },
     children: [
       {
@@ -120,7 +131,8 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/creditcard/mycards/index.vue"),
         name: "MyCards",
         meta: {
-          title: "我的卡包"
+          title: "我的卡包",
+          elIcon: "CreditCard"
         }
       },
       {
@@ -129,6 +141,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "Cards",
         meta: {
           title: "卡片大全",
+          elIcon: "CreditCard",
           keepAlive: true
         }
       }
@@ -138,7 +151,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     path: "/settings",
     meta: {
       title: "系统设置",
-      elIcon: "Link"
+      elIcon: "Setting"
     },
     children: [
       {
@@ -164,7 +177,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "实验室",
-      elIcon: "Link"
+      elIcon: "MilkTea"
     },
     children: [
       {
@@ -181,56 +194,6 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "Link3",
         meta: {
           title: "中文文档3"
-        }
-      }
-    ]
-  },
-  {
-    path: "/settings3",
-    meta: {
-      title: "系统设置3",
-      elIcon: "Link"
-    },
-    children: [
-      {
-        path: "https://juejin.cn/post/74451518951215432093",
-        component: () => {},
-        name: "Link13",
-        meta: {
-          title: "中文文档3"
-        }
-      },
-      {
-        path: "https://juejin.cn/post/74451518951215432094",
-        component: () => {},
-        name: "Link4",
-        meta: {
-          title: "中文文档3"
-        }
-      }
-    ]
-  },
-  {
-    path: "/settings4",
-    meta: {
-      title: "系统设置4",
-      elIcon: "Link"
-    },
-    children: [
-      {
-        path: "https://juejin.cn/post/74451518951215432094",
-        component: () => {},
-        name: "Link14",
-        meta: {
-          title: "中文文档3"
-        }
-      },
-      {
-        path: "https://juejin.cn/post/74451518951215432095",
-        component: () => {},
-        name: "Link45",
-        meta: {
-          title: "中文文档5"
         }
       }
     ]
