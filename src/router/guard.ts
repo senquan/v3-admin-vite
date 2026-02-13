@@ -19,7 +19,6 @@ export function registerNavigationGuard(router: Router) {
   router.beforeEach(async (to, _from) => {
     NProgress.start()
     const userStore = useUserStore()
-    const permissionStore = usePermissionStore()
     // 如果没有登录
     if (!getToken()) {
       // 如果在免登录的白名单中，则直接进入
@@ -34,10 +33,9 @@ export function registerNavigationGuard(router: Router) {
     // 否则要重新获取权限角色
     try {
       await userStore.getInfo()
-      // 注意：角色必须是一个数组！ 例如: ["admin"] 或 ["developer", "editor"]
-      const roles = userStore.roles
+      const permissionStore = usePermissionStore()
       // 生成可访问的 Routes
-      routerConfig.dynamic ? permissionStore.setRoutes(roles) : permissionStore.setAllRoutes()
+      routerConfig.dynamic ? permissionStore.generateRoutes() : permissionStore.setAllRoutes()
       // 将 "有访问权限的动态路由" 添加到 Router 中
       permissionStore.addRoutes.forEach(route => router.addRoute(route))
       // 设置 replace: true, 因此导航将不会留下历史记录
