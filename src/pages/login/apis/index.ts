@@ -18,6 +18,16 @@ export function loginApi(data: Auth.LoginRequestData) {
   })
 }
 
+export function loginWithToken(token: string) {
+  return request<Auth.LoginResponseData>({
+    url: "auth/login-token",
+    method: "post",
+    data: {
+      token
+    }
+  })
+}
+
 export function registerApi(data: Auth.RegisterRequestData) {
   return request<Auth.RegisterResponseData>({
     url: "users/register",

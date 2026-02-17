@@ -4,7 +4,9 @@ import { routerConfig } from "@/router/config"
 import { registerNavigationGuard } from "@/router/guard"
 import { flatMultiLevelRoutes } from "./helper"
 
-const Layouts = () => import("@/layouts/index.vue")
+function Layouts() {
+  return import("@/layouts/index.vue")
+}
 
 /**
  * @name 常驻路由
@@ -84,7 +86,7 @@ export function resetRouter() {
     // 注意：所有动态路由路由必须带有 Name 属性，否则可能会不能完全重置干净
     router.getRoutes().forEach((route) => {
       const { name, meta } = route
-      if (name && meta.roles?.length) {
+      if (name && Array.isArray(meta.roles) && meta.roles.length) {
         router.hasRoute(name) && router.removeRoute(name)
       }
     })

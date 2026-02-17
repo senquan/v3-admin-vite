@@ -106,6 +106,7 @@ export const usePermissionStore = defineStore("permission", () => {
     if (remoteDynamicRoutes.value.length > 0) {
       allDynamicRoutes.push(...remoteDynamicRoutes.value)
     }
+    console.log("所有动态路由:", allDynamicRoutes)
     set(allDynamicRoutes)
   }
 

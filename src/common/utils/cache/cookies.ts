@@ -14,3 +14,15 @@ export function setToken(token: string) {
 export function removeToken() {
   Cookies.remove(CacheKey.TOKEN)
 }
+
+export function getLoginToken() {
+  return Cookies.get(CacheKey.LOGIN_TOKEN)
+}
+
+export function setLoginToken(token: string) {
+  Cookies.set(CacheKey.LOGIN_TOKEN, token)
+}
+
+export function removeLoginToken() {
+  Cookies.remove(CacheKey.LOGIN_TOKEN)
+}

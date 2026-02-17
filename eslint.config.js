@@ -23,6 +23,7 @@ export default antfu(
       // vue
       "vue/block-order": ["error", { order: ["script", "template", "style"] }],
       "vue/attributes-order": "off",
+      "vue/singleline-html-element-content-newline": "off",
       // ts
       "ts/no-use-before-define": "off",
       // node
