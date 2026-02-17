@@ -5,6 +5,7 @@ import { handleUrlToken, validateAndLogin } from "@@/utils/auth"
 import { getToken } from "@@/utils/cache/cookies"
 import NProgress from "nprogress"
 import { usePermissionStore } from "@/pinia/stores/permission"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { useUserStore } from "@/pinia/stores/user"
 import { routerConfig } from "@/router/config"
 import { isWhiteList } from "@/router/whitelist"
@@ -50,6 +51,8 @@ export function registerNavigationGuard(router: Router) {
     // 否则要重新获取权限角色
     try {
       await userStore.getInfo()
+      const systemParamsStore = useSystemParamsStore()
+      systemParamsStore.initData()
       const permissionStore = usePermissionStore()
       // 生成可访问的 Routes
       routerConfig.dynamic ? await permissionStore.generateRoutes() : permissionStore.setAllRoutes()

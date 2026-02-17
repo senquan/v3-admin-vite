@@ -9,6 +9,14 @@ export function getLoanDepositSummary(params: Finance.LoanDepositSummaryParams) 
   })
 }
 
+export function getFixedDeposits(params: Finance.FixedDepositsParams) {
+  return request<Finance.FixedDepositsResponseData>({
+    url: "/finance/fixed-deposits",
+    method: "get",
+    params
+  })
+}
+
 export function importDeposit(data: any, batchNo: string) {
   return request<Finance.CommonActionResult>({
     url: "/finance/import-deposit",

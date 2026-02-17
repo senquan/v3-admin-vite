@@ -2,6 +2,7 @@
 import type { FormInstance, FormRules } from "element-plus"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { getFixedDeposits } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
@@ -30,9 +31,8 @@ const formRef = ref<FormInstance>()
 const depositImportRef = ref<any>([])
 
 const searchForm = reactive({
-  companyName: "",
-  depositCode: "",
-  status: undefined as number | undefined,
+  keyword: "",
+  status: "0",
   dateRange: [] as string[]
 })
 
@@ -90,39 +90,28 @@ function calculateExpectedIncome() {
 async function fetchData() {
   loading.value = true
   try {
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                seq: 1,
-                depositCode: "FD2024001",
-                companyId: 1,
-                companyName: "上海工程局一分公司",
-                depositAmount: 1000000,
-                depositTerm: 12,
-                interestRate: 3.5,
-                startDate: "2024-01-01",
-                endDate: "2025-01-01",
-                expectedIncome: 35000,
-                actualIncome: 0,
-                status: 1,
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z",
-                remark: "年度定期存款年度定期存款年度定期存款"
-              }
-            ],
-            total: 1
-          }
-        })
-      }, 500)
-    })
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      keyword: searchForm.keyword,
+      status: Number(searchForm.status),
+      startDate: "",
+      endDate: ""
+    }
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
+    const response = await getFixedDeposits(params)
 
     const result: any = response
-    tableData.value = result.data.items
+    let count = 1
+    tableData.value = result.data.records.map((item: any) => {
+      return {
+        ...item,
+        seq: count++
+      }
+    })
     pagination.total = result.data.total
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
@@ -162,8 +151,8 @@ function handleSearch() {
 function resetSearch() {
   Object.assign(searchForm, {
     companyName: "",
-    depositCode: "",
-    status: undefined,
+    batchNo: "",
+    status: "0",
     dateRange: []
   })
   handleSearch()
@@ -268,20 +257,18 @@ onMounted(() => {
   <div class="fixed-deposit-management">
     <el-card>
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="存款编号">
-          <el-input v-model="searchForm.depositCode" placeholder="请输入存款编号" />
-        </el-form-item>
-        <el-form-item label="存款单位">
-          <el-input v-model="searchForm.companyName" placeholder="请输入存款单位" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入存款编号、单位名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
+            <el-option label="全部" :value="0" />
             <el-option label="存续中" :value="1" />
             <el-option label="已到期" :value="2" />
             <el-option label="已支取" :value="3" />
           </el-select>
         </el-form-item>
-        <el-form-item label="存款日期">
+        <el-form-item label="到期日期">
           <el-date-picker
             v-model="searchForm.dateRange"
             type="daterange"
@@ -290,6 +277,7 @@ onMounted(() => {
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
+            @change="handleSearch"
           />
         </el-form-item>
         <el-form-item>
@@ -315,7 +303,7 @@ onMounted(() => {
       >
         <el-table-column width="50" type="selection" />
         <el-table-column prop="seq" label="序号" width="80" align="center" />
-        <el-table-column prop="depositCode" label="存款编号" width="100" align="center" />
+        <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
           <template #default="{ row }">
@@ -351,14 +339,14 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
+        <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
         <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="导入批次" width="100" align="center" />
-        <el-table-column prop="recentInterestDate" label="最近计息日" width="100" align="center" />
+        <el-table-column prop="batchNo" label="导入批次" width="130" align="center" />
+        <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="center" />
         <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" @click="handleEdit(row)">编辑</el-button>
