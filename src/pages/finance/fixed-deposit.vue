@@ -38,7 +38,7 @@ const searchForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
@@ -301,7 +301,7 @@ onMounted(() => {
         v-loading="loading"
         header-cell-class-name="header-cell-fix"
       >
-        <el-table-column width="50" type="selection" />
+        <el-table-column width="50" type="selection" align="center" />
         <el-table-column prop="seq" label="序号" width="80" align="center" />
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
@@ -499,7 +499,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
+:deep(.search-form .el-form-item) {
   margin-bottom: 0;
 }
 

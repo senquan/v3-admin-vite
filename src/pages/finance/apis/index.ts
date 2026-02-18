@@ -17,6 +17,38 @@ export function getFixedDeposits(params: Finance.FixedDepositsParams) {
   })
 }
 
+export function getPaymentClearings(params: Finance.PaymentClearingParams) {
+  return request<Finance.PaymentClearingResponseData>({
+    url: "/finance/payment-receives",
+    method: "get",
+    params
+  })
+}
+
+export function receiveConfirm(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/receive/confirm",
+    method: "post",
+    data
+  })
+}
+
+export function receiveDelete(id: number) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/receive",
+    method: "delete",
+    data: { id }
+  })
+}
+
+export function updateReceive(data: any, id: number) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/receive/${id}`,
+    method: "put",
+    data
+  })
+}
+
 export function importDeposit(data: any, batchNo: string) {
   return request<Finance.CommonActionResult>({
     url: "/finance/import-deposit",
@@ -24,6 +56,18 @@ export function importDeposit(data: any, batchNo: string) {
     data: {
       deposits: data,
       batchNo
+    }
+  })
+}
+
+export function importReceive(data: any, batchNo: string, receiveType: number) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/import-receive",
+    method: "post",
+    data: {
+      receives: data,
+      batchNo,
+      receiveType
     }
   })
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { request } from '@/http/axios'
 import type { FormInstance, FormRules } from "element-plus"
 
 interface FundTransfer {
@@ -107,57 +108,29 @@ function generateTransferCode() {
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                transferCode: "FT202401010001",
-                fromCompanyCode: "SH002",
-                fromCompanyName: "上海工程局二分公司",
-                toCompanyCode: "SH001",
-                toCompanyName: "上海工程局",
-                transferAmount: 1000000,
-                transferType: 1,
-                transferDate: "2024-01-01",
-                transferStatus: 3,
-                transferDirection: "上划",
-                bankAccount: "1234567890123456",
-                remark: "月度资金上划",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 2,
-                transferCode: "FT202401020001",
-                fromCompanyCode: "SH001",
-                fromCompanyName: "上海工程局",
-                toCompanyCode: "SH003",
-                toCompanyName: "上海工程局三分公司",
-                transferAmount: 500000,
-                transferType: 2,
-                transferDate: "2024-01-02",
-                transferStatus: 2,
-                transferDirection: "下拨",
-                bankAccount: "9876543210987654",
-                remark: "项目资金下拨",
-                createdBy: "admin",
-                createdAt: "2024-01-02T00:00:00Z"
-              }
-            ],
-            total: 2
-          }
-        })
-      }, 500)
+    const params: any = {
+      page: pagination.page,
+      size: pagination.size
+    }
+    if (searchForm.fromCompanyName) params.fromCompanyName = searchForm.fromCompanyName
+    if (searchForm.toCompanyName) params.toCompanyName = searchForm.toCompanyName
+    if (searchForm.transferType) params.transferType = searchForm.transferType
+    if (searchForm.transferStatus) params.transferStatus = searchForm.transferStatus
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
+
+    const response = await request({
+      url: '/finance/fund-transfers',
+      method: 'get',
+      params
     })
 
-    const result: any = response
-    tableData.value = result.data.items
-    pagination.total = result.data.total
+    if (response.code === 200) {
+      tableData.value = response.data.items || []
+      pagination.total = response.data.total || 0
+    }
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
   } finally {
@@ -168,24 +141,14 @@ async function fetchData() {
 // 获取单位列表
 async function getCompanies() {
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, companyName: "上海工程局", companyCode: "SH001" },
-              { id: 2, companyName: "上海工程局二分公司", companyCode: "SH002" },
-              { id: 3, companyName: "上海工程局三分公司", companyCode: "SH003" }
-            ]
-          }
-        })
-      }, 300)
+    const response = await request({
+      url: '/finance/companies',
+      method: 'get'
     })
 
-    const result: any = response
-    companyOptions.value = result.data.items
+    if (response.code === 200) {
+      companyOptions.value = response.data.items || []
+    }
   } catch (error) {
     console.error("获取单位列表失败:", error)
   }
@@ -247,10 +210,16 @@ async function handleDelete(row: FundTransfer) {
       type: "warning"
     })
 
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
+    const response = await request({
+      url: '/finance/fund-transfer',
+      method: 'delete',
+      data: { id: row.id }
+    })
+
+    if (response.code === 200) {
+      ElMessage.success("删除成功")
+      fetchData()
+    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
@@ -266,12 +235,32 @@ async function handleSubmit() {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
+    const url = form.id ? `/finance/fund-transfer/${form.id}` : '/finance/fund-transfer'
+    const method = form.id ? 'put' : 'post'
 
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
+    const response = await request({
+      url,
+      method,
+      data: {
+        transferCode: form.transferCode,
+        fromCompanyCode: form.fromCompanyCode,
+        fromCompanyName: form.fromCompanyName,
+        toCompanyCode: form.toCompanyCode,
+        toCompanyName: form.toCompanyName,
+        transferAmount: form.transferAmount,
+        transferType: form.transferType,
+        transferDate: form.transferDate,
+        transferStatus: form.transferStatus,
+        bankAccount: form.bankAccount,
+        remark: form.remark
+      }
+    })
+
+    if (response.code === 200) {
+      ElMessage.success(form.id ? "更新成功" : "创建成功")
+      showCreateDialog.value = false
+      fetchData()
+    }
   } catch (error) {
     console.error("提交失败:", error)
   } finally {

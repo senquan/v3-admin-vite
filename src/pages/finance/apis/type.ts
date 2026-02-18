@@ -1,5 +1,5 @@
 export interface FixedDepositsResponseData extends ApiResponseData<FixedDeposits> {}
-
+export interface PaymentClearingResponseData extends ApiResponseData<PaymentClearing> {}
 export interface LoanDepositSummaryParams {
   companyCode: string
   startDate: string
@@ -12,6 +12,14 @@ export interface FixedDepositsParams {
   keyword?: string
   startDate?: string
   endDate?: string
+  status?: number
+  page?: number
+  size?: number
+}
+
+export interface PaymentClearingParams {
+  receiveType?: number
+  keyword?: string
   status?: number
   page?: number
   size?: number
@@ -42,4 +50,8 @@ export interface FixedDeposits {
   depositInterest: number
   totalAmount: number
   status: number
+}
+
+export interface PaymentClearing {
+  [key: string]: any
 }

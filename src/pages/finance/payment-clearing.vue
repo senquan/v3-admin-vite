@@ -1,221 +1,246 @@
 <script setup lang="ts">
-import type { FormInstance, FormRules } from "element-plus"
+import { formattedMoney } from "@@/utils"
+import { formatDateTime } from "@@/utils/datetime"
+import { getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
+import ReceiveImport from "./forms/_receive-import.vue"
 
-interface PaymentClearing {
+interface PaymentReceive {
   id: number
-  companyCode: string
+  receiveType: number
+  receiveDate: string
+  sapCode: string | null
   companyName: string
-  billNumber: string // 票据编号
-  billType: string // 票据类型：银行承兑汇票、商业承兑汇票
-  billAmount: number // 票据金额
-  billDate: string // 出票日期
-  maturityDate: string // 到期日期
-  discountRate: number // 贴现率
-  discountAmount: number // 贴现金额
-  discountDate: string // 贴现日期
-  clearingStatus: number // 清算状态：1-未贴现，2-已贴现，3-已到期，4-已清算
-  clearingDate: string // 清算日期
-  remark: string
+  customerName: string | null
+  projectName: string | null
+  receiveAmount: number
+  receiveBank: string | null
+  billNo: string | null
+  billType: string | null
+  billAmount: number
+  dueDate: string
+  collectionDate: string | null
+  received: number
+  discountDate: string | null
+  discountAmount: number
+  discountFee: number
+  accountAmount: number
+  accountSet: string | null
+  status: number
   createdBy: string
+  creator: { name: string }
   createdAt: string
+  updator: { name: string }
+  updatedAt: string
+  batchNo: string
 }
 
 const loading = ref(false)
-const submitLoading = ref(false)
-const showCreateDialog = ref(false)
-const dialogTitle = ref("新增票据")
-const formRef = ref<FormInstance>()
+const selectedRow = ref<PaymentReceive | null>(null)
+const showEditDialog = ref(false)
+const receiveImportRef = ref<any>(null)
 
 const searchForm = reactive({
-  companyName: "",
-  companyCode: "",
-  billType: "",
-  clearingStatus: undefined as number | undefined,
+  keyword: "",
+  status: 0,
   dateRange: [] as string[]
 })
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
-const tableData = ref<PaymentClearing[]>([])
-const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
+const tableRef = ref<any>(null)
+const tableData = ref<PaymentReceive[]>([])
 
-const form = reactive({
-  id: undefined as number | undefined,
-  companyCode: "",
-  companyName: "",
-  billNumber: "",
-  billType: "",
-  billAmount: undefined as number | undefined,
-  billDate: "",
-  maturityDate: "",
-  discountRate: undefined as number | undefined,
-  discountAmount: undefined as number | undefined,
+const editForm = reactive({
+  id: 0,
+  receiveAmount: undefined as number | undefined,
+  collectionDate: "",
   discountDate: "",
-  clearingStatus: 1,
-  clearingDate: "",
-  remark: ""
+  discountAmount: undefined as number | undefined,
+  discountFee: undefined as number | undefined,
+  received: 0 as number,
+  accountAmount: undefined as number | undefined
 })
 
-const rules = reactive<FormRules>({
-  companyCode: [{ required: true, message: "请输入单位编号", trigger: "blur" }],
-  companyName: [{ required: true, message: "请输入单位名称", trigger: "blur" }],
-  billNumber: [{ required: true, message: "请输入票据编号", trigger: "blur" }],
-  billType: [{ required: true, message: "请选择票据类型", trigger: "change" }],
-  billAmount: [{ required: true, message: "请输入票据金额", trigger: "blur" }],
-  billDate: [{ required: true, message: "请选择出票日期", trigger: "change" }],
-  maturityDate: [{ required: true, message: "请选择到期日期", trigger: "change" }]
-})
+// function getReceiveTypeLabel(type: number) {
+//   const labels = { 1: "银行到款", 2: "票据到款" }
+//   return labels[type as keyof typeof labels] || "未知"
+// }
 
-// 获取清算状态标签
-function getClearingStatusLabel(status: number) {
-  const labels = { 1: "未贴现", 2: "已贴现", 3: "已到期", 4: "已清算" }
+function getStatusLabel(status: number) {
+  const labels = { 1: "待确认", 2: "已生效", 3: "已清算", 4: "已删除" }
   return labels[status as keyof typeof labels] || "未知"
 }
 
-// 获取清算状态标签类型
-function getClearingStatusType(status: number) {
-  const types = { 1: "info", 2: "warning", 3: "danger", 4: "success" }
+function getStatusType(status: number) {
+  const types = { 1: "warning", 2: "success", 3: "primary", 4: "info" }
   return types[status as keyof typeof types] || "info"
 }
 
-// 获取票据类型标签
-function getBillTypeLabel(type: string) {
-  const labels = { bank: "银行承兑汇票", commercial: "商业承兑汇票" }
-  return labels[type as keyof typeof labels] || type
+// function getBillTypeLabel(type: string | null) {
+//   if (!type) return "-"
+//   const labels = { 1: "银行承兑汇票", 2: "商业承兑汇票" }
+//   return labels[type as unknown as keyof typeof labels] || type
+// }
+
+function formatAmount(amount: number | undefined | null) {
+  if (amount === undefined || amount === null) return "-"
+  return formattedMoney(amount)
 }
 
-// 格式化金额
-function formatAmount(amount: number) {
-  return amount?.toFixed(2) || "0.00"
+function formatDate(date: string | null) {
+  return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
 }
 
-// 格式化日期
-function formatDate(date: string) {
-  return date ? new Date(date).toLocaleDateString() : "-"
-}
-
-// 计算贴现金额
-function calculateDiscountAmount() {
-  if (form.billAmount && form.discountRate) {
-    // 简单贴现计算：票据金额 × (1 - 贴现率)
-    return form.billAmount * (1 - form.discountRate / 100)
-  }
-  return 0
-}
-
-// 查询数据
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                companyCode: "SH001",
-                companyName: "上海工程局一分公司",
-                billNumber: "BC2024001",
-                billType: "bank",
-                billAmount: 1000000,
-                billDate: "2024-01-01",
-                maturityDate: "2024-07-01",
-                discountRate: 3.5,
-                discountAmount: 982500,
-                discountDate: "2024-01-15",
-                clearingStatus: 2,
-                clearingDate: "",
-                remark: "正常贴现",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 2,
-                companyCode: "SH002",
-                companyName: "上海工程局二分公司",
-                billNumber: "CC2024001",
-                billType: "commercial",
-                billAmount: 500000,
-                billDate: "2024-02-01",
-                maturityDate: "2024-08-01",
-                discountRate: 0,
-                discountAmount: 0,
-                discountDate: "",
-                clearingStatus: 1,
-                clearingDate: "",
-                remark: "未贴现",
-                createdBy: "admin",
-                createdAt: "2024-02-01T00:00:00Z"
-              }
-            ],
-            total: 2
-          }
-        })
-      }, 500)
-    })
+    const params = {
+      keyword: searchForm.keyword || undefined,
+      status: searchForm.status,
+      page: pagination.page,
+      size: pagination.size
+    }
+    const response = await getPaymentClearings(params)
 
     const result: any = response
-    tableData.value = result.data.items
+    let count = 1
+    tableData.value = result.data.records.map((item: any) => {
+      return {
+        ...item,
+        seq: count++
+      }
+    })
     pagination.total = result.data.total
-  } catch (error) {
-    ElMessage.error(`获取数据失败: ${error}`)
+  } catch (error: any) {
+    ElMessage.error(error.message || "获取数据失败")
   } finally {
     loading.value = false
   }
 }
 
-// 获取单位列表
-async function getCompanies() {
-  try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, companyName: "上海工程局一分公司", companyCode: "SH001" },
-              { id: 2, companyName: "上海工程局二分公司", companyCode: "SH002" },
-              { id: 3, companyName: "上海工程局三分公司", companyCode: "SH003" }
-            ]
-          }
-        })
-      }, 300)
-    })
+async function handleImport() {
+  receiveImportRef.value?.open()
+}
 
-    const result: any = response
-    companyOptions.value = result.data.items
-  } catch (error) {
-    console.error("获取单位列表失败:", error)
+function importSuccess() {
+  handleSearch()
+}
+
+function handleEdit(row: PaymentReceive) {
+  selectedRow.value = row
+  editForm.id = row.id
+  editForm.receiveAmount = Number(row.receiveAmount)
+  editForm.collectionDate = row.collectionDate || ""
+  editForm.discountDate = row.discountDate || ""
+  editForm.discountAmount = Number(row.discountAmount)
+  editForm.discountFee = Number(row.discountFee)
+  editForm.accountAmount = Number(row.accountAmount)
+  editForm.received = row.received || 0
+  showEditDialog.value = true
+}
+
+async function handleSaveEdit() {
+  try {
+    const updateData: any = {}
+
+    updateData.collectionDate = editForm.collectionDate || null
+    updateData.discountDate = editForm.discountDate || null
+    updateData.discountAmount = editForm.discountAmount
+    updateData.discountFee = editForm.discountFee
+    updateData.accountAmount = editForm.accountAmount
+    updateData.received = editForm.received
+
+    const response = await updateReceive(updateData, editForm.id)
+
+    if (response.code === 0) {
+      ElMessage.success("更新成功")
+      showEditDialog.value = false
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "更新失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "更新失败")
   }
 }
 
-// 搜索
+async function handleConfirm() {
+  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
+  if (selected.length === 0) {
+    ElMessage.warning("请选择待确认的记录")
+    return
+  }
+
+  try {
+    const response = await receiveConfirm({
+      ids: selected.map((r: any) => r.id)
+    })
+
+    if (response.code === 0) {
+      ElMessage.success(response.message || "确认成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "确认失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "确认失败")
+  }
+}
+
+async function handleDelete(row: PaymentReceive) {
+  try {
+    if (row.status !== 1) {
+      ElMessage.warning("只能删除待确认的记录")
+      return
+    }
+    await ElMessageBox.confirm(`确定要删除该记录吗？`, "提示", { type: "warning" })
+
+    const response = await receiveDelete(row.id)
+
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "删除失败")
+    }
+  } catch (error: any) {
+    if (error !== "cancel") {
+      ElMessage.error(error.message || "删除失败")
+    }
+  }
+}
+
+function handleDateChange() {
+  editForm.received = 1
+}
+
+function handleReceive() {
+  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.receiveType === 2 && row.received === 0)
+  if (selected.length === 0) {
+    ElMessage.warning("请选择要操作的记录，票据类型并且未到账。")
+    return
+  }
+  handleEdit(selected.pop())
+}
+
 function handleSearch() {
   pagination.page = 1
   fetchData()
 }
 
-// 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    companyName: "",
-    companyCode: "",
-    billType: "",
-    clearingStatus: undefined,
+    keyword: "",
+    status: 0,
     dateRange: []
   })
   handleSearch()
 }
 
-// 分页变化
 function handleSizeChange(val: number) {
   pagination.size = val
   fetchData()
@@ -226,235 +251,80 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
-// 编辑
-function handleEdit(row: PaymentClearing) {
-  dialogTitle.value = "编辑票据"
-  Object.assign(form, {
-    id: row.id,
-    companyCode: row.companyCode,
-    companyName: row.companyName,
-    billNumber: row.billNumber,
-    billType: row.billType,
-    billAmount: row.billAmount,
-    billDate: row.billDate,
-    maturityDate: row.maturityDate,
-    discountRate: row.discountRate,
-    discountAmount: row.discountAmount,
-    discountDate: row.discountDate,
-    clearingStatus: row.clearingStatus,
-    clearingDate: row.clearingDate,
-    remark: row.remark
-  })
-  showCreateDialog.value = true
-}
-
-// 删除
-async function handleDelete(row: PaymentClearing) {
-  try {
-    await ElMessageBox.confirm(`确定要删除票据 ${row.billNumber} 吗？`, "提示", {
-      type: "warning"
-    })
-
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
-  } catch (error) {
-    if (error !== "cancel") {
-      ElMessage.error("删除失败")
-    }
-  }
-}
-
-// 贴现操作
-function handleDiscount(row: PaymentClearing) {
-  dialogTitle.value = "票据贴现"
-  Object.assign(form, {
-    id: row.id,
-    companyCode: row.companyCode,
-    companyName: row.companyName,
-    billNumber: row.billNumber,
-    billType: row.billType,
-    billAmount: row.billAmount,
-    billDate: row.billDate,
-    maturityDate: row.maturityDate,
-    discountRate: undefined,
-    discountAmount: undefined,
-    discountDate: "",
-    clearingStatus: 2,
-    clearingDate: "",
-    remark: row.remark
-  })
-  showCreateDialog.value = true
-}
-
-// 清算操作
-function handleClearing(row: PaymentClearing) {
-  dialogTitle.value = "票据清算"
-  Object.assign(form, {
-    id: row.id,
-    companyCode: row.companyCode,
-    companyName: row.companyName,
-    billNumber: row.billNumber,
-    billType: row.billType,
-    billAmount: row.billAmount,
-    billDate: row.billDate,
-    maturityDate: row.maturityDate,
-    discountRate: row.discountRate,
-    discountAmount: row.discountAmount,
-    discountDate: row.discountDate,
-    clearingStatus: 4,
-    clearingDate: new Date().toISOString().split("T")[0],
-    remark: row.remark
-  })
-  showCreateDialog.value = true
-}
-
-// 提交表单
-async function handleSubmit() {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-    submitLoading.value = true
-
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
-  } catch (error) {
-    console.error("提交失败:", error)
-  } finally {
-    submitLoading.value = false
-  }
-}
-
-// 重置表单
-function resetForm() {
-  if (formRef.value) {
-    formRef.value.resetFields()
-  }
-  Object.assign(form, {
-    id: undefined,
-    companyCode: "",
-    companyName: "",
-    billNumber: "",
-    billType: "",
-    billAmount: undefined,
-    billDate: "",
-    maturityDate: "",
-    discountRate: undefined,
-    discountAmount: undefined,
-    discountDate: "",
-    clearingStatus: 1,
-    clearingDate: "",
-    remark: ""
-  })
-}
-
-// 选择单位时自动填充编号
-function onCompanyChange(companyId: number) {
-  const company = companyOptions.value.find(item => item.id === companyId)
-  if (company) {
-    form.companyCode = company.companyCode
-    form.companyName = company.companyName
-  }
-}
-
-// 初始化
 onMounted(() => {
   fetchData()
-  getCompanies()
 })
 </script>
 
 <template>
-  <div class="payment-clearing-management">
+  <div class="payment-clearing">
     <el-card>
-      <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="单位名称">
-          <el-input v-model="searchForm.companyName" placeholder="请输入单位名称" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、客户名称、项目名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
-        <el-form-item label="单位编号">
-          <el-input v-model="searchForm.companyCode" placeholder="请输入单位编号" />
-        </el-form-item>
-        <el-form-item label="票据类型">
-          <el-select v-model="searchForm.billType" placeholder="请选择票据类型" clearable>
-            <el-option label="银行承兑汇票" value="bank" />
-            <el-option label="商业承兑汇票" value="commercial" />
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" style="width: 90px;" @change="handleSearch">
+            <el-option label="全部" :value="0" />
+            <el-option label="待确认" :value="1" />
+            <el-option label="已生效" :value="2" />
+            <el-option label="已清算" :value="3" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="清算状态">
-          <el-select v-model="searchForm.clearingStatus" placeholder="请选择状态" clearable>
-            <el-option label="未贴现" :value="1" />
-            <el-option label="已贴现" :value="2" />
-            <el-option label="已到期" :value="3" />
-            <el-option label="已清算" :value="4" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="日期范围">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="showCreateDialog = true">
-            <el-icon><Plus /></el-icon>
-            新增票据
+          <el-button type="primary" @click="handleImport">
+            <SvgIcon name="import" />
+            导入到款
           </el-button>
+          <el-button type="primary" @click="handleReceive">
+            <el-icon><DocumentChecked /></el-icon>
+            到账填报
+          </el-button>
+          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>
       </el-form>
 
-      <!-- 数据表格 -->
       <el-table
+        ref="tableRef"
         :data="tableData"
         border
         stripe
         v-loading="loading"
-        header-cell-class-name="text-center"
+        header-cell-class-name="header-cell-fix"
       >
-        <el-table-column prop="companyCode" label="单位编号" width="100" align="center" />
-        <el-table-column prop="companyName" label="单位名称" min-width="150" />
-        <el-table-column prop="billNumber" label="票据编号" width="120" align="center" />
-        <el-table-column prop="billType" label="票据类型" width="120" align="center">
+        <el-table-column width="50" type="selection" align="center" />
+        <el-table-column prop="receiveType" label="到款类型" width="100" align="center">
           <template #default="{ row }">
-            {{ getBillTypeLabel(row.billType) }}
+            {{ row.receiveType === 1 ? "银行到款" : "票据到款" }}
           </template>
         </el-table-column>
-        <el-table-column prop="billAmount" label="票据金额(元)" width="120" align="right">
+        <el-table-column prop="receiveDate" label="到款日期" width="110" align="center">
           <template #default="{ row }">
-            {{ formatAmount(row.billAmount) }}
+            {{ formatDate(row.receiveDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="billDate" label="出票日期" width="120" align="center">
+        <el-table-column prop="sapCode" label="SAP代码" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="companyName" label="单位名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="customerName" label="客户名称" width="220" show-overflow-tooltip />
+        <el-table-column prop="projectName" label="项目名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right">
           <template #default="{ row }">
-            {{ formatDate(row.billDate) }}
+            {{ formatAmount(row.accountAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="maturityDate" label="到期日期" width="120" align="center">
+        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center" />
+        <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
+        <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
+        <el-table-column prop="receiptDate" label="托收日期" width="120" align="center">
           <template #default="{ row }">
-            {{ formatDate(row.maturityDate) }}
+            {{ formatDate(row.receiptDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="discountRate" label="贴现率(%)" width="100" align="center">
+        <el-table-column prop="received" label="是否已到账" width="80" align="center">
           <template #default="{ row }">
-            {{ row.discountRate ? `${row.discountRate}%` : "-" }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="discountAmount" label="贴现金额(元)" width="120" align="right">
-          <template #default="{ row }">
-            {{ row.discountAmount ? formatAmount(row.discountAmount) : '-' }}
+            {{ row.received === 1 ? "已到账" : "未到账" }}
           </template>
         </el-table-column>
         <el-table-column prop="discountDate" label="贴现日期" width="120" align="center">
@@ -462,48 +332,159 @@ onMounted(() => {
             {{ formatDate(row.discountDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="clearingStatus" label="清算状态" width="100" align="center">
+        <el-table-column prop="discountAmount" label="贴现到款金额" width="120" align="center" />
+        <el-table-column prop="discountFee" label="贴现手续费" width="120" align="center" />
+        <el-table-column prop="accountSet" label="账套" width="100" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="getClearingStatusType(row.clearingStatus) as any">
-              {{ getClearingStatusLabel(row.clearingStatus) }}
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="clearingDate" label="清算日期" width="120" align="center">
+        <el-table-column prop="creator.name" label="创建人" width="120" align="center" />
+        <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
           <template #default="{ row }">
-            {{ formatDate(row.clearingDate) }}
+            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120" />
-        <el-table-column label="操作" width="250" fixed="right" align="center">
+        <el-table-column prop="batchNo" label="批次号" width="130" />
+        <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button
-              v-if="row.clearingStatus === 1"
-              type="warning"
-              @click="handleDiscount(row)"
-              size="small"
-            >
-              贴现
-            </el-button>
-            <el-button
-              v-if="row.clearingStatus === 2 || row.clearingStatus === 3"
-              type="success"
-              @click="handleClearing(row)"
-              size="small"
-            >
-              清算
-            </el-button>
-            <el-button type="primary" @click="handleEdit(row)" size="small">
-              编辑
-            </el-button>
-            <el-button type="danger" @click="handleDelete(row)" size="small">
-              删除
-            </el-button>
+            <el-button type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
+      <el-dialog v-model="showEditDialog" title="贴现填报" width="600px">
+        <el-form :model="editForm" label-width="80px">
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="SAP代码">
+                <el-input :model-value="selectedRow?.sapCode" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="单位名称">
+                <el-input :model-value="selectedRow?.companyName" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="项目名称">
+                <el-input :model-value="selectedRow?.projectName" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="票据金额">
+                <el-input :model-value="selectedRow?.billAmount" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="24">
+              <el-form-item label="客户名称">
+                <el-input :model-value="selectedRow?.customerName" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="托收日期">
+                <el-date-picker
+                  v-model="editForm.collectionDate"
+                  type="date"
+                  placeholder="选择托收日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  @change="handleDateChange"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="是否已到账" label-width="100px">
+                <el-select v-model="editForm.received">
+                  <el-option label="已到账" :value="1" />
+                  <el-option label="未到账" :value="0" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="贴现日期">
+                <el-date-picker
+                  v-model="editForm.discountDate"
+                  type="date"
+                  placeholder="选择贴现日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="贴现到款金额" label-width="100px">
+                <el-input-number
+                  v-model="editForm.discountAmount"
+                  :min="0"
+                  :precision="2"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="贴现手续费" label-width="100px">
+                <el-input-number
+                  v-model="editForm.discountFee"
+                  :min="0"
+                  :precision="2"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="到款金额" label-width="100px">
+                <el-input-number
+                  v-model="editForm.accountAmount"
+                  :min="0"
+                  :precision="2"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="创建人">
+                <el-input :model-value="selectedRow?.creator.name" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="创建日期">
+                <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="修改人">
+                <el-input :model-value="selectedRow?.updator.name" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="修改日期">
+                <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+        <template #footer>
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleSaveEdit">保存</el-button>
+        </template>
+      </el-dialog>
+
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.size"
@@ -516,185 +497,15 @@ onMounted(() => {
       />
     </el-card>
 
-    <!-- 新增/编辑/贴现/清算对话框 -->
-    <el-dialog
-      v-model="showCreateDialog"
-      :title="dialogTitle"
-      width="700px"
-      @close="resetForm"
-    >
-      <el-form
-        :model="form"
-        :rules="rules"
-        ref="formRef"
-        label-width="100px"
-      >
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="单位名称" prop="companyName">
-              <el-select
-                v-model="form.companyName"
-                placeholder="请选择单位"
-                filterable
-                @change="onCompanyChange"
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="单位编号" prop="companyCode">
-              <el-input v-model="form.companyCode" placeholder="请输入单位编号" disabled />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="票据编号" prop="billNumber">
-              <el-input v-model="form.billNumber" placeholder="请输入票据编号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="票据类型" prop="billType">
-              <el-select v-model="form.billType" placeholder="请选择票据类型">
-                <el-option label="银行承兑汇票" value="bank" />
-                <el-option label="商业承兑汇票" value="commercial" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="票据金额" prop="billAmount">
-              <el-input-number
-                v-model="form.billAmount"
-                placeholder="请输入票据金额"
-                :min="0"
-                :step="1000"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="出票日期" prop="billDate">
-              <el-date-picker
-                v-model="form.billDate"
-                type="date"
-                placeholder="请选择出票日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="到期日期" prop="maturityDate">
-              <el-date-picker
-                v-model="form.maturityDate"
-                type="date"
-                placeholder="请选择到期日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="清算状态" prop="clearingStatus">
-              <el-select v-model="form.clearingStatus" placeholder="请选择清算状态" disabled>
-                <el-option label="未贴现" :value="1" />
-                <el-option label="已贴现" :value="2" />
-                <el-option label="已到期" :value="3" />
-                <el-option label="已清算" :value="4" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 贴现相关字段 -->
-        <div v-if="dialogTitle.includes('贴现') || form.clearingStatus >= 2">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="贴现率(%)" prop="discountRate">
-                <el-input-number
-                  v-model="form.discountRate"
-                  placeholder="请输入贴现率"
-                  :min="0"
-                  :max="100"
-                  :step="0.1"
-                  controls-position="right"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="贴现日期" prop="discountDate">
-                <el-date-picker
-                  v-model="form.discountDate"
-                  type="date"
-                  placeholder="请选择贴现日期"
-                  format="YYYY-MM-DD"
-                  value-format="YYYY-MM-DD"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <el-form-item label="贴现金额">
-            <el-input :value="formatAmount(calculateDiscountAmount())" disabled>
-              <template #prepend>¥</template>
-            </el-input>
-          </el-form-item>
-        </div>
-
-        <!-- 清算相关字段 -->
-        <div v-if="dialogTitle.includes('清算') || form.clearingStatus === 4">
-          <el-form-item label="清算日期" prop="clearingDate">
-            <el-date-picker
-              v-model="form.clearingDate"
-              type="date"
-              placeholder="请选择清算日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
-          </el-form-item>
-        </div>
-
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <ReceiveImport
+      ref="receiveImportRef"
+      @success="importSuccess"
+    />
   </div>
 </template>
 
 <style scoped>
-.payment-clearing-management {
+.payment-clearing {
   padding: 10px;
 }
 
@@ -705,17 +516,23 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
+:deep(.search-form .el-form-item) {
   margin-bottom: 0;
 }
 
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+}
+
+:deep(.el-tabs__content) {
+  padding-top: 10px;
 }
 </style>
