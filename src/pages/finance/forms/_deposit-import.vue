@@ -277,7 +277,7 @@ defineExpose({
           </div>
           <template #tip>
             <div class="el-upload__tip">
-              请上传Excel文件, 格式必须与模板一致，下载 <el-link type="primary" href="/templates/deposit-import.xlsx">定期存款导入模板</el-link>
+              请上传Excel文件, 格式必须与模板一致，下载 <el-link type="primary" href="/templates/deposit-import.xlsx">定期存款</el-link> 导入模板
             </div>
           </template>
         </el-upload>
@@ -285,9 +285,7 @@ defineExpose({
 
       <div class="progress-area">
         <div class="progress-info">
-          <span>处理进度: {{ processedRows }}/{{ totalRows }}</span>
-          <span>新增: <el-link @click="handleRecent(successCount)">{{ successCount }}</el-link></span>
-          <span>失败: {{ errorCount }}</span>
+          <span>处理进度: {{ processedRows }}/{{ totalRows }} [ 新增: <el-link @click="handleRecent(successCount)">{{ successCount }}</el-link> 失败: {{ errorCount }} ]</span>
         </div>
         <el-progress :percentage="progress" :status="progress === 100 ? 'success' : ''" />
       </div>

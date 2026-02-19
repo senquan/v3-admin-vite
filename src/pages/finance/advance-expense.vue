@@ -1,36 +1,39 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import { formattedMoney } from "@@/utils"
+import { formatDateTime } from "@@/utils/datetime"
+import { getAdvanceExpenses, getExpenseTypes } from "./apis"
+import AdvanceImport from "./forms/_advance-import.vue"
 
 interface AdvanceExpense {
   id: number
   advanceCode: string // 垫资编号
+  expenseType: string // 类型
   companyCode: string // 单位编号
   companyName: string // 单位名称
-  projectCode: string // 项目编号
-  projectName: string // 项目名称
-  advanceAmount: number // 垫资金额
-  advanceDate: string // 垫资日期
-  repaymentDate: string // 还款日期
-  actualRepaymentDate: string // 实际还款日期
-  repaymentAmount: number // 还款金额
-  advanceStatus: number // 垫资状态：1-垫资中，2-部分还款，3-已还清，4-逾期
-  interestRate: number // 利率(%)
-  interestAmount: number // 利息金额
+  businessYear: string // 年度
+  amount: number // 垫资金额
+  status: number // 状态：1-待确认，2-已确认，3-已删除
   remark: string
-  createdBy: string
+  details: any[]
+  creator: any
   createdAt: string
+  updator: any
+  updatedAt: string
 }
 
 const loading = ref(false)
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
+const showDetailDrawer = ref(false)
 const dialogTitle = ref("新增垫资")
 const formRef = ref<FormInstance>()
+const advanceImportRef = ref<any>(null)
+const currentRow = ref<AdvanceExpense | null>(null)
 
 const searchForm = reactive({
-  companyName: "",
-  projectCode: "",
-  advanceStatus: undefined as number | undefined,
+  keyword: "",
+  status: 0,
   dateRange: [] as string[]
 })
 
@@ -41,17 +44,22 @@ const pagination = reactive({
 })
 
 const tableData = ref<AdvanceExpense[]>([])
+const newItemTableData = ref<any[]>([])
 const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
-const projectOptions = ref<{ id: number, projectName: string, projectCode: string }[]>([])
+const expenseTypeMap = new Map<number, string>()
+const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
+
+const isAmountDisabled = computed(() => {
+  return expenseTypeMap.get(form.expenseType || 0) === "代垫费用"
+})
 
 const form = reactive({
   id: undefined as number | undefined,
-  advanceCode: "",
-  companyCode: "",
+  businessYear: new Date().getFullYear(),
+  companyId: undefined as number | undefined,
   companyName: "",
-  projectCode: "",
-  projectName: "",
-  advanceAmount: undefined as number | undefined,
+  expenseType: undefined as number | undefined,
+  amount: undefined as number | undefined,
   advanceDate: "",
   repaymentDate: "",
   actualRepaymentDate: "",
@@ -63,117 +71,59 @@ const form = reactive({
 })
 
 const rules = reactive<FormRules>({
+  businessYear: [{ required: true, message: "请选择年度", trigger: "change" }],
   companyName: [{ required: true, message: "请选择单位", trigger: "change" }],
-  projectName: [{ required: true, message: "请选择项目", trigger: "change" }],
-  advanceAmount: [{ required: true, message: "请输入垫资金额", trigger: "blur" }],
-  advanceDate: [{ required: true, message: "请选择垫资日期", trigger: "change" }],
+  expenseType: [{ required: true, message: "请选择类型", trigger: "change" }],
+  amount: [{ required: true, message: "请输入金额", trigger: "blur" }],
   repaymentDate: [{ required: true, message: "请选择还款日期", trigger: "change" }],
   interestRate: [{ required: true, message: "请输入利率", trigger: "blur" }]
 })
 
 // 获取垫资状态标签
 function getAdvanceStatusLabel(status: number) {
-  const labels = { 1: "垫资中", 2: "部分还款", 3: "已还清", 4: "逾期" }
+  const labels = { 1: "待确认", 2: "已确认", 3: "已删除" }
   return labels[status as keyof typeof labels] || "未知"
 }
 
 // 获取垫资状态标签类型
 function getAdvanceStatusType(status: number) {
-  const types = { 1: "warning", 2: "primary", 3: "success", 4: "danger" }
+  const types = { 1: "warning", 2: "success", 3: "danger" }
   return types[status as keyof typeof types] || "info"
 }
 
-// 格式化金额
-function formatAmount(amount: number) {
-  return amount?.toFixed(2) || "0.00"
-}
-
-// 格式化日期
-function formatDate(date: string) {
-  return date ? new Date(date).toLocaleDateString() : "-"
-}
-
-// 计算利息金额
-function calculateInterest() {
-  if (form.advanceAmount && form.interestRate && form.advanceDate && form.repaymentDate) {
-    const startDate = new Date(form.advanceDate)
-    const endDate = new Date(form.repaymentDate)
-    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    const interest = (form.advanceAmount * form.interestRate * days) / 36500
-    return Number.parseFloat(interest.toFixed(2))
+// 生成年份范围数组
+function range(start: number, diff: number) {
+  const result = []
+  for (let i = start; i >= start - diff; i--) {
+    result.push(i)
   }
-  return 0
-}
-
-// 生成垫资编号
-function generateAdvanceCode() {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
-  form.advanceCode = `AE${year}${month}${day}${random}`
+  return result
 }
 
 // 查询数据
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                advanceCode: "AE202401010001",
-                companyCode: "SH002",
-                companyName: "上海工程局二分公司",
-                projectCode: "P2024001",
-                projectName: "高铁建设项目A标段",
-                advanceAmount: 2000000,
-                advanceDate: "2024-01-01",
-                repaymentDate: "2024-07-01",
-                actualRepaymentDate: "",
-                repaymentAmount: 0,
-                advanceStatus: 1,
-                interestRate: 4.5,
-                interestAmount: 45000,
-                remark: "项目启动垫资",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 2,
-                advanceCode: "AE202401020001",
-                companyCode: "SH003",
-                companyName: "上海工程局三分公司",
-                projectCode: "P2024002",
-                projectName: "地铁建设项目B标段",
-                advanceAmount: 1500000,
-                advanceDate: "2024-01-02",
-                repaymentDate: "2024-06-02",
-                actualRepaymentDate: "2024-05-15",
-                repaymentAmount: 1500000,
-                advanceStatus: 3,
-                interestRate: 4.2,
-                interestAmount: 25200,
-                remark: "已按时还款",
-                createdBy: "admin",
-                createdAt: "2024-01-02T00:00:00Z"
-              }
-            ],
-            total: 2
-          }
-        })
-      }, 500)
-    })
+    const params: any = {
+      page: pagination.page,
+      size: pagination.size
+    }
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.status) params.status = searchForm.status
 
-    const result: any = response
-    tableData.value = result.data.items
-    pagination.total = result.data.total
+    const response = await getAdvanceExpenses(params)
+
+    if (response.code === 0) {
+      let count = 1
+      const data = response.data.records.map((item: any) => ({
+        ...item,
+        seq: count++
+      })) || []
+      pagination.total = response.data.total || 0
+      tableData.value = data
+    } else {
+      tableData.value = []
+    }
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
   } finally {
@@ -208,26 +158,13 @@ async function getCompanies() {
 }
 
 // 获取项目列表
-async function getProjects() {
+async function fetchExpenseTypes() {
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, projectName: "高铁建设项目A标段", projectCode: "P2024001" },
-              { id: 2, projectName: "地铁建设项目B标段", projectCode: "P2024002" },
-              { id: 3, projectName: "桥梁建设项目C标段", projectCode: "P2024003" }
-            ]
-          }
-        })
-      }, 300)
+    const response = await getExpenseTypes()
+    response.data.records.forEach((item: any) => {
+      expenseTypeMap.set(item.id, item.name)
     })
-
-    const result: any = response
-    projectOptions.value = result.data.items
+    expenseTypeOptions.value = Array.from(expenseTypeMap.entries()).map(([id, label]) => ({ id, label }))
   } catch (error) {
     console.error("获取项目列表失败:", error)
   }
@@ -242,9 +179,8 @@ function handleSearch() {
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    companyName: "",
-    projectCode: "",
-    advanceStatus: undefined,
+    keyword: "",
+    status: 0,
     dateRange: []
   })
   handleSearch()
@@ -262,26 +198,9 @@ function handleCurrentChange(val: number) {
 }
 
 // 编辑
-function handleEdit(row: AdvanceExpense) {
-  dialogTitle.value = "编辑垫资"
-  Object.assign(form, {
-    id: row.id,
-    advanceCode: row.advanceCode,
-    companyCode: row.companyCode,
-    companyName: row.companyName,
-    projectCode: row.projectCode,
-    projectName: row.projectName,
-    advanceAmount: row.advanceAmount,
-    advanceDate: row.advanceDate,
-    repaymentDate: row.repaymentDate,
-    actualRepaymentDate: row.actualRepaymentDate,
-    repaymentAmount: row.repaymentAmount,
-    advanceStatus: row.advanceStatus,
-    interestRate: row.interestRate,
-    interestAmount: row.interestAmount,
-    remark: row.remark
-  })
-  showCreateDialog.value = true
+function handleDetail(row: AdvanceExpense) {
+  currentRow.value = row
+  showDetailDrawer.value = true
 }
 
 // 删除
@@ -300,29 +219,6 @@ async function handleDelete(row: AdvanceExpense) {
       ElMessage.error("删除失败")
     }
   }
-}
-
-// 还款操作
-function handleRepayment(row: AdvanceExpense) {
-  dialogTitle.value = "垫资还款"
-  Object.assign(form, {
-    id: row.id,
-    advanceCode: row.advanceCode,
-    companyCode: row.companyCode,
-    companyName: row.companyName,
-    projectCode: row.projectCode,
-    projectName: row.projectName,
-    advanceAmount: row.advanceAmount,
-    advanceDate: row.advanceDate,
-    repaymentDate: row.repaymentDate,
-    actualRepaymentDate: new Date().toISOString().split("T")[0],
-    repaymentAmount: row.advanceAmount,
-    advanceStatus: row.advanceAmount === row.repaymentAmount ? 3 : 2,
-    interestRate: row.interestRate,
-    interestAmount: row.interestAmount,
-    remark: row.remark
-  })
-  showCreateDialog.value = true
 }
 
 // 提交表单
@@ -358,7 +254,7 @@ function resetForm() {
     companyName: "",
     projectCode: "",
     projectName: "",
-    advanceAmount: undefined,
+    amount: undefined,
     advanceDate: "",
     repaymentDate: "",
     actualRepaymentDate: "",
@@ -374,25 +270,60 @@ function resetForm() {
 function onCompanyChange(companyId: number) {
   const company = companyOptions.value.find(item => item.id === companyId)
   if (company) {
-    form.companyCode = company.companyCode
     form.companyName = company.companyName
   }
 }
 
-// 选择项目
-function onProjectChange(projectId: number) {
-  const project = projectOptions.value.find(item => item.id === projectId)
-  if (project) {
-    form.projectCode = project.projectCode
-    form.projectName = project.projectName
-  }
+async function handleImport() {
+  advanceImportRef.value?.open()
+}
+
+function importSuccess() {
+  handleSearch()
+}
+
+async function handleConfirm() {
+  // const selected = activeTab.value === "up"
+  //   ? upTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
+  //   : downTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
+  // if (selected.length === 0) {
+  //   ElMessage.warning("请选择待确认的记录")
+  //   return
+  // }
+
+  // try {
+  //   const response = await transferConfirm({
+  //     ids: selected.map((r: any) => r.id),
+  //     type: activeTab.value === "up" ? 1 : 2
+  //   })
+
+  //   if (response.code === 0) {
+  //     ElMessage.success(response.message || "确认成功")
+  //     fetchData()
+  //   } else {
+  //     ElMessage.error(response.message || "确认失败")
+  //   }
+  // } catch (error: any) {
+  //   ElMessage.error(error.message || "确认失败")
+  // }
+}
+
+function deleteRow(index: number) {
+  newItemTableData.value.splice(index, 1)
+}
+
+function onAddItem() {
+  newItemTableData.value.push({
+    name: "",
+    amount: 0
+  })
 }
 
 // 初始化
 onMounted(() => {
   fetchData()
   getCompanies()
-  getProjects()
+  fetchExpenseTypes()
 })
 </script>
 
@@ -401,30 +332,16 @@ onMounted(() => {
     <el-card>
       <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="单位名称">
-          <el-input v-model="searchForm.companyName" placeholder="请输入单位名称" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
-        <el-form-item label="项目编号">
-          <el-input v-model="searchForm.projectCode" placeholder="请输入项目编号" />
-        </el-form-item>
-        <el-form-item label="垫资状态">
-          <el-select v-model="searchForm.advanceStatus" placeholder="请选择状态" clearable>
-            <el-option label="垫资中" :value="1" />
-            <el-option label="部分还款" :value="2" />
-            <el-option label="已还清" :value="3" />
-            <el-option label="逾期" :value="4" />
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+            <el-option label="全部" :value="0" />
+            <el-option label="待确认" :value="1" />
+            <el-option label="已生效" :value="2" />
+            <el-option label="已删除" :value="3" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="垫资日期">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
@@ -433,6 +350,11 @@ onMounted(() => {
             <el-icon><Plus /></el-icon>
             新增垫资
           </el-button>
+          <el-button type="primary" @click="handleImport">
+            <SvgIcon name="import" />
+            导入
+          </el-button>
+          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>
       </el-form>
 
@@ -442,68 +364,35 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
-        header-cell-class-name="text-center"
+        header-cell-class-name="header-cell-fix"
       >
         <el-table-column prop="advanceCode" label="垫资编号" width="140" align="center" />
         <el-table-column prop="companyName" label="单位名称" min-width="150" />
-        <el-table-column prop="projectName" label="项目名称" min-width="180" />
-        <el-table-column prop="advanceAmount" label="垫资金额(元)" width="120" align="right">
+        <el-table-column prop="expenseType" label="类型" width="180" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ formatAmount(row.advanceAmount) }}
+            {{ expenseTypeMap.get(row.expenseType) }}
           </template>
         </el-table-column>
-        <el-table-column prop="advanceDate" label="垫资日期" width="120" align="center">
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
           <template #default="{ row }">
-            {{ formatDate(row.advanceDate) }}
+            {{ formattedMoney(row.amount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="repaymentDate" label="应还日期" width="120" align="center">
+        <el-table-column prop="remark" label="备注" min-width="150" />
+        <el-table-column prop="businessYear" label="年度" width="100" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            {{ formatDate(row.repaymentDate) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="repaymentAmount" label="已还金额(元)" width="120" align="right">
-          <template #default="{ row }">
-            {{ formatAmount(row.repaymentAmount) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="actualRepaymentDate" label="实际还款日期" width="120" align="center">
-          <template #default="{ row }">
-            {{ formatDate(row.actualRepaymentDate) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="interestRate" label="利率(%)" width="100" align="center">
-          <template #default="{ row }">
-            {{ row.interestRate }}%
-          </template>
-        </el-table-column>
-        <el-table-column prop="interestAmount" label="利息金额(元)" width="120" align="right">
-          <template #default="{ row }">
-            {{ formatAmount(row.interestAmount) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="advanceStatus" label="垫资状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getAdvanceStatusType(row.advanceStatus) as any">
-              {{ getAdvanceStatusLabel(row.advanceStatus) }}
+            <el-tag :type="getAdvanceStatusType(row.status) as any">
+              {{ getAdvanceStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120" />
-        <el-table-column label="操作" width="150" fixed="right" align="center">
+        <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button
-              v-if="row.advanceStatus !== 3"
-              type="success"
-              @click="handleRepayment(row)"
-              size="small"
-            >
-              还款
+            <el-button type="primary" @click="handleDetail(row)">
+              详情
             </el-button>
-            <el-button type="primary" @click="handleEdit(row)" size="small">
-              编辑
-            </el-button>
-            <el-button type="danger" @click="handleDelete(row)" size="small">
+            <el-button type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>
@@ -523,7 +412,7 @@ onMounted(() => {
       />
     </el-card>
 
-    <!-- 新增/编辑/还款对话框 -->
+    <!-- 新增对话框 -->
     <el-dialog
       v-model="showCreateDialog"
       :title="dialogTitle"
@@ -538,27 +427,12 @@ onMounted(() => {
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="垫资编号" prop="advanceCode">
-              <el-input v-model="form.advanceCode" placeholder="请输入垫资编号">
-                <template #append>
-                  <el-button @click="generateAdvanceCode">生成</el-button>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="垫资状态" prop="advanceStatus">
-              <el-select v-model="form.advanceStatus" placeholder="请选择垫资状态" disabled>
-                <el-option label="垫资中" :value="1" />
-                <el-option label="部分还款" :value="2" />
-                <el-option label="已还清" :value="3" />
-                <el-option label="逾期" :value="4" />
+            <el-form-item label="年度" prop="businessYear">
+              <el-select v-model="form.businessYear" placeholder="请选择年度">
+                <el-option v-for="value in range(new Date().getFullYear(), 10)" :key="value" :value="value" />
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="单位名称" prop="companyName">
               <el-select
@@ -576,116 +450,38 @@ onMounted(() => {
               </el-select>
             </el-form-item>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="项目名称" prop="projectName">
+            <el-form-item label="类型" prop="expenseType">
               <el-select
-                v-model="form.projectName"
-                placeholder="请选择项目"
-                filterable
-                @change="onProjectChange"
+                v-model="form.expenseType"
+                placeholder="请选择类型"
               >
                 <el-option
-                  v-for="item in projectOptions"
+                  v-for="item in expenseTypeOptions"
                   :key="item.id"
-                  :label="item.projectName"
+                  :label="item.label"
                   :value="item.id"
                 />
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="垫资金额" prop="advanceAmount">
+            <el-form-item label="金额" prop="amount">
               <el-input-number
-                v-model="form.advanceAmount"
+                v-model="form.amount"
                 placeholder="请输入垫资金额"
                 :min="0"
                 :step="10000"
                 controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="利率(%)" prop="interestRate">
-              <el-input-number
-                v-model="form.interestRate"
-                placeholder="请输入利率"
-                :min="0"
-                :max="100"
-                :step="0.1"
-                controls-position="right"
+                :readonly="isAmountDisabled"
                 style="width: 100%"
               />
             </el-form-item>
           </el-col>
         </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="垫资日期" prop="advanceDate">
-              <el-date-picker
-                v-model="form.advanceDate"
-                type="date"
-                placeholder="请选择垫资日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="还款日期" prop="repaymentDate">
-              <el-date-picker
-                v-model="form.repaymentDate"
-                type="date"
-                placeholder="请选择还款日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 利息金额显示 -->
-        <el-form-item label="利息金额">
-          <el-input :value="formatAmount(calculateInterest())" disabled>
-            <template #prepend>¥</template>
-          </el-input>
-        </el-form-item>
-
-        <!-- 还款相关字段 -->
-        <div v-if="dialogTitle.includes('还款') || form.advanceStatus > 1">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="还款金额" prop="repaymentAmount">
-                <el-input-number
-                  v-model="form.repaymentAmount"
-                  placeholder="请输入还款金额"
-                  :min="0"
-                  :step="10000"
-                  controls-position="right"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="实际还款日期" prop="actualRepaymentDate">
-                <el-date-picker
-                  v-model="form.actualRepaymentDate"
-                  type="date"
-                  placeholder="请选择实际还款日期"
-                  format="YYYY-MM-DD"
-                  value-format="YYYY-MM-DD"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </div>
 
         <el-form-item label="备注" prop="remark">
           <el-input
@@ -695,6 +491,25 @@ onMounted(() => {
             :rows="3"
           />
         </el-form-item>
+
+        <el-table :data="newItemTableData" style="width: 100%" max-height="300">
+          <el-table-column fixed prop="name" label="费用名称" width="300" />
+          <el-table-column prop="amount" label="金额" min-width="200" />
+          <el-table-column fixed="right" label="操作" width="120">
+            <template #default="scope">
+              <el-button
+                type="danger"
+                size="small"
+                @click.prevent="deleteRow(scope.$index)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-button class="mt-4" style="width: 100%" @click="onAddItem">
+          添加费用
+        </el-button>
       </el-form>
 
       <template #footer>
@@ -704,6 +519,122 @@ onMounted(() => {
         </el-button>
       </template>
     </el-dialog>
+
+    <el-drawer
+      v-model="showDetailDrawer"
+      :title="`代垫费用明细 - ${currentRow?.advanceCode}`"
+      size="35%"
+    >
+      <div v-if="currentRow">
+        <el-descriptions
+          title="基本信息"
+          :column="2"
+          border
+        >
+          <el-descriptions-item label-width="120px">
+            <template #label>
+              <div class="cell-item">
+                年度
+              </div>
+            </template>
+            {{ currentRow?.businessYear }}
+          </el-descriptions-item>
+          <el-descriptions-item label-width="120px">
+            <template #label>
+              <div class="cell-item">
+                单位名称
+              </div>
+            </template>
+            {{ currentRow?.companyName }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                类型
+              </div>
+            </template>
+            {{ currentRow?.expenseType }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                金额
+              </div>
+            </template>
+            {{ currentRow?.amount }}
+          </el-descriptions-item>
+          <el-descriptions-item :span="2">
+            <template #label>
+              <div class="cell-item">
+                备注
+              </div>
+            </template>
+            {{ currentRow?.remark }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                创建人
+              </div>
+            </template>
+            {{ currentRow?.creator?.name }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                创建日期
+              </div>
+            </template>
+            {{ formatDateTime(currentRow?.createdAt, "YYYY-MM-DD") }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                修改人
+              </div>
+            </template>
+            {{ currentRow?.updator?.name }}
+          </el-descriptions-item>
+          <el-descriptions-item>
+            <template #label>
+              <div class="cell-item">
+                修改日期
+              </div>
+            </template>
+            {{ formatDateTime(currentRow?.updatedAt, "YYYY-MM-DD") }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <el-divider />
+        <el-descriptions
+          v-if="currentRow?.details && currentRow?.details.length > 0"
+          title="代垫费用明细"
+          :column="1"
+          border
+        >
+          <el-descriptions-item v-for="(detail, index) in currentRow?.details" :key="index" label-width="200px" align="right">
+            <template #label>
+              <div class="cell-item">
+                {{ detail.expenseType?.name }}
+              </div>
+            </template>
+            {{ formattedMoney(detail.amount) }}
+          </el-descriptions-item>
+          <el-descriptions-item align="right">
+            <template #label>
+              <div class="cell-item">
+                合计
+              </div>
+            </template>
+            {{ formattedMoney(currentRow?.amount) }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-drawer>
+
+    <AdvanceImport
+      ref="advanceImportRef"
+      @success="importSuccess"
+    />
   </div>
 </template>
 
@@ -714,17 +645,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {
@@ -737,5 +666,10 @@ onMounted(() => {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);
+}
+
+.cell-item {
+  display: flex;
+  align-items: center;
 }
 </style>

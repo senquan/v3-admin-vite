@@ -1,6 +1,8 @@
 export interface FixedDepositsResponseData extends ApiResponseData<FixedDeposits> {}
 export interface PaymentClearingResponseData extends ApiResponseData<PaymentClearing> {}
 export interface FundTransferResponseData extends ApiResponseData<FundTransfer> {}
+export interface AdvanceExpenseResponseData extends ApiResponseData<AdvanceExpense> {}
+export interface ExpenseTypeResponseData extends ApiResponseData<ExpenseType> {}
 
 export interface BaseQueryParams {
   keyword?: string
@@ -30,6 +32,11 @@ export interface FundTransferParams extends BaseQueryParams {
   status?: number
   startDate?: string
   endDate?: string
+}
+
+export interface AdvanceExpenseParams extends BaseQueryParams {
+  type: number
+  status?: number
 }
 
 export interface CommonActionResult {
@@ -65,4 +72,13 @@ export interface PaymentClearing {
 
 export interface FundTransfer {
   [key: string]: any
+}
+
+export interface AdvanceExpense {
+  [key: string]: any
+}
+
+export interface ExpenseType {
+  id: number
+  name: string
 }

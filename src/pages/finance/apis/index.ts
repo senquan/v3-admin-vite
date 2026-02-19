@@ -33,6 +33,37 @@ export function getFundTransfers(params: Finance.FundTransferParams) {
   })
 }
 
+export function getAdvanceExpenses(params: Finance.AdvanceExpenseParams) {
+  return request<Finance.AdvanceExpenseResponseData>({
+    url: "/finance/advance-expenses",
+    method: "get",
+    params
+  })
+}
+
+export function getExpenseTypes() {
+  return request<Finance.ExpenseTypeResponseData>({
+    url: "/finance/expense-types",
+    method: "get"
+  })
+}
+
+export function transferConfirm(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/transfer/confirm`,
+    method: "post",
+    data
+  })
+}
+
+export function transferDelete(id: number) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/fund-transfer`,
+    method: "delete",
+    data: { id }
+  })
+}
+
 export function receiveConfirm(data: any) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive/confirm",
@@ -88,6 +119,17 @@ export function importTransfer(data: any, batchNo: string, transferType: number)
       transfers: data,
       batchNo,
       transferType
+    }
+  })
+}
+
+export function importAdvance(data: any, batchNo: string) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/import-advance-expense",
+    method: "post",
+    data: {
+      expenses: data,
+      batchNo
     }
   })
 }

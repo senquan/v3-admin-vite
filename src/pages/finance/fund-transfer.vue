@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getFundTransfers } from "./apis"
+import { getFundTransfers, transferConfirm, transferDelete } from "./apis"
 import TransferImport from "./forms/_transfer-import.vue"
 
 interface FundTransfer {
@@ -27,6 +28,8 @@ const dialogTitle = ref("新增转账")
 const formRef = ref<FormInstance>()
 const activeTab = ref("up")
 const transferImportRef = ref<any>(null)
+const upTableRef = ref<any>(null)
+const downTableRef = ref<any>(null)
 
 const searchForm = reactive({
   keyword: "",
@@ -69,7 +72,7 @@ const rules = reactive<FormRules>({
 
 // 获取转账状态标签
 function getTransferStatusLabel(status: number) {
-  const labels = { 1: "待处理", 2: "处理中", 3: "已完成", 4: "已取消" }
+  const labels = { 1: "待确认", 2: "已生效", 3: "已删除" }
   return labels[status as keyof typeof labels] || "未知"
 }
 
@@ -77,11 +80,6 @@ function getTransferStatusLabel(status: number) {
 function getTransferStatusType(status: number) {
   const types = { 1: "info", 2: "warning", 3: "success", 4: "danger" }
   return types[status as keyof typeof types] || "info"
-}
-
-// 格式化金额
-function formatAmount(amount: number) {
-  return amount?.toFixed(2) || "0.00"
 }
 
 // 格式化日期
@@ -200,16 +198,12 @@ async function handleDelete(row: FundTransfer) {
       type: "warning"
     })
 
-    // const response = await request({
-    //   url: '/finance/fund-transfer',
-    //   method: 'delete',
-    //   data: { id: row.id }
-    // })
+    const response = await transferDelete(row.id)
 
-    // if (response.code === 200) {
-    //   ElMessage.success("删除成功")
-    //   fetchData()
-    // }
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
@@ -298,26 +292,29 @@ function onToCompanyChange(companyId: number) {
 }
 
 async function handleConfirm() {
-  // const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
-  // if (selected.length === 0) {
-  //   ElMessage.warning("请选择待确认的记录")
-  //   return
-  // }
+  const selected = activeTab.value === "up"
+    ? upTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
+    : downTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
+  if (selected.length === 0) {
+    ElMessage.warning("请选择待确认的记录")
+    return
+  }
 
-  // try {
-  //   const response = await receiveConfirm({
-  //     ids: selected.map((r: any) => r.id)
-  //   })
+  try {
+    const response = await transferConfirm({
+      ids: selected.map((r: any) => r.id),
+      type: activeTab.value === "up" ? 1 : 2
+    })
 
-  //   if (response.code === 0) {
-  //     ElMessage.success(response.message || "确认成功")
-  //     fetchData()
-  //   } else {
-  //     ElMessage.error(response.message || "确认失败")
-  //   }
-  // } catch (error: any) {
-  //   ElMessage.error(error.message || "确认失败")
-  // }
+    if (response.code === 0) {
+      ElMessage.success(response.message || "确认成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "确认失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "确认失败")
+  }
 }
 
 function handleTabChange() {
@@ -355,10 +352,10 @@ onMounted(() => {
             </el-form-item>
             <el-form-item label="转账状态">
               <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-                <el-option label="待处理" :value="1" />
-                <el-option label="处理中" :value="2" />
-                <el-option label="已完成" :value="3" />
-                <el-option label="已取消" :value="4" />
+                <el-option label="全部" :value="0" />
+                <el-option label="待确认" :value="1" />
+                <el-option label="已生效" :value="2" />
+                <el-option label="已删除" :value="3" />
               </el-select>
             </el-form-item>
             <el-form-item label="转账日期">
@@ -385,13 +382,15 @@ onMounted(() => {
 
           <!-- 数据表格 -->
           <el-table
+            ref="upTableRef"
             :data="upTableData"
             border
             stripe
             v-loading="loading"
             header-cell-class-name="header-cell-fix"
           >
-            <el-table-column prop="seq" label="序号" width="80" align="center" />
+            <el-table-column width="50" type="selection" align="center" />
+            <el-table-column prop="seq" label="序号" width="60" align="center" />
             <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
             <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
               <template #default="{ row }">
@@ -401,7 +400,7 @@ onMounted(() => {
             <el-table-column prop="companyName" label="单位名称" min-width="150" />
             <el-table-column prop="transferAmount" label="金额(元)" width="150" align="right">
               <template #default="{ row }">
-                {{ formatAmount(row.transferAmount) }}
+                {{ formattedMoney(row.transferAmount) }}
               </template>
             </el-table-column>
             <el-table-column prop="transferStatus" label="转账状态" width="100" align="center">
@@ -419,12 +418,12 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
-            <el-table-column label="操作" width="150" fixed="right" align="center">
+            <el-table-column label="操作" width="160" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" @click="handleEdit(row)" size="small">
+                <el-button type="primary" @click="handleEdit(row)">
                   编辑
                 </el-button>
-                <el-button type="danger" @click="handleDelete(row)" size="small">
+                <el-button type="danger" @click="handleDelete(row)">
                   删除
                 </el-button>
               </template>
@@ -452,10 +451,10 @@ onMounted(() => {
             </el-form-item>
             <el-form-item label="转账状态">
               <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-                <el-option label="待处理" :value="1" />
-                <el-option label="处理中" :value="2" />
-                <el-option label="已完成" :value="3" />
-                <el-option label="已取消" :value="4" />
+                <el-option label="全部" :value="0" />
+                <el-option label="待确认" :value="1" />
+                <el-option label="已生效" :value="2" />
+                <el-option label="已删除" :value="3" />
               </el-select>
             </el-form-item>
             <el-form-item label="转账日期">
@@ -482,13 +481,15 @@ onMounted(() => {
 
           <!-- 数据表格 -->
           <el-table
+            ref="downTableRef"
             :data="downTableData"
             border
             stripe
             v-loading="loading"
             header-cell-class-name="header-cell-fix"
           >
-            <el-table-column prop="seq" label="序号" width="80" align="center" />
+            <el-table-column width="50" type="selection" align="center" />
+            <el-table-column prop="seq" label="序号" width="60" align="center" />
             <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
             <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
               <template #default="{ row }">
@@ -498,7 +499,7 @@ onMounted(() => {
             <el-table-column prop="companyName" label="单位名称" min-width="150" />
             <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="150" align="right">
               <template #default="{ row }">
-                {{ formatAmount(row.transferAmount) }}
+                {{ formattedMoney(row.transferAmount) }}
               </template>
             </el-table-column>
             <el-table-column prop="isLoan" label="是否贷款" width="100" align="center">
@@ -704,10 +705,6 @@ onMounted(() => {
   text-align: center;
   background-color: #f5f7fa;
   height: 50px;
-}
-
-.text-center {
-  text-align: center;
 }
 
 .pagination {

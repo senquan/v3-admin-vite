@@ -21,3 +21,15 @@ export function formattedMoney(money: number | string) {
     maximumFractionDigits: 2
   })
 }
+
+export function calculateSum(data: Record<string, number>[]): number {
+  let total = 0
+  for (const obj of data) {
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        total += obj[key]
+      }
+    }
+  }
+  return total
+}

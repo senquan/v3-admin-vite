@@ -1,8 +1,9 @@
 <script lang="ts" setup>
+import { calculateSum } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { ElMessage } from "element-plus"
 import * as XLSX from "xlsx"
-import { importReceive } from "../apis"
+import { importAdvance } from "../apis"
 
 const emit = defineEmits(["success", "close"])
 const visible = ref(false)
@@ -16,31 +17,20 @@ const processedRows = ref(0)
 const successCount = ref(0)
 const errorCount = ref(0)
 const errorMessages = ref<string[]>([])
-const receiveType = ref(1)
 
 const fieldMapping = {
   序号: "seq",
-  到款日期: "receiveDate",
-  SAP代码: "sapCode",
+  垫付编号: "advanceCode",
   单位名称: "companyName",
-  客户名称: "customerName",
-  项目名称: "projectName",
-  票据号码: "billNo",
-  票据类型: "billType",
-  票据金额: "billAmount",
-  到期日: "dueDate",
-  托收日期: "collectionDate",
-  是否已到账: "received",
-  贴现日期: "discountDate",
-  贴现到款金额: "discountAmount",
-  贴现手续费: "discountFee",
-  到账金额: "accountAmount",
-  到款银行: "receiveBank"
+  类型: "expenseType",
+  金额: "amount",
+  备注: "remark",
+  年份: "businessYear"
 }
 
 function open() {
   visible.value = true
-  batchNo.value = `R-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
+  batchNo.value = `A-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
   resetData()
 }
 
@@ -143,7 +133,8 @@ async function processFile() {
         const workbook = XLSX.read(data, { type: "array" })
 
         // 处理每个工作表
-        const allReceive = []
+        const allAdvance = []
+        errorMessages.value = []
         let hasError = false
 
         for (const sheetName of workbook.SheetNames) {
@@ -157,60 +148,86 @@ async function processFile() {
 
           // 检查表头
           const headers = jsonData[0] as string[]
-          if ((receiveType.value === 1 && headers.length < 8) || (receiveType.value === 2 && headers.length < 15)) {
-            errorMessages.value.push(`工作表 ${sheetName} 列数不足，已跳过`)
+          if (headers.length < 5) {
+            errorMessages.value.push(`工作表 ${sheetName} 列数不符，已跳过`)
             continue
           }
 
           // 解析数据
-          const receive = []
+          const advance = []
           for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i] as any[]
             if (!row || row.length === 0) continue
 
-            console.log("row", row)
             const item: any = {}
+            const details = [] as any[]
+            let total = 0
 
             // 映射字段
             for (let j = 0; j < headers.length; j++) {
               const header = headers[j]
               const fieldName = fieldMapping[header as keyof typeof fieldMapping]
-
-              if (fieldName && row[j] !== undefined && row[j] !== "") {
-                if (fieldName.includes("Date"))
-                  item[fieldName] = convertExcelDate(row[j])
-                else
-                  item[fieldName] = row[j]
+              if (fieldName) {
+                if (row[j] !== undefined && row[j] !== "") {
+                  if (fieldName.includes("Date"))
+                    item[fieldName] = convertExcelDate(row[j])
+                  else
+                    item[fieldName] = row[j]
+                } else {
+                  if (fieldName !== "remark" && fieldName !== "amount" && fieldName !== "advanceCode") {
+                    errorCount.value++
+                    errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行必填项 ${header}。`)
+                    hasError = true
+                    break
+                  }
+                }
               } else {
-                if (fieldName !== "collectionDate" && !fieldName.includes("discount")) {
-                  errorCount.value++
-                  errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行必填项 ${header}。`)
-                  hasError = true
-                  break
+                if (item.expenseType === "代垫费用") {
+                  if (header === "合计")
+                    total = Number(row[j])
+                  else
+                    details.push({ [header]: Number(row[j]) })
+                } else {
+                  continue
                 }
               }
             }
-            item.receiveType = receiveType.value
+
+            if (item.expenseType === "代垫费用") {
+              const detailTotal = Math.round(calculateSum(details) * 100) / 100
+              if (total !== detailTotal) {
+                console.log("cc", total, details, detailTotal)
+                errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行合计与明细不一致。`)
+                hasError = true
+              }
+              item.amount = detailTotal
+            } else {
+              if (Number.isNaN(item.amount) || Number(item.amount) === 0) {
+                errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行金额不可为0。`)
+                hasError = true
+              }
+            }
 
             if (!hasError) {
-              receive.push(item)
+              if (details.length > 0) {
+                item.details = details
+              }
+              advance.push(item)
             }
           }
-
-          allReceive.push(...receive)
+          allAdvance.push(...advance)
         }
 
         // 设置总行数
-        totalRows.value = allReceive.length
+        totalRows.value = allAdvance.length
 
         // 批量处理数据
-        if (!hasError && allReceive.length > 0) {
-          // TODO: 校验合计
+        if (!hasError && allAdvance.length > 0) {
           const batchSize = 20
-          for (let i = 0; i < allReceive.length; i += batchSize) {
-            const batch = allReceive.slice(i, i + batchSize)
+          for (let i = 0; i < allAdvance.length; i += batchSize) {
+            const batch = allAdvance.slice(i, i + batchSize)
             try {
-              const result = await importReceive(batch, batchNo.value, receiveType.value)
+              const result = await importAdvance(batch, batchNo.value)
               if (result.code === 0) {
                 successCount.value += result.data.successCount || 0
                 errorCount.value += result.data.errorCount || 0
@@ -263,17 +280,13 @@ defineExpose({
 <template>
   <el-dialog
     v-model="visible"
-    title="批量导入到款"
+    title="批量导入"
     width="600px"
     :close-on-click-modal="false"
     :before-close="close"
   >
     <div class="import-container">
       <div class="upload-area">
-        <el-radio-group v-model="receiveType">
-          <el-radio :label="1">银行到款</el-radio>
-          <el-radio :label="2">票据到款</el-radio>
-        </el-radio-group>
         <el-upload
           ref="uploadRef"
           action="#"
@@ -296,9 +309,9 @@ defineExpose({
               请上传Excel文件, 格式必须与模板一致，下载
               <el-link
                 type="primary"
-                :href="receiveType === 1 ? '/templates/bank-receive-import.xlsx' : '/templates/bill-receive-import.xlsx'"
+                href="/templates/advance-import.xlsx"
               >
-                {{ receiveType === 1 ? "银行到款" : "票据到款" }}
+                代垫费用
               </el-link> 导入模板
             </div>
           </template>

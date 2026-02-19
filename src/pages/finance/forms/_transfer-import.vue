@@ -292,8 +292,8 @@ defineExpose({
                 type="primary"
                 :href="transferType === 1 ? '/templates/transfer-up-import.xlsx' : '/templates/transfer-down-import.xlsx'"
               >
-                {{ transferType === 1 ? "分公司资金上划" : "局集团资金下拨" }}导入模板
-              </el-link>
+                {{ transferType === 1 ? "分公司资金上划" : "局集团资金下拨" }}
+              </el-link> 导入模板
             </div>
           </template>
         </el-upload>
@@ -301,9 +301,7 @@ defineExpose({
 
       <div class="progress-area">
         <div class="progress-info">
-          <span>处理进度: {{ processedRows }}/{{ totalRows }}</span>
-          <span>新增: <el-link @click="handleRecent(successCount)">{{ successCount }}</el-link></span>
-          <span>失败: {{ errorCount }}</span>
+          <span>处理进度: {{ processedRows }}/{{ totalRows }} [ 新增: <el-link @click="handleRecent(successCount)">{{ successCount }}</el-link> 失败: {{ errorCount }} ]</span>
         </div>
         <el-progress :percentage="progress" :status="progress === 100 ? 'success' : ''" />
       </div>
