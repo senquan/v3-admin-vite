@@ -1,28 +1,35 @@
 export interface FixedDepositsResponseData extends ApiResponseData<FixedDeposits> {}
 export interface PaymentClearingResponseData extends ApiResponseData<PaymentClearing> {}
-export interface LoanDepositSummaryParams {
+export interface FundTransferResponseData extends ApiResponseData<FundTransfer> {}
+
+export interface BaseQueryParams {
+  keyword?: string
+  page?: number
+  size?: number
+}
+
+export interface LoanDepositSummaryParams extends BaseQueryParams {
   companyCode: string
   startDate: string
   endDate: string
-  page: number
-  size: number
 }
 
-export interface FixedDepositsParams {
-  keyword?: string
+export interface FixedDepositsParams extends BaseQueryParams {
   startDate?: string
   endDate?: string
   status?: number
-  page?: number
-  size?: number
 }
 
-export interface PaymentClearingParams {
+export interface PaymentClearingParams extends BaseQueryParams {
   receiveType?: number
-  keyword?: string
   status?: number
-  page?: number
-  size?: number
+}
+
+export interface FundTransferParams extends BaseQueryParams {
+  type: number
+  status?: number
+  startDate?: string
+  endDate?: string
 }
 
 export interface CommonActionResult {
@@ -53,5 +60,9 @@ export interface FixedDeposits {
 }
 
 export interface PaymentClearing {
+  [key: string]: any
+}
+
+export interface FundTransfer {
   [key: string]: any
 }

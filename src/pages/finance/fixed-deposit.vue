@@ -494,13 +494,9 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
-}
-
-:deep(.search-form .el-form-item) {
-  margin-bottom: 0;
 }
 
 :deep(.el-table .header-cell-fix) {

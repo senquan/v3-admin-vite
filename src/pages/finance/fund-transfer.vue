@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { request } from '@/http/axios'
 import type { FormInstance, FormRules } from "element-plus"
+import { formatDateTime } from "@@/utils/datetime"
+import { getFundTransfers } from "./apis"
+import TransferImport from "./forms/_transfer-import.vue"
 
 interface FundTransfer {
   id: number
-  transferCode: string // 转账编号
-  fromCompanyCode: string // 拨出单位编号
-  fromCompanyName: string // 拨出单位名称
-  toCompanyCode: string // 拨入单位编号
-  toCompanyName: string // 拨入单位名称
+  seq: number
+  transferCode: string
+  companyName: string // 单位名称
   transferAmount: number // 转账金额
   transferType: number // 转账类型：1-上划，2-下拨
   transferDate: string // 转账日期
@@ -25,12 +25,12 @@ const submitLoading = ref(false)
 const showCreateDialog = ref(false)
 const dialogTitle = ref("新增转账")
 const formRef = ref<FormInstance>()
+const activeTab = ref("up")
+const transferImportRef = ref<any>(null)
 
 const searchForm = reactive({
-  fromCompanyName: "",
-  toCompanyName: "",
-  transferType: undefined as number | undefined,
-  transferStatus: undefined as number | undefined,
+  keyword: "",
+  status: undefined as number | undefined,
   dateRange: [] as string[]
 })
 
@@ -40,7 +40,8 @@ const pagination = reactive({
   total: 0
 })
 
-const tableData = ref<FundTransfer[]>([])
+const upTableData = ref<FundTransfer[]>([])
+const downTableData = ref<FundTransfer[]>([])
 const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
 
 const form = reactive({
@@ -66,12 +67,6 @@ const rules = reactive<FormRules>({
   transferDate: [{ required: true, message: "请选择转账日期", trigger: "change" }]
 })
 
-// 获取转账类型标签
-function getTransferTypeLabel(type: number) {
-  const labels = { 1: "上划", 2: "下拨" }
-  return labels[type as keyof typeof labels] || "未知"
-}
-
 // 获取转账状态标签
 function getTransferStatusLabel(status: number) {
   const labels = { 1: "待处理", 2: "处理中", 3: "已完成", 4: "已取消" }
@@ -91,7 +86,7 @@ function formatAmount(amount: number) {
 
 // 格式化日期
 function formatDate(date: string) {
-  return date ? new Date(date).toLocaleDateString() : "-"
+  return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
 }
 
 // 生成转账编号
@@ -109,27 +104,28 @@ async function fetchData() {
   loading.value = true
   try {
     const params: any = {
+      type: activeTab.value === "up" ? 1 : 2,
       page: pagination.page,
       size: pagination.size
     }
-    if (searchForm.fromCompanyName) params.fromCompanyName = searchForm.fromCompanyName
-    if (searchForm.toCompanyName) params.toCompanyName = searchForm.toCompanyName
-    if (searchForm.transferType) params.transferType = searchForm.transferType
-    if (searchForm.transferStatus) params.transferStatus = searchForm.transferStatus
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.status) params.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       params.startDate = searchForm.dateRange[0]
       params.endDate = searchForm.dateRange[1]
     }
 
-    const response = await request({
-      url: '/finance/fund-transfers',
-      method: 'get',
-      params
-    })
+    const response = await getFundTransfers(params)
 
-    if (response.code === 200) {
-      tableData.value = response.data.items || []
+    if (response.code === 0) {
+      let count = 1
+      const data = response.data.records.map((item: any) => ({
+        ...item,
+        seq: count++
+      })) || []
       pagination.total = response.data.total || 0
+      if (activeTab.value === "up") upTableData.value = data
+      else downTableData.value = data
     }
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
@@ -141,14 +137,14 @@ async function fetchData() {
 // 获取单位列表
 async function getCompanies() {
   try {
-    const response = await request({
-      url: '/finance/companies',
-      method: 'get'
-    })
+    // const response = await request({
+    //   url: '/finance/companies',
+    //   method: 'get'
+    // })
 
-    if (response.code === 200) {
-      companyOptions.value = response.data.items || []
-    }
+    // if (response.code === 200) {
+    //   companyOptions.value = response.data.items || []
+    // }
   } catch (error) {
     console.error("获取单位列表失败:", error)
   }
@@ -163,10 +159,8 @@ function handleSearch() {
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    fromCompanyName: "",
-    toCompanyName: "",
-    transferType: undefined,
-    transferStatus: undefined,
+    keyword: "",
+    status: undefined,
     dateRange: []
   })
   handleSearch()
@@ -188,11 +182,7 @@ function handleEdit(row: FundTransfer) {
   dialogTitle.value = "编辑转账"
   Object.assign(form, {
     id: row.id,
-    transferCode: row.transferCode,
-    fromCompanyCode: row.fromCompanyCode,
-    fromCompanyName: row.fromCompanyName,
-    toCompanyCode: row.toCompanyCode,
-    toCompanyName: row.toCompanyName,
+    companyName: row.companyName,
     transferAmount: row.transferAmount,
     transferType: row.transferType,
     transferDate: row.transferDate,
@@ -210,16 +200,16 @@ async function handleDelete(row: FundTransfer) {
       type: "warning"
     })
 
-    const response = await request({
-      url: '/finance/fund-transfer',
-      method: 'delete',
-      data: { id: row.id }
-    })
+    // const response = await request({
+    //   url: '/finance/fund-transfer',
+    //   method: 'delete',
+    //   data: { id: row.id }
+    // })
 
-    if (response.code === 200) {
-      ElMessage.success("删除成功")
-      fetchData()
-    }
+    // if (response.code === 200) {
+    //   ElMessage.success("删除成功")
+    //   fetchData()
+    // }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
@@ -229,43 +219,43 @@ async function handleDelete(row: FundTransfer) {
 
 // 提交表单
 async function handleSubmit() {
-  if (!formRef.value) return
+  // if (!formRef.value) return
 
-  try {
-    await formRef.value.validate()
-    submitLoading.value = true
+  // try {
+  //   await formRef.value.validate()
+  //   submitLoading.value = true
 
-    const url = form.id ? `/finance/fund-transfer/${form.id}` : '/finance/fund-transfer'
-    const method = form.id ? 'put' : 'post'
+  //   const url = form.id ? `/finance/fund-transfer/${form.id}` : '/finance/fund-transfer'
+  //   const method = form.id ? 'put' : 'post'
 
-    const response = await request({
-      url,
-      method,
-      data: {
-        transferCode: form.transferCode,
-        fromCompanyCode: form.fromCompanyCode,
-        fromCompanyName: form.fromCompanyName,
-        toCompanyCode: form.toCompanyCode,
-        toCompanyName: form.toCompanyName,
-        transferAmount: form.transferAmount,
-        transferType: form.transferType,
-        transferDate: form.transferDate,
-        transferStatus: form.transferStatus,
-        bankAccount: form.bankAccount,
-        remark: form.remark
-      }
-    })
+  //   const response = await request({
+  //     url,
+  //     method,
+  //     data: {
+  //       transferCode: form.transferCode,
+  //       fromCompanyCode: form.fromCompanyCode,
+  //       fromCompanyName: form.fromCompanyName,
+  //       toCompanyCode: form.toCompanyCode,
+  //       toCompanyName: form.toCompanyName,
+  //       transferAmount: form.transferAmount,
+  //       transferType: form.transferType,
+  //       transferDate: form.transferDate,
+  //       transferStatus: form.transferStatus,
+  //       bankAccount: form.bankAccount,
+  //       remark: form.remark
+  //     }
+  //   })
 
-    if (response.code === 200) {
-      ElMessage.success(form.id ? "更新成功" : "创建成功")
-      showCreateDialog.value = false
-      fetchData()
-    }
-  } catch (error) {
-    console.error("提交失败:", error)
-  } finally {
-    submitLoading.value = false
-  }
+  //   if (response.code === 200) {
+  //     ElMessage.success(form.id ? "更新成功" : "创建成功")
+  //     showCreateDialog.value = false
+  //     fetchData()
+  //   }
+  // } catch (error) {
+  //   console.error("提交失败:", error)
+  // } finally {
+  //   submitLoading.value = false
+  // }
 }
 
 // 重置表单
@@ -307,6 +297,45 @@ function onToCompanyChange(companyId: number) {
   }
 }
 
+async function handleConfirm() {
+  // const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
+  // if (selected.length === 0) {
+  //   ElMessage.warning("请选择待确认的记录")
+  //   return
+  // }
+
+  // try {
+  //   const response = await receiveConfirm({
+  //     ids: selected.map((r: any) => r.id)
+  //   })
+
+  //   if (response.code === 0) {
+  //     ElMessage.success(response.message || "确认成功")
+  //     fetchData()
+  //   } else {
+  //     ElMessage.error(response.message || "确认失败")
+  //   }
+  // } catch (error: any) {
+  //   ElMessage.error(error.message || "确认失败")
+  // }
+}
+
+function handleTabChange() {
+  if (activeTab.value === "up") {
+    if (upTableData.value.length === 0) fetchData()
+  } else if (activeTab.value === "down") {
+    if (downTableData.value.length === 0) fetchData()
+  }
+}
+
+async function handleImport() {
+  transferImportRef.value?.open(activeTab.value === "up" ? 1 : 2)
+}
+
+function importSuccess() {
+  handleSearch()
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
@@ -317,109 +346,217 @@ onMounted(() => {
 <template>
   <div class="fund-transfer-management">
     <el-card>
-      <!-- 搜索条件 -->
-      <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="拨出单位">
-          <el-input v-model="searchForm.fromCompanyName" placeholder="请输入拨出单位" />
-        </el-form-item>
-        <el-form-item label="拨入单位">
-          <el-input v-model="searchForm.toCompanyName" placeholder="请输入拨入单位" />
-        </el-form-item>
-        <el-form-item label="转账类型">
-          <el-select v-model="searchForm.transferType" placeholder="请选择类型" clearable>
-            <el-option label="上划" :value="1" />
-            <el-option label="下拨" :value="2" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="转账状态">
-          <el-select v-model="searchForm.transferStatus" placeholder="请选择状态" clearable>
-            <el-option label="待处理" :value="1" />
-            <el-option label="处理中" :value="2" />
-            <el-option label="已完成" :value="3" />
-            <el-option label="已取消" :value="4" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="转账日期">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+        <el-tab-pane label="分公司每日资金上划" name="up">
+          <!-- 搜索条件 -->
+          <el-form :model="searchForm" inline class="search-form">
+            <el-form-item label="关键词">
+              <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="转账状态">
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+                <el-option label="待处理" :value="1" />
+                <el-option label="处理中" :value="2" />
+                <el-option label="已完成" :value="3" />
+                <el-option label="已取消" :value="4" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="转账日期">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch">查询</el-button>
+              <el-button @click="resetSearch">重置</el-button>
+              <el-button type="primary" @click="handleImport">
+                <SvgIcon name="import" />
+                导入
+              </el-button>
+              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- 数据表格 -->
+          <el-table
+            :data="upTableData"
+            border
+            stripe
+            v-loading="loading"
+            header-cell-class-name="header-cell-fix"
+          >
+            <el-table-column prop="seq" label="序号" width="80" align="center" />
+            <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
+            <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
+              <template #default="{ row }">
+                {{ formatDate(row.transferDate) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="companyName" label="单位名称" min-width="150" />
+            <el-table-column prop="transferAmount" label="金额(元)" width="150" align="right">
+              <template #default="{ row }">
+                {{ formatAmount(row.transferAmount) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="transferStatus" label="转账状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getTransferStatusType(row.transferStatus) as any">
+                  {{ getTransferStatusLabel(row.transferStatus) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="150" />
+            <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
+            <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+              <template #default="{ row }">
+                {{ formatDate(row.createdAt) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
+            <el-table-column label="操作" width="150" fixed="right" align="center">
+              <template #default="{ row }">
+                <el-button type="primary" @click="handleEdit(row)" size="small">
+                  编辑
+                </el-button>
+                <el-button type="danger" @click="handleDelete(row)" size="small">
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.size"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="pagination.total"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            class="pagination"
           />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="showCreateDialog = true">
-            <el-icon><Plus /></el-icon>
-            新增转账
-          </el-button>
-        </el-form-item>
-      </el-form>
+        </el-tab-pane>
 
-      <!-- 数据表格 -->
-      <el-table
-        :data="tableData"
-        border
-        stripe
-        v-loading="loading"
-        header-cell-class-name="text-center"
-      >
-        <el-table-column prop="transferCode" label="转账编号" width="140" align="center" />
-        <el-table-column prop="fromCompanyName" label="拨出单位" min-width="150" />
-        <el-table-column prop="toCompanyName" label="拨入单位" min-width="150" />
-        <el-table-column prop="transferAmount" label="转账金额(元)" width="120" align="right">
-          <template #default="{ row }">
-            {{ formatAmount(row.transferAmount) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="transferType" label="转账类型" width="100" align="center">
-          <template #default="{ row }">
-            {{ getTransferTypeLabel(row.transferType) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
-          <template #default="{ row }">
-            {{ formatDate(row.transferDate) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="transferStatus" label="转账状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getTransferStatusType(row.transferStatus) as any">
-              {{ getTransferStatusLabel(row.transferStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="bankAccount" label="银行账户" width="160" align="center" />
-        <el-table-column prop="remark" label="备注" min-width="120" />
-        <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
-        <el-table-column label="操作" width="150" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button type="primary" @click="handleEdit(row)" size="small">
-              编辑
-            </el-button>
-            <el-button type="danger" @click="handleDelete(row)" size="small">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        <el-tab-pane label="局集团资金下拨" name="down">
+          <!-- 搜索条件 -->
+          <el-form :model="searchForm" inline class="search-form">
+            <el-form-item label="关键词">
+              <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="转账状态">
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+                <el-option label="待处理" :value="1" />
+                <el-option label="处理中" :value="2" />
+                <el-option label="已完成" :value="3" />
+                <el-option label="已取消" :value="4" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="转账日期">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch">查询</el-button>
+              <el-button @click="resetSearch">重置</el-button>
+              <el-button type="primary" @click="handleImport">
+                <SvgIcon name="import" />
+                导入
+              </el-button>
+              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+            </el-form-item>
+          </el-form>
 
-      <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.size"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="pagination.total"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-        class="pagination"
-      />
+          <!-- 数据表格 -->
+          <el-table
+            :data="downTableData"
+            border
+            stripe
+            v-loading="loading"
+            header-cell-class-name="header-cell-fix"
+          >
+            <el-table-column prop="seq" label="序号" width="80" align="center" />
+            <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
+            <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
+              <template #default="{ row }">
+                {{ formatDate(row.transferDate) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="companyName" label="单位名称" min-width="150" />
+            <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="150" align="right">
+              <template #default="{ row }">
+                {{ formatAmount(row.transferAmount) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="isLoan" label="是否贷款" width="100" align="center">
+              <template #default="{ row }">
+                {{ row.isLoan === 1 ? '是' : '否' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="dueDate" label="贷款期限" width="120" align="center">
+              <template #default="{ row }">
+                {{ formatDate(row.dueDate) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="transferStatus" label="转账状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="getTransferStatusType(row.transferStatus) as any">
+                  {{ getTransferStatusLabel(row.transferStatus) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="150" />
+            <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
+            <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+              <template #default="{ row }">
+                {{ formatDate(row.createdAt) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
+            <el-table-column label="操作" width="150" fixed="right" align="center">
+              <template #default="{ row }">
+                <el-button type="primary" @click="handleEdit(row)" size="small">
+                  编辑
+                </el-button>
+                <el-button type="danger" @click="handleDelete(row)" size="small">
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.size"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="pagination.total"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            class="pagination"
+          />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
+
+    <TransferImport
+      ref="transferImportRef"
+      @success="importSuccess"
+    />
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
@@ -558,13 +695,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
+:deep(.el-table .header-cell-fix) {
+  text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .text-center {

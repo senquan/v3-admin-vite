@@ -40,7 +40,7 @@ const fieldMapping = {
 
 function open() {
   visible.value = true
-  batchNo.value = `I-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
+  batchNo.value = `R-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
   resetData()
 }
 

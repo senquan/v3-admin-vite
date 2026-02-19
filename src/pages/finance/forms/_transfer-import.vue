@@ -2,7 +2,7 @@
 import { formatDateTime } from "@@/utils/datetime"
 import { ElMessage } from "element-plus"
 import * as XLSX from "xlsx"
-import { importDeposit } from "../apis"
+import { importTransfer } from "../apis"
 
 const emit = defineEmits(["success", "close"])
 const visible = ref(false)
@@ -16,22 +16,22 @@ const processedRows = ref(0)
 const successCount = ref(0)
 const errorCount = ref(0)
 const errorMessages = ref<string[]>([])
+const transferType = ref(1)
 
 const fieldMapping = {
   序号: "seq",
-  存款编号: "depositCode",
-  存款类型: "depositType",
-  起息日期: "startDate",
+  日期: "transferDate",
   单位名称: "companyName",
-  金额: "depositAmount",
-  定存期限: "depositTerm",
-  到期日: "endDate",
-  备注: "remark"
+  金额: "transferAmount",
+  备注: "remark",
+  是否贷款: "isLoan",
+  贷款期限: "dueDate"
 }
 
-function open() {
+function open(type: number) {
   visible.value = true
-  batchNo.value = `D-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
+  batchNo.value = `T-${formatDateTime(new Date(), "YYMMDDHHmmss")}`
+  transferType.value = type
   resetData()
 }
 
@@ -134,7 +134,9 @@ async function processFile() {
         const workbook = XLSX.read(data, { type: "array" })
 
         // 处理每个工作表
-        const allDeposit = []
+        const allTransfer = []
+        errorMessages.value = []
+        let hasError = false
 
         for (const sheetName of workbook.SheetNames) {
           const worksheet = workbook.Sheets[sheetName]
@@ -147,20 +149,18 @@ async function processFile() {
 
           // 检查表头
           const headers = jsonData[0] as string[]
-          if (headers.length < 9) {
-            errorMessages.value.push(`工作表 ${sheetName} 列数不足，已跳过`)
+          if ((transferType.value === 1 && headers.length !== 4) || (transferType.value === 2 && headers.length !== 6)) {
+            errorMessages.value.push(`工作表 ${sheetName} 列数不符，已跳过`)
             continue
           }
 
           // 解析数据
-          const deposit = []
+          const transfer = []
           for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i] as any[]
             if (!row || row.length === 0) continue
 
-            console.log("row", row)
             const item: any = {}
-            let hasError = false
 
             // 映射字段
             for (let j = 0; j < headers.length; j++) {
@@ -168,37 +168,47 @@ async function processFile() {
               const fieldName = fieldMapping[header as keyof typeof fieldMapping]
 
               if (fieldName && row[j] !== undefined && row[j] !== "") {
-                if (fieldName === "startDate" || fieldName === "endDate")
+                if (fieldName.includes("Date"))
                   item[fieldName] = convertExcelDate(row[j])
                 else
                   item[fieldName] = row[j]
               } else {
-                if (fieldName !== "remark") {
+                if (fieldName !== "remark" && fieldName !== "dueDate") {
                   errorCount.value++
-                  errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行必填项 ${header}，已跳过`)
+                  errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行必填项 ${header}。`)
+                  hasError = true
+                  break
+                }
+              }
+            }
+            item.transferType = transferType.value
+            if (transferType.value === 2) {
+              if (item.isLoan === "是") {
+                if (item.dueDate === undefined || item.dueDate === "") {
+                  errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行贷款期限不能为空。`)
                   hasError = true
                 }
               }
             }
 
             if (!hasError) {
-              deposit.push(item)
+              transfer.push(item)
             }
           }
-
-          allDeposit.push(...deposit)
+          allTransfer.push(...transfer)
         }
 
         // 设置总行数
-        totalRows.value = allDeposit.length
+        totalRows.value = allTransfer.length
 
         // 批量处理数据
-        if (allDeposit.length > 0) {
+        if (!hasError && allTransfer.length > 0) {
+          // TODO: 校验合计
           const batchSize = 20
-          for (let i = 0; i < allDeposit.length; i += batchSize) {
-            const batch = allDeposit.slice(i, i + batchSize)
+          for (let i = 0; i < allTransfer.length; i += batchSize) {
+            const batch = allTransfer.slice(i, i + batchSize)
             try {
-              const result = await importDeposit(batch, batchNo.value)
+              const result = await importTransfer(batch, batchNo.value, transferType.value)
               if (result.code === 0) {
                 successCount.value += result.data.successCount || 0
                 errorCount.value += result.data.errorCount || 0
@@ -225,7 +235,7 @@ async function processFile() {
           ElMessage.success(`导入完成，新增: ${successCount.value}，失败: ${errorCount.value}`)
           emit("success")
         } else {
-          ElMessage.warning("没有有效的存款数据可导入")
+          ElMessage.warning("没有有效的到款数据可导入")
         }
       } catch (error: any) {
         ElMessage.error(`解析Excel文件失败: ${error.message}`)
@@ -251,7 +261,7 @@ defineExpose({
 <template>
   <el-dialog
     v-model="visible"
-    title="批量导入存款"
+    title="批量导入"
     width="600px"
     :close-on-click-modal="false"
     :before-close="close"
@@ -277,7 +287,13 @@ defineExpose({
           </div>
           <template #tip>
             <div class="el-upload__tip">
-              请上传Excel文件, 格式必须与模板一致，下载 <el-link type="primary" href="/templates/deposit-import.xlsx">定期存款导入模板</el-link>
+              请上传Excel文件, 格式必须与模板一致，下载
+              <el-link
+                type="primary"
+                :href="transferType === 1 ? '/templates/transfer-up-import.xlsx' : '/templates/transfer-down-import.xlsx'"
+              >
+                {{ transferType === 1 ? "分公司资金上划" : "局集团资金下拨" }}导入模板
+              </el-link>
             </div>
           </template>
         </el-upload>

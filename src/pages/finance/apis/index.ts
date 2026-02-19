@@ -25,6 +25,14 @@ export function getPaymentClearings(params: Finance.PaymentClearingParams) {
   })
 }
 
+export function getFundTransfers(params: Finance.FundTransferParams) {
+  return request<Finance.FundTransferResponseData>({
+    url: "/finance/fund-transfers",
+    method: "get",
+    params
+  })
+}
+
 export function receiveConfirm(data: any) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive/confirm",
@@ -68,6 +76,18 @@ export function importReceive(data: any, batchNo: string, receiveType: number) {
       receives: data,
       batchNo,
       receiveType
+    }
+  })
+}
+
+export function importTransfer(data: any, batchNo: string, transferType: number) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/import-transfer",
+    method: "post",
+    data: {
+      transfers: data,
+      batchNo,
+      transferType
     }
   })
 }
