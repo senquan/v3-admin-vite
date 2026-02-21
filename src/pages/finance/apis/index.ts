@@ -9,6 +9,13 @@ export function getLoanDepositSummary(params: Finance.LoanDepositSummaryParams) 
   })
 }
 
+export function getCompanies() {
+  return request<Finance.CompaniesResponseData>({
+    url: "/company/companies",
+    method: "get"
+  })
+}
+
 export function getFixedDeposits(params: Finance.FixedDepositsParams) {
   return request<Finance.FixedDepositsResponseData>({
     url: "/finance/fixed-deposits",
@@ -48,6 +55,14 @@ export function getExpenseTypes() {
   })
 }
 
+export function getProfitPayments(params: Finance.ProfitPaymentParams) {
+  return request<Finance.ProfitPaymentResponseData>({
+    url: "/finance/profit-payments",
+    method: "get",
+    params
+  })
+}
+
 export function transferConfirm(data: any) {
   return request<Finance.CommonActionResult>({
     url: `/finance/transfer/confirm`,
@@ -67,6 +82,14 @@ export function transferDelete(id: number) {
 export function receiveConfirm(data: any) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive/confirm",
+    method: "post",
+    data
+  })
+}
+
+export function profitConfirm(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/profit-payments/confirm",
     method: "post",
     data
   })
@@ -129,6 +152,17 @@ export function importAdvance(data: any, batchNo: string) {
     method: "post",
     data: {
       expenses: data,
+      batchNo
+    }
+  })
+}
+
+export function importProfit(data: any, batchNo: string) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/import-profit",
+    method: "post",
+    data: {
+      profits: data,
       batchNo
     }
   })

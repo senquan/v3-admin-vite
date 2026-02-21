@@ -3,6 +3,8 @@ export interface PaymentClearingResponseData extends ApiResponseData<PaymentClea
 export interface FundTransferResponseData extends ApiResponseData<FundTransfer> {}
 export interface AdvanceExpenseResponseData extends ApiResponseData<AdvanceExpense> {}
 export interface ExpenseTypeResponseData extends ApiResponseData<ExpenseType> {}
+export interface ProfitPaymentResponseData extends ApiResponseData<ProfitPayment> {}
+export interface CompaniesResponseData extends ApiResponseData<Company> {}
 
 export interface BaseQueryParams {
   keyword?: string
@@ -36,6 +38,10 @@ export interface FundTransferParams extends BaseQueryParams {
 
 export interface AdvanceExpenseParams extends BaseQueryParams {
   type: number
+  status?: number
+}
+
+export interface ProfitPaymentParams extends BaseQueryParams {
   status?: number
 }
 
@@ -81,4 +87,14 @@ export interface AdvanceExpense {
 export interface ExpenseType {
   id: number
   name: string
+}
+
+export interface ProfitPayment {
+  [key: string]: any
+}
+
+export interface Company {
+  id: number
+  companyCode: string
+  companyName: string
 }

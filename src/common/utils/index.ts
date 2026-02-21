@@ -33,3 +33,12 @@ export function calculateSum(data: Record<string, number>[]): number {
   }
   return total
 }
+
+// 生成年份范围数组
+export function range(start: number, diff: number) {
+  const result = []
+  for (let i = start; i >= start - diff; i--) {
+    result.push(i)
+  }
+  return result
+}

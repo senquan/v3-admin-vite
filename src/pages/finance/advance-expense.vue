@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
-import { formattedMoney } from "@@/utils"
+import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { getAdvanceExpenses, getExpenseTypes } from "./apis"
 import AdvanceImport from "./forms/_advance-import.vue"
@@ -80,24 +80,15 @@ const rules = reactive<FormRules>({
 })
 
 // 获取垫资状态标签
-function getAdvanceStatusLabel(status: number) {
+function getStatusLabel(status: number) {
   const labels = { 1: "待确认", 2: "已确认", 3: "已删除" }
   return labels[status as keyof typeof labels] || "未知"
 }
 
 // 获取垫资状态标签类型
-function getAdvanceStatusType(status: number) {
+function getStatusType(status: number) {
   const types = { 1: "warning", 2: "success", 3: "danger" }
   return types[status as keyof typeof types] || "info"
-}
-
-// 生成年份范围数组
-function range(start: number, diff: number) {
-  const result = []
-  for (let i = start; i >= start - diff; i--) {
-    result.push(i)
-  }
-  return result
 }
 
 // 查询数据
@@ -382,8 +373,8 @@ onMounted(() => {
         <el-table-column prop="businessYear" label="年度" width="100" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getAdvanceStatusType(row.status) as any">
-              {{ getAdvanceStatusLabel(row.status) }}
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
