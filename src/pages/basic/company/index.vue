@@ -1,28 +1,18 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
-
-interface Company {
-  id: number
-  companyCode: string
-  companyName: string
-  parentCompanyId: number | null
-  parentCompanyName?: string
-  companyLevel: number
-  status: number
-  createdBy: string
-  createdAt: string
-}
+import type { Company, CompanyTree } from "../apis/type"
+import { formatDateTime } from "@@/utils/datetime"
+import { createCompany, deleteCompany, getCompaniesTree, getCompanyList, updateCompany } from "../apis"
 
 const loading = ref(false)
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
-const dialogTitle = ref("新增单位")
+const dialogStatus = ref("create")
 const formRef = ref<FormInstance>()
 
 const searchForm = reactive({
-  companyName: "",
-  companyCode: "",
-  status: undefined as number | undefined
+  keyword: "",
+  status: 0
 })
 
 const pagination = reactive({
@@ -32,12 +22,14 @@ const pagination = reactive({
 })
 
 const tableData = ref<Company[]>([])
-const companyOptions = ref<Company[]>([])
+const companyOptions = ref<CompanyTree[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
   companyCode: "",
   companyName: "",
+  accountCode: "",
+  accountName: "",
   parentCompanyId: undefined as number | undefined,
   companyLevel: 1,
   status: 1
@@ -55,45 +47,20 @@ function getLevelLabel(level: number) {
   return labels[level] || "未知"
 }
 
-// 格式化日期
-function formatDate(date: string) {
-  return new Date(date).toLocaleString()
-}
-
 // 查询数据
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                companyCode: "SH001",
-                companyName: "上海工程局",
-                parentCompanyId: null,
-                companyLevel: 1,
-                status: 1,
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              }
-            ],
-            total: 1
-          }
-        })
-      }, 500)
-    })
+    const params: any = {
+      page: pagination.page,
+      size: pagination.size
+    }
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+    if (searchForm.status) params.status = searchForm.status
 
-    const result: any = response
-    tableData.value = result.data.items
-    pagination.total = result.data.total
-
-    // 设置上级单位选项
-    companyOptions.value = result.data.items.filter((item: Company) => item.companyLevel < 3)
+    const response = await getCompanyList(params)
+    tableData.value = response.data.records
+    pagination.total = response.data.total
   } catch (error) {
     ElMessage.error(`获取数据失败:${error}`)
   } finally {
@@ -104,22 +71,10 @@ async function fetchData() {
 // 获取上级单位列表
 async function getParentCompanies() {
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, companyName: "上海工程局", companyLevel: 1 }
-            ]
-          }
-        })
-      }, 300)
-    })
-
-    const result: any = response
-    companyOptions.value = result.data.items
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
   } catch (error) {
     console.error("获取上级单位失败:", error)
   }
@@ -134,9 +89,8 @@ function handleSearch() {
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    companyName: "",
-    companyCode: "",
-    status: undefined
+    keyword: "",
+    status: 0
   })
   handleSearch()
 }
@@ -154,11 +108,14 @@ function handleCurrentChange(val: number) {
 
 // 编辑
 function handleEdit(row: Company) {
-  dialogTitle.value = "编辑单位"
+  dialogStatus.value = "edit"
+  getParentCompanies()
   Object.assign(form, {
     id: row.id,
     companyCode: row.companyCode,
     companyName: row.companyName,
+    accountCode: row.accountCode,
+    accountName: row.accountName,
     parentCompanyId: row.parentCompanyId,
     companyLevel: row.companyLevel,
     status: row.status
@@ -167,20 +124,24 @@ function handleEdit(row: Company) {
 }
 
 // 删除
-async function handleDelete(_: Company) {
+async function handleDelete(row: Company) {
   try {
-    await ElMessageBox.confirm("确定要删除该单位吗？", "提示", {
-      type: "warning"
+    await ElMessageBox.confirm("确定要删除该企业账套吗？", "提示", {
+      type: "warning",
+      confirmButtonText: "确定",
+      cancelButtonText: "取消"
     })
 
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
-  } catch (error) {
-    if (error !== "cancel") {
+    const response = await deleteCompany(row.id)
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+    } else {
       ElMessage.error("删除失败")
     }
+  } catch (error) {
+    console.error("删除失败:", error)
+  } finally {
+    fetchData()
   }
 }
 
@@ -192,17 +153,27 @@ async function handleSubmit() {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
+    const response = dialogStatus.value === "edit" ? await updateCompany(form) : await createCompany(form)
 
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
+    if (response.code === 0) {
+      ElMessage.success(form.id ? "更新成功" : "创建成功")
+      showCreateDialog.value = false
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "提交失败")
+    }
   } catch (error) {
     console.error("提交失败:", error)
   } finally {
     submitLoading.value = false
   }
+}
+
+function handleCreate() {
+  dialogStatus.value = "create"
+  resetForm()
+  getParentCompanies()
+  showCreateDialog.value = true
 }
 
 // 重置表单
@@ -214,6 +185,8 @@ function resetForm() {
     id: undefined,
     companyCode: "",
     companyName: "",
+    accountCode: "",
+    accountName: "",
     parentCompanyId: undefined,
     companyLevel: 1,
     status: 1
@@ -223,7 +196,6 @@ function resetForm() {
 // 初始化
 onMounted(() => {
   fetchData()
-  getParentCompanies()
 })
 </script>
 
@@ -232,22 +204,20 @@ onMounted(() => {
     <el-card>
       <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="单位名称">
-          <el-input v-model="searchForm.companyName" placeholder="请输入单位名称" />
-        </el-form-item>
-        <el-form-item label="单位编号">
-          <el-input v-model="searchForm.companyCode" placeholder="请输入单位编号" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称和单位编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 100px;">
+            <el-option label="全部" :value="0" />
             <el-option label="启用" :value="1" />
-            <el-option label="停用" :value="0" />
+            <el-option label="停用" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="showCreateDialog = true">
+          <el-button type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增单位
           </el-button>
@@ -255,11 +225,19 @@ onMounted(() => {
       </el-form>
 
       <!-- 数据表格 -->
-      <el-table :data="tableData" border stripe v-loading="loading" header-cell-class-name="text-center" row-class-name="text-center">
-        <el-table-column prop="companyCode" label="单位编号" width="120" align="center" />
+      <el-table
+        :data="tableData"
+        border
+        stripe
+        v-loading="loading"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="companyCode" label="单位编号" width="120" show-overflow-tooltip />
         <el-table-column prop="companyName" label="单位名称" min-width="200" />
-        <el-table-column prop="parentCompanyName" label="上级单位" min-width="150" />
-        <el-table-column prop="companyLevel" label="单位层级" width="100" align="center">
+        <el-table-column prop="parentCompany.companyName" label="上级单位" width="150" show-overflow-tooltip />
+        <el-table-column prop="accountCode" label="账套编号" width="170" show-overflow-tooltip />
+        <el-table-column prop="accountName" label="账套名称" width="170" show-overflow-tooltip />
+        <el-table-column prop="companyLevel" label="层级" width="80" align="center">
           <template #default="{ row }">
             {{ getLevelLabel(row.companyLevel) }}
           </template>
@@ -271,10 +249,16 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdBy" label="创建人" width="120" align="center" />
+        <el-table-column prop="creator.name" label="创建人" width="110" align="center" />
         <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
           <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="updater.name" label="修改人" width="110" align="center" />
+        <el-table-column prop="updatedAt" label="修改时间" width="160" align="center">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" align="center">
@@ -301,7 +285,7 @@ onMounted(() => {
     <!-- 新增/编辑对话框 -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="dialogTitle"
+      :title="dialogStatus === 'create' ? '新增单位' : '编辑单位'"
       width="500px"
       @close="resetForm"
     >
@@ -317,15 +301,21 @@ onMounted(() => {
         <el-form-item label="单位名称" prop="companyName">
           <el-input v-model="form.companyName" placeholder="请输入单位名称" />
         </el-form-item>
+        <el-form-item label="账套编号" prop="accountCode">
+          <el-input v-model="form.accountCode" placeholder="请输入账套编号" />
+        </el-form-item>
+        <el-form-item label="账套名称" prop="accountName">
+          <el-input v-model="form.accountName" placeholder="请输入账套名称" />
+        </el-form-item>
         <el-form-item label="上级单位" prop="parentCompanyId">
-          <el-select v-model="form.parentCompanyId" placeholder="请选择上级单位" clearable filterable>
-            <el-option
-              v-for="item in companyOptions"
-              :key="item.id"
-              :label="item.companyName"
-              :value="item.id"
-            />
-          </el-select>
+          <el-tree-select
+            v-model="form.parentCompanyId"
+            :data="companyOptions"
+            placeholder="请选择上级单位"
+            :render-after-expand="false"
+            :check-strictly="true"
+            clearable
+          />
         </el-form-item>
         <el-form-item label="单位层级" prop="companyLevel">
           <el-select v-model="form.companyLevel" placeholder="请选择单位层级">
@@ -364,17 +354,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {

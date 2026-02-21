@@ -55,7 +55,7 @@ function createInstance() {
       const message = get(error, "response.data.message")
       switch (status) {
         case 400:
-          error.message = "请求错误"
+          error.message = `请求错误：${message}`
           break
         case 401:
           // Token 过期时
@@ -90,7 +90,6 @@ function createInstance() {
           error.message = "HTTP 版本不受支持"
           break
       }
-      ElMessage.error(error.message)
       return Promise.reject(error)
     }
   )
