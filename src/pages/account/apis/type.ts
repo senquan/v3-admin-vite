@@ -57,6 +57,7 @@ export interface AccountListOptData {
   id: number
   type: number
   name: string
+  isLedger: number
   currency: number
 }
 

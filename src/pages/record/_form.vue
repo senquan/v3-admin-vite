@@ -31,7 +31,6 @@ const cascaderOptions = ref({
   accountTo: [] as number[]
 })
 const isEdit = ref(false)
-const tagsAccount = [70, 115, 130]
 
 const visibleInit = {
   category_id: true,
@@ -67,6 +66,7 @@ const tagOptions = ref<any>([])
 const selectedTags = ref<any>([])
 const eventOptions = ref<any>([])
 const selectedEvents = ref<any>([])
+const tagAccounts = ref<number[]>([])
 
 const rules = ref({
   templateId: [{
@@ -107,6 +107,7 @@ function open(options = {
   accounts: [],
   tags: [],
   events: [],
+  tagAccounts: [] as number[],
   id: 0
 }) {
   visible.value = true
@@ -127,6 +128,7 @@ function open(options = {
   }
   if (options.tags) selectedTags.value = options.tags
   if (options.events) selectedEvents.value = options.events
+  if (options.tagAccounts) tagAccounts.value = options.tagAccounts
 
   if (isEdit.value) {
     templateDisabled.value = true
@@ -209,7 +211,7 @@ function querySearchAsync(queryString: string, cb: any) {
     cb([])
     return
   }
-  fetchRecordList({ keyword: queryString, startDate: "1970-01-01" }).then((response) => {
+  fetchRecordList({ keyword: queryString, startDate: "1970-01-01", showTransfer: true }).then((response) => {
     if (response.code === 0) {
       const resutl = response.data.records.map((item: any) => ({
         value: `${item.content}: ${item.remark}`,
@@ -341,7 +343,7 @@ function resetVisible() {
 }
 
 function visibleTagField() {
-  if (tagsAccount.includes(formData.accountFrom) || tagsAccount.includes(formData.accountTo)) {
+  if (tagAccounts.value.includes(formData.accountFrom) || tagAccounts.value.includes(formData.accountTo)) {
     formVisible.value.tags = true
   } else {
     formVisible.value.tags = false

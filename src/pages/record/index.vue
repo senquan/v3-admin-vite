@@ -41,6 +41,7 @@ const recordFormRef = ref<any>([])
 const templates = ref<any>([])
 const categories = ref<any>([])
 const accounts = ref<any>([])
+const tagAccounts = ref<number[]>([])
 
 async function fetchRecords() {
   listQuery.id = Number(router.currentRoute.value.query.id || 0)
@@ -121,6 +122,7 @@ async function fetchAllOptions() {
     const accountOptData: Array<any> = []
     if (accountsRes.data) {
       for (const item of accountsRes.data) {
+        if (item.isLedger > 0) tagAccounts.value.push(item.id)
         if (accountOptData[item.type] === undefined) {
           accountOptData[item.type] = []
         }
@@ -157,6 +159,7 @@ function openFrom(id: number) {
     templates: templates.value,
     categories: categories.value,
     accounts: accounts.value,
+    tagAccounts: tagAccounts.value,
     id
   })
   formVisibility.value = true

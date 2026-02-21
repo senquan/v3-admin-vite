@@ -1,4 +1,5 @@
 import { useWebsocket } from "@@/composables/useWebsocket"
+import { getToken } from "@@/utils/cache/cookies"
 import { defineStore } from "pinia"
 import { ref } from "vue"
 
@@ -21,17 +22,25 @@ export const useWebsocketStore = defineStore("websocket", () => {
     if (url.value === wsUrl && websocket.isConnected) return
 
     url.value = wsUrl
-    opts &&= {
-      ...opts,
-      onMessage: (data: any) => {
-        // 调用原始的onMessage
-        opts?.onMessage?.(data)
 
-        // 处理订阅的消息
-        handleMessage(data)
-      }
-    }
-    websocket.connect(wsUrl, opts)
+    // 保存原始的onMessage回调
+    const originalOnMessage = opts?.onMessage
+
+    // 构造新的选项对象
+    const newOpts = opts
+      ? {
+          ...opts,
+          onMessage: (data: any) => {
+            originalOnMessage?.(data)
+            handleMessage(data)
+          }
+        }
+      : {
+          onMessage: (data: any) => {
+            handleMessage(data)
+          }
+        }
+    websocket.connect(wsUrl, newOpts)
   }
 
   const _reconnect = () => {
@@ -101,7 +110,11 @@ export const useWebsocketStore = defineStore("websocket", () => {
 
   // 自动连接WebSocket
   const defaultUrl = import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:5101"
-  _connect(defaultUrl)
+
+  // 获取当前用户的token用于WebSocket认证
+  const token = getToken() || ""
+  const urlWithToken = token ? `${defaultUrl}?token=${token}` : defaultUrl
+  _connect(urlWithToken)
 
   return {
     // 状态
