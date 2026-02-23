@@ -21,7 +21,7 @@ export function batchUpdateSettings(data: Dict.SettingsCreateData[]) {
 
 export function fetchDictList(params: Dict.CommonListRequestParams) {
   return request<Dict.DictListResponseData>({
-    url: "dict/list",
+    url: "/system/dicts",
     method: "get",
     params
   })

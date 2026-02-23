@@ -10,3 +10,9 @@ interface ApiResponseData<T> {
     [key: string]: any
   }
 }
+
+interface BaseQueryParams {
+  keyword?: string
+  page?: number
+  size?: number
+}

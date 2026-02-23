@@ -2,7 +2,8 @@
 import type { FormInstance, FormRules } from "element-plus"
 import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getAdvanceExpenses, getExpenseTypes } from "./apis"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
+import { advanceExpenseConfirm, getAdvanceExpenses } from "./apis"
 import AdvanceImport from "./forms/_advance-import.vue"
 
 interface AdvanceExpense {
@@ -28,9 +29,13 @@ const showCreateDialog = ref(false)
 const showDetailDrawer = ref(false)
 const dialogTitle = ref("新增垫资")
 const formRef = ref<FormInstance>()
+const tableRef = ref<any>(null)
 const advanceImportRef = ref<any>(null)
 const currentRow = ref<AdvanceExpense | null>(null)
 
+const systemParamsStore = useSystemParamsStore()
+const expenseTypeMap = systemParamsStore.getArrayDict(2)
+console.log(expenseTypeMap)
 const searchForm = reactive({
   keyword: "",
   status: 0,
@@ -39,18 +44,18 @@ const searchForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
 const tableData = ref<AdvanceExpense[]>([])
 const newItemTableData = ref<any[]>([])
 const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
-const expenseTypeMap = new Map<number, string>()
+
 const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
 
 const isAmountDisabled = computed(() => {
-  return expenseTypeMap.get(form.expenseType || 0) === "代垫费用"
+  return expenseTypeMap.find(item => item.id === form.expenseType)?.label === "代垫费用"
 })
 
 const form = reactive({
@@ -145,19 +150,6 @@ async function getCompanies() {
     companyOptions.value = result.data.items
   } catch (error) {
     console.error("获取单位列表失败:", error)
-  }
-}
-
-// 获取项目列表
-async function fetchExpenseTypes() {
-  try {
-    const response = await getExpenseTypes()
-    response.data.records.forEach((item: any) => {
-      expenseTypeMap.set(item.id, item.name)
-    })
-    expenseTypeOptions.value = Array.from(expenseTypeMap.entries()).map(([id, label]) => ({ id, label }))
-  } catch (error) {
-    console.error("获取项目列表失败:", error)
   }
 }
 
@@ -274,29 +266,26 @@ function importSuccess() {
 }
 
 async function handleConfirm() {
-  // const selected = activeTab.value === "up"
-  //   ? upTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
-  //   : downTableRef.value?.getSelectionRows().filter((row: any) => row.transferStatus === 1)
-  // if (selected.length === 0) {
-  //   ElMessage.warning("请选择待确认的记录")
-  //   return
-  // }
+  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
+  if (selected.length === 0) {
+    ElMessage.warning("请选择待确认的记录")
+    return
+  }
 
-  // try {
-  //   const response = await transferConfirm({
-  //     ids: selected.map((r: any) => r.id),
-  //     type: activeTab.value === "up" ? 1 : 2
-  //   })
+  try {
+    const response = await advanceExpenseConfirm({
+      ids: selected.map((r: any) => r.id)
+    })
 
-  //   if (response.code === 0) {
-  //     ElMessage.success(response.message || "确认成功")
-  //     fetchData()
-  //   } else {
-  //     ElMessage.error(response.message || "确认失败")
-  //   }
-  // } catch (error: any) {
-  //   ElMessage.error(error.message || "确认失败")
-  // }
+    if (response.code === 0) {
+      ElMessage.success(response.message || "确认成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "确认失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "确认失败")
+  }
 }
 
 function deleteRow(index: number) {
@@ -314,7 +303,6 @@ function onAddItem() {
 onMounted(() => {
   fetchData()
   getCompanies()
-  fetchExpenseTypes()
 })
 </script>
 
@@ -351,17 +339,20 @@ onMounted(() => {
 
       <!-- 数据表格 -->
       <el-table
+        ref="tableRef"
         :data="tableData"
         border
         stripe
         v-loading="loading"
         header-cell-class-name="header-cell-fix"
       >
+        <el-table-column width="50" type="selection" align="center" />
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
         <el-table-column prop="advanceCode" label="垫资编号" width="140" align="center" />
         <el-table-column prop="companyName" label="单位名称" min-width="150" />
         <el-table-column prop="expenseType" label="类型" width="180" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ expenseTypeMap.get(row.expenseType) }}
+            {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="amount" label="金额(元)" width="120" align="right">

@@ -52,7 +52,7 @@ export interface DictListResponseData {
   code: number
   message: string
   data: {
-    dicts: DictListData[]
+    records: DictListData[]
     total: number
     page: number
     pageSize: number

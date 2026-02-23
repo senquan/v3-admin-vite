@@ -42,13 +42,12 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
       })
 
       if (res.code === 0 && res.data) {
-        dicts.value = res.data.dicts || []
+        dicts.value = res.data.records || []
         dicts.value = dicts.value.reduce((acc, item) => {
           acc[item.group] = acc[item.group] || []
           acc[item.group].push(item)
           return acc
         }, {})
-        console.log("dicts", dicts.value)
       } else {
         error.value = res.message || "加载系统字典失败"
       }

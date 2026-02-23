@@ -6,12 +6,6 @@ export interface ExpenseTypeResponseData extends ApiResponseData<ExpenseType> {}
 export interface ProfitPaymentResponseData extends ApiResponseData<ProfitPayment> {}
 export interface CompaniesResponseData extends ApiResponseData<Company> {}
 
-export interface BaseQueryParams {
-  keyword?: string
-  page?: number
-  size?: number
-}
-
 export interface LoanDepositSummaryParams extends BaseQueryParams {
   companyCode: string
   startDate: string

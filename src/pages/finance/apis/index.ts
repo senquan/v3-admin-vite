@@ -95,6 +95,14 @@ export function profitConfirm(data: any) {
   })
 }
 
+export function advanceExpenseConfirm(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/advance-expense/confirm",
+    method: "post",
+    data
+  })
+}
+
 export function receiveDelete(id: number) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive",
