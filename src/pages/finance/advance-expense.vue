@@ -35,7 +35,7 @@ const currentRow = ref<AdvanceExpense | null>(null)
 
 const systemParamsStore = useSystemParamsStore()
 const expenseTypeMap = systemParamsStore.getArrayDict(2)
-console.log(expenseTypeMap)
+
 const searchForm = reactive({
   keyword: "",
   status: 0,
@@ -349,7 +349,7 @@ onMounted(() => {
         <el-table-column width="50" type="selection" align="center" />
         <el-table-column prop="seq" label="序号" width="60" align="center" />
         <el-table-column prop="advanceCode" label="垫资编号" width="140" align="center" />
-        <el-table-column prop="companyName" label="单位名称" min-width="150" />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
         <el-table-column prop="expenseType" label="类型" width="180" show-overflow-tooltip>
           <template #default="{ row }">
             {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}

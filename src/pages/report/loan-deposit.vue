@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { calculateSum, formattedMoney } from "@@/utils"
+import { formatDateTime } from "@@/utils/datetime"
+import { getFixedDeposits, getFundTransfers, getPaymentClearings } from "../finance/apis"
 import { getDepositLoanSummary } from "./apis"
 
 const router = useRouter()
@@ -21,6 +23,11 @@ interface LoanDeposit {
 }
 
 const loading = ref(false)
+const drillLoading = ref(false)
+const currentDrillType = ref(0)
+const currentCompanyId = ref(0)
+const showDrillDialog = ref(false)
+const drillData = reactive<any>({})
 
 const searchForm = reactive({
   keyword: ""
@@ -28,12 +35,32 @@ const searchForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
+const drillPagination = reactive({
+  page: 1,
+  size: 15,
+  total: 0
+})
+
+const dialogTitle = {
+  1: "内部贷款余额",
+  2: "活期存款到款",
+  3: "活期存款上划",
+  4: "活期存款定期转入",
+  5: "活期存款下拨",
+  6: "活期存款转入定期"
+}
+
 const tableData = ref<LoanDeposit[]>([])
 const fixedDepositTypes = ref<string[]>([])
+
+function formatAmount(amount: number | undefined | null) {
+  if (amount === undefined || amount === null) return "-"
+  return formattedMoney(amount)
+}
 
 // 查询数据
 async function fetchData() {
@@ -80,6 +107,26 @@ async function fetchData() {
   }
 }
 
+function getTransferStatusLabel(status: number) {
+  const labels = { 1: "待确认", 2: "已生效", 3: "已删除" }
+  return labels[status as keyof typeof labels] || "未知"
+}
+
+// 格式化日期
+function formatDate(date: string) {
+  return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
+}
+
+function getStatusLabel(status: number) {
+  const labels = { 1: "待确认", 2: "已生效", 3: "已清算", 4: "已删除" }
+  return labels[status as keyof typeof labels] || "未知"
+}
+
+function getStatusType(status: number) {
+  const types = { 1: "warning", 2: "success", 3: "primary", 4: "info" }
+  return types[status as keyof typeof types] || "info"
+}
+
 // 搜索
 function handleSearch() {
   pagination.page = 1
@@ -104,6 +151,64 @@ function handleSizeChange(val: number) {
 function handleCurrentChange(val: number) {
   pagination.page = val
   fetchData()
+}
+
+function handleDrill(row: any, type: number) {
+  currentDrillType.value = type
+  currentCompanyId.value = row.companyId
+  showDrillDialog.value = true
+  loadDrillData(type)
+}
+
+async function loadDrillData(type: number) {
+  drillLoading.value = true
+  try {
+    const params: any = {
+      page: drillPagination.page,
+      size: drillPagination.size,
+      companyId: currentCompanyId.value
+    }
+
+    let response
+    if (type === 1) {
+      params.type = 2
+      params.isLoan = 1
+      response = await getFundTransfers(params)
+    } else if (type === 2) {
+      params.status = 2
+      params.received = 1
+      response = await getPaymentClearings(params)
+    } else if (type === 3) {
+      params.type = 1
+      response = await getFundTransfers(params)
+    } else if (type === 4) {
+      params.isReleased = 1
+      response = await getFixedDeposits(params)
+    }
+    if (response && response.code === 0) {
+      let count = 1
+      drillData[type] = []
+      response.data.records.forEach((item: any) => {
+        item.seq = count++
+        drillData[type].push(item)
+      })
+      drillPagination.total = response.data.total || 0
+    }
+  } catch (error) {
+    ElMessage.error(`获取数据失败: ${error}`)
+  } finally {
+    drillLoading.value = false
+  }
+}
+
+function handleSizeChangeDrill(val: number) {
+  drillPagination.size = val
+  loadDrillData(currentDrillType.value)
+}
+
+function handleCurrentChangeDrill(val: number) {
+  drillPagination.page = val
+  loadDrillData(currentDrillType.value)
 }
 
 // 初始化
@@ -139,7 +244,7 @@ onMounted(() => {
         <el-table-column prop="internalDepositBalance" label="内部贷款" class-name="header-internal-loan">
           <el-table-column prop="loanBalance" label="余额" width="140" align="right">
             <template #default="{ row }">
-              {{ formattedMoney(row.loanBalance) }}
+              <span class="drillable" @click="handleDrill(row, 1)">{{ formattedMoney(row.loanBalance) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="loanInterest" label="利息" width="140" align="right">
@@ -158,17 +263,17 @@ onMounted(() => {
             <el-table-column label="活期存款" class-name="header-current-deposit">
               <el-table-column prop="depositIncoming" label="到款" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositIncoming) }}
+                  <span class="drillable" @click="handleDrill(row, 2)">{{ formattedMoney(row.depositTransferUp) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositTransferUp" label="上划" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositTransferUp) }}
+                  <span class="drillable" @click="handleDrill(row, 3)">{{ formattedMoney(row.depositTransferUp) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositFromFixed" label="定期转入" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositFromFixed) }}
+                  <span class="drillable" @click="handleDrill(row, 4)">{{ formattedMoney(row.depositFromFixed) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositTransferDown" label="下拨" width="140" align="right">
@@ -242,6 +347,195 @@ onMounted(() => {
         class="pagination"
       />
     </el-card>
+
+    <el-dialog
+      v-model="showDrillDialog"
+      :title="`${dialogTitle[currentDrillType as keyof typeof dialogTitle]} 明细详情`"
+      width="80%"
+      height="80%"
+    >
+      <el-table
+        v-if="currentDrillType === 1"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="transferDate" label="日期" width="120" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" width="220" />
+        <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="160" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.transferAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="isLoan" label="是否贷款" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.isLoan === 1 ? '是' : '否' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dueDate" label="贷款期限" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.dueDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="200" />
+        <el-table-column prop="interestRate" label="利率" width="100" />
+        <el-table-column prop="interest" label="利息" width="100" />
+        <el-table-column prop="transferStatus" label="转账状态" width="100" align="center">
+          <template #default="{ row }">
+            {{ getTransferStatusLabel(row.transferStatus) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dueDate" label="到期日" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.dueDate) }}
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 2"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="receiveType" label="到款类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.receiveType === 1 ? "银行到款" : "票据到款" }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="receiveDate" label="到款日期" width="110" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.receiveDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="sapCode" label="SAP代码" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="customerName" label="客户名称" width="220" show-overflow-tooltip />
+        <el-table-column prop="projectName" label="项目名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right">
+          <template #default="{ row }">
+            {{ formatAmount(row.accountAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center" />
+        <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
+        <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
+        <el-table-column prop="receiptDate" label="托收日期" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.receiptDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="received" label="是否已到账" width="80" align="center">
+          <template #default="{ row }">
+            {{ row.received === 1 ? "已到账" : "未到账" }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="discountDate" label="贴现日期" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.discountDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="discountAmount" label="贴现到款金额" width="120" align="center" />
+        <el-table-column prop="discountFee" label="贴现手续费" width="120" align="center" />
+        <el-table-column prop="accountSet" label="账套" width="100" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 3"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="transferDate" label="日期" width="120" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" width="220" />
+        <el-table-column prop="transferAmount" label="金额" width="160" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.transferAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="200" />
+        <el-table-column prop="transferStatus" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            {{ getTransferStatusLabel(row.transferStatus) }}
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 4"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="80" align="center" />
+        <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
+        <el-table-column prop="startDate" label="起息日期" width="100" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.startDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.amount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="depositTerm" label="定存期限" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.depositTerm }}个月
+          </template>
+        </el-table-column>
+        <el-table-column prop="endDate" label="到期日期" width="100" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.endDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="isEarlyRelease" label="提前释放" width="100" align="center" />
+        <el-table-column prop="releaseDate" label="释放日期" width="100" align="center" />
+        <el-table-column prop="daysCount" label="已计息天数" width="100" align="center" />
+        <el-table-column prop="releaseAmount" label="释放金额" width="120" align="center" />
+        <el-table-column prop="remainingAmount" label="剩余金额" width="120" align="center" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="drillPagination.page"
+        v-model:page-size="drillPagination.size"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="drillPagination.total"
+        @size-change="handleSizeChangeDrill"
+        @current-change="handleCurrentChangeDrill"
+        class="pagination"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -255,6 +549,12 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
+}
+
+:deep(.el-table .header-cell-fix) {
+  text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .summary-cards {
@@ -309,6 +609,10 @@ onMounted(() => {
 
 :deep(.el-table .header-fixed-deposit) {
   background-color: #e8ebf0 !important;
+}
+
+.drillable {
+  cursor: pointer;
 }
 
 .pagination {

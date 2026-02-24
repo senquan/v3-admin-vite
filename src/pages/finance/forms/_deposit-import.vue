@@ -24,7 +24,7 @@ const fieldMapping = {
   起息日期: "startDate",
   单位名称: "companyName",
   金额: "depositAmount",
-  定存期限: "depositTerm",
+  定存期限: "depositPeriod",
   到期日: "endDate",
   备注: "remark"
 }

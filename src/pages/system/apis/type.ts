@@ -71,7 +71,7 @@ export interface CommonListRequestParams {
   keyword?: string
   sort?: string
   page?: number
-  pageSize?: number
+  size?: number
 }
 
 export interface CommonActionResponseData {

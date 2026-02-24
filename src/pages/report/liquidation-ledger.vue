@@ -2,7 +2,7 @@
 import { formattedMoney } from "@@/utils"
 import { useRouter } from "vue-router"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { getAdvanceExpenses } from "../finance/apis"
+import { getAdvanceExpenses, getProfitPayments } from "../finance/apis"
 import { getClearingSummary } from "./apis"
 
 const router = useRouter()
@@ -29,6 +29,7 @@ interface InternalDeposit {
 const loading = ref(false)
 const drillLoading = ref(false)
 const currentDrillType = ref(0)
+const currentCompanyId = ref(0)
 const showDrillDialog = ref(false)
 const drillData = reactive<any>({})
 
@@ -40,6 +41,9 @@ const dialogTitle = {
   5: "代垫职工薪酬",
   6: "本年上缴利润"
 }
+
+const advanceExpenseTypes = [2, 3, 4, 5]
+const advanceExpenseDetailColumns = ref<any[]>([])
 
 const searchForm = reactive({
   keyword: ""
@@ -53,7 +57,7 @@ const pagination = reactive({
 
 const drillPagination = reactive({
   page: 1,
-  size: 10,
+  size: 15,
   total: 0
 })
 
@@ -123,6 +127,7 @@ function handleSave() {
 
 function handleDrill(row: any, type: number) {
   currentDrillType.value = type
+  currentCompanyId.value = row.companyId
   if (type === 1) {
     router.push({
       name: "Internal Loan Deposit",
@@ -130,7 +135,7 @@ function handleDrill(row: any, type: number) {
         companyId: row.companyId
       }
     })
-  } else if (type === 2) {
+  } else {
     showDrillDialog.value = true
     loadDrillData(type)
   }
@@ -142,17 +147,34 @@ async function loadDrillData(type: number) {
     const params: any = {
       page: drillPagination.page,
       size: drillPagination.size,
-      type: getExpensesType(type)
+      companyId: currentCompanyId.value
     }
 
     let response
-    if (type === 2) response = await getAdvanceExpenses(params)
+    if (advanceExpenseTypes.includes(type)) {
+      params.type = getExpensesType(type)
+      response = await getAdvanceExpenses(params)
+    } else {
+      params.status = 2
+      response = await getProfitPayments(params)
+    }
     if (response && response.code === 0) {
       let count = 1
       drillData[type] = []
+      advanceExpenseDetailColumns.value = []
       response.data.records.forEach((item: any) => {
         item.seq = count++
         drillData[type].push(item)
+        if (item.expenseType === 3) {
+          for (const key in item.details) {
+            const name = item.details[key].expenseType?.name
+            if (name) {
+              if (!advanceExpenseDetailColumns.value.includes(name)) {
+                advanceExpenseDetailColumns.value.push(name)
+              }
+            }
+          }
+        }
       })
       drillPagination.total = response.data.total || 0
     }
@@ -173,10 +195,17 @@ function handleCurrentChangeDrill(val: number) {
   loadDrillData(currentDrillType.value)
 }
 
+// 根据穿透类型获取代垫费用类型
 function getExpensesType(type: number) {
   switch (type) {
     case 2:
       return 1
+    case 3:
+      return 2
+    case 4:
+      return 3
+    case 5:
+      return 4
     default:
       return 0
   }
@@ -280,38 +309,38 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="dueBillAdvance" label="代垫到期票据款" width="160" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.dueBillAdvance) }}
+            <span class="drillable" @click="handleDrill(row, 3)">{{ formattedMoney(row.dueBillAdvance) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="expenseAdvance" label="代垫费用" width="120" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.expenseAdvance) }}
+            <span class="drillable" @click="handleDrill(row, 4)">{{ formattedMoney(row.expenseAdvance) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="salaryAdvance" label="代垫职工薪酬" width="150" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.salaryAdvance) }}
+            <span class="drillable" @click="handleDrill(row, 5)">{{ formattedMoney(row.salaryAdvance) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="annualProfitPayment" label="本年上缴利润" width="140" align="right">
           <el-table-column prop="dueProfit1" label="第一次应缴" width="160" align="right">
             <template #default="{ row }">
-              {{ formattedMoney(row.dueProfit1) }}
+              <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.dueProfit1) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="dueProfit2" label="第二次应缴" width="160" align="right">
             <template #default="{ row }">
-              {{ formattedMoney(row.dueProfit2) }}
+              <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.dueProfit2) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="profitPaid" label="已缴" width="160" align="right">
             <template #default="{ row }">
-              {{ formattedMoney(row.profitPaid) }}
+              <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.profitPaid) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="remainingProfit" label="小计（剩余应缴）" width="160" align="right">
             <template #default="{ row }">
-              {{ formattedMoney(row.remainingProfit) }}
+              <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.remainingProfit) }}</span>
             </template>
           </el-table-column>
         </el-table-column>
@@ -357,26 +386,60 @@ onMounted(() => {
       height="80%"
     >
       <el-table
-        v-if="currentDrillType === 2"
+        v-if="advanceExpenseTypes.includes(currentDrillType)"
         border
         stripe
         v-loading="drillLoading"
         :data="drillData[currentDrillType as keyof typeof drillData]"
         header-cell-class-name="header-cell-fix"
       >
-        <el-table-column prop="seq" label="序号" width="80" align="center" />
-        <el-table-column prop="company.companyName" label="单位名称" width="250" />
-        <el-table-column prop="expenseType" label="类型" width="160" align="center">
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" width="220" />
+        <el-table-column prop="expenseType" label="类型" width="180" align="center">
           <template #default="{ row }">
             {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="金额" width="160" align="right">
+        <el-table-column prop="amount" label="金额" width="150" align="right">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="businessYear" label="年份" width="120" align="center" />
+        <el-table-column prop="businessYear" label="年份" width="80" align="center" />
+        <el-table-column v-for="(column, index) in advanceExpenseDetailColumns" :key="index" :label="column" width="140" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.details.find((item: any) => item.expenseType?.name === column)?.amount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="200" />
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 6"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" width="220" />
+        <el-table-column prop="dueProfit1" label="第一次应缴" width="180" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.dueProfit1) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dueProfit2" label="第二次应缴" width="180" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.dueProfit2) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remainingProfit" label="合计（剩余应缴）" width="180" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(Number(row.dueProfit1) + Number(row.dueProfit2) - Number(row.actualAmount)) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="businessYear" label="年份" width="80" align="center" />
         <el-table-column prop="remark" label="备注" min-width="200" />
       </el-table>
 

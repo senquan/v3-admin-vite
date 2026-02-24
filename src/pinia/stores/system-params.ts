@@ -20,7 +20,7 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
     try {
       const res = await fetchParamList({
         page: 1,
-        pageSize: 100 // 获取足够多的系统参数
+        size: 100 // 获取足够多的系统参数
       })
 
       if (res.code === 0 && res.data) {
@@ -38,7 +38,7 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
     try {
       const res = await fetchDictList({
         page: 1,
-        pageSize: 100 // 获取足够多的系统字典
+        size: 100 // 获取足够多的系统字典
       })
 
       if (res.code === 0 && res.data) {

@@ -78,7 +78,7 @@ function getTransferStatusLabel(status: number) {
 
 // 获取转账状态标签类型
 function getTransferStatusType(status: number) {
-  const types = { 1: "info", 2: "warning", 3: "success", 4: "danger" }
+  const types = { 1: "info", 2: "success", 3: "danger" }
   return types[status as keyof typeof types] || "info"
 }
 
@@ -397,7 +397,7 @@ onMounted(() => {
                 {{ formatDate(row.transferDate) }}
               </template>
             </el-table-column>
-            <el-table-column prop="companyName" label="单位名称" min-width="150" />
+            <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
             <el-table-column prop="transferAmount" label="金额(元)" width="150" align="right">
               <template #default="{ row }">
                 {{ formattedMoney(row.transferAmount) }}

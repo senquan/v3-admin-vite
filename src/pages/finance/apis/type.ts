@@ -32,6 +32,7 @@ export interface FundTransferParams extends BaseQueryParams {
 
 export interface AdvanceExpenseParams extends BaseQueryParams {
   type: number
+  companyId?: number
   status?: number
 }
 

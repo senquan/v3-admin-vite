@@ -2,6 +2,7 @@
 import type { FormInstance, FormRules } from "element-plus"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getFixedDeposits } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
@@ -11,7 +12,7 @@ interface FixedDeposit {
   companyId: number
   companyName: string
   depositAmount: number
-  depositTerm: number
+  depositPeriod: number
   interestRate: number
   startDate: string
   endDate: string
@@ -29,6 +30,9 @@ const showCreateDialog = ref(false)
 const dialogTitle = ref("新增存款")
 const formRef = ref<FormInstance>()
 const depositImportRef = ref<any>([])
+
+const systemParamsStore = useSystemParamsStore()
+const depositPeriodMap = systemParamsStore.getArrayDict(3)
 
 const searchForm = reactive({
   keyword: "",
@@ -50,7 +54,7 @@ const form = reactive({
   depositCode: "",
   companyId: undefined as number | undefined,
   depositAmount: undefined as number | undefined,
-  depositTerm: undefined as number | undefined,
+  depositPeriod: undefined as number | undefined,
   interestRate: undefined as number | undefined,
   startDate: "",
   remark: ""
@@ -60,7 +64,7 @@ const rules = reactive<FormRules>({
   depositCode: [{ required: true, message: "请输入存款编号", trigger: "blur" }],
   companyId: [{ required: true, message: "请选择存款单位", trigger: "change" }],
   depositAmount: [{ required: true, message: "请输入存款金额", trigger: "blur" }],
-  depositTerm: [{ required: true, message: "请选择存款期限", trigger: "change" }],
+  depositPeriod: [{ required: true, message: "请选择存款期限", trigger: "change" }],
   interestRate: [{ required: true, message: "请输入年利率", trigger: "blur" }],
   startDate: [{ required: true, message: "请选择起息日期", trigger: "change" }]
 })
@@ -80,8 +84,8 @@ function formatDate(date: string) {
 }
 
 function calculateExpectedIncome() {
-  if (form.depositAmount && form.depositTerm && form.interestRate) {
-    const years = form.depositTerm / 12
+  if (form.depositAmount && form.depositPeriod && form.interestRate) {
+    const years = form.depositPeriod / 12
     return form.depositAmount * (form.interestRate / 100) * years
   }
   return 0
@@ -175,7 +179,7 @@ function handleEdit(row: FixedDeposit) {
     depositCode: row.depositCode,
     companyId: row.companyId,
     depositAmount: row.depositAmount,
-    depositTerm: row.depositTerm,
+    depositPeriod: row.depositPeriod,
     interestRate: row.interestRate,
     startDate: row.startDate,
     remark: row.remark
@@ -231,7 +235,7 @@ function resetForm() {
     depositCode: "",
     companyId: undefined,
     depositAmount: undefined,
-    depositTerm: undefined,
+    depositPeriod: undefined,
     interestRate: undefined,
     startDate: "",
     remark: ""
@@ -310,15 +314,15 @@ onMounted(() => {
             {{ formatDate(row.startDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="companyName" label="单位名称" min-width="180" />
-        <el-table-column prop="depositAmount" label="金额(元)" width="120" align="right">
+        <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.depositAmount) }}
+            {{ formattedMoney(row.amount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="depositTerm" label="定存期限" width="100" align="center">
+        <el-table-column prop="depositPeriod" label="定存期限" width="100" align="center">
           <template #default="{ row }">
-            {{ row.depositTerm }}个月
+            {{ depositPeriodMap.find(item => item.value === String(row.depositPeriod))?.name || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="endDate" label="到期日期" width="100" align="center">
@@ -417,8 +421,8 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="存款期限" prop="depositTerm">
-              <el-select v-model="form.depositTerm" placeholder="请选择存款期限">
+            <el-form-item label="存款期限" prop="depositPeriod">
+              <el-select v-model="form.depositPeriod" placeholder="请选择存款期限">
                 <el-option label="3个月" :value="3" />
                 <el-option label="6个月" :value="6" />
                 <el-option label="12个月" :value="12" />

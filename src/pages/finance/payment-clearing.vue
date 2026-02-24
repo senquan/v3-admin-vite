@@ -306,7 +306,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="sapCode" label="SAP代码" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="companyName" label="单位名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="customerName" label="客户名称" width="220" show-overflow-tooltip />
         <el-table-column prop="projectName" label="项目名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right">
