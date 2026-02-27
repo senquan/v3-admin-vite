@@ -329,7 +329,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip />
-        <el-table-column label="操作" width="300" fixed="right" align="center">
+        <el-table-column label="操作" width="310" fixed="right" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === 2 && row.remainingProfit > 0" type="success" @click="handleTurnOver(row)">
               上缴

@@ -79,6 +79,14 @@ export function transferDelete(id: number) {
   })
 }
 
+export function depositConfirm(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/import-deposit/confirm",
+    method: "post",
+    data
+  })
+}
+
 export function receiveConfirm(data: any) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive/confirm",

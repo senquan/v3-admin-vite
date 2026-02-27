@@ -3,7 +3,7 @@ import type { FormInstance, FormRules } from "element-plus"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { getFixedDeposits } from "./apis"
+import { depositConfirm, getFixedDeposits } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
@@ -46,6 +46,7 @@ const pagination = reactive({
   total: 0
 })
 
+const tableRef = ref<any>(null)
 const tableData = ref<FixedDeposit[]>([])
 const companyOptions = ref<{ id: number, companyName: string }[]>([])
 
@@ -70,12 +71,12 @@ const rules = reactive<FormRules>({
 })
 
 function getStatusLabel(status: number) {
-  const labels = { 1: "存续中", 2: "已到期", 3: "已支取" }
+  const labels = { 1: "待确认", 2: "已生效", 3: "已删除" }
   return labels[status as keyof typeof labels] || "未知"
 }
 
 function getStatusType(status: number) {
-  const types = { 1: "primary", 2: "warning", 3: "success" }
+  const types = { 1: "warning", 2: "success", 3: "danger" }
   return types[status as keyof typeof types] || "info"
 }
 
@@ -251,6 +252,29 @@ function generateDepositCode() {
   form.depositCode = `FD${year}${month}${day}${random}`
 }
 
+async function handleConfirm() {
+  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
+  if (selected.length === 0) {
+    ElMessage.warning("请选择待确认的记录")
+    return
+  }
+
+  try {
+    const response = await depositConfirm({
+      ids: selected.map((r: any) => r.id)
+    })
+
+    if (response.code === 0) {
+      ElMessage.success(response.message || "确认成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "确认失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "确认失败")
+  }
+}
+
 onMounted(() => {
   fetchData()
   getCompanies()
@@ -295,10 +319,12 @@ onMounted(() => {
             <SvgIcon name="import" />
             导入定期存款
           </el-button>
+          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>
       </el-form>
 
       <el-table
+        ref="tableRef"
         :data="tableData"
         border
         stripe
@@ -331,7 +357,11 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="isEarlyRelease" label="提前释放" width="100" align="center" />
+        <el-table-column prop="earlyRelease" label="提前释放" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.earlyRelease === 1 ? '是' : '否' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="releaseDate" label="释放日期" width="100" align="center" />
         <el-table-column prop="daysCount" label="已计息天数" width="100" align="center" />
         <el-table-column prop="releaseAmount" label="释放金额" width="120" align="center" />
@@ -349,8 +379,8 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="导入批次" width="130" align="center" />
-        <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="center" />
+        <el-table-column prop="batchNo" label="导入批次" width="130" align="right" show-overflow-tooltip />
+        <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="right" />
         <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" @click="handleEdit(row)">编辑</el-button>

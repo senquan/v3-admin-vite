@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { calculateSum, formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getFixedDeposits, getFundTransfers, getPaymentClearings } from "../finance/apis"
 import { getDepositLoanSummary } from "./apis"
 
@@ -28,6 +29,9 @@ const currentDrillType = ref(0)
 const currentCompanyId = ref(0)
 const showDrillDialog = ref(false)
 const drillData = reactive<any>({})
+
+const systemParamsStore = useSystemParamsStore()
+const depositPeriodMap = systemParamsStore.getArrayDict(3)
 
 const searchForm = reactive({
   keyword: ""
@@ -182,7 +186,16 @@ async function loadDrillData(type: number) {
       params.type = 1
       response = await getFundTransfers(params)
     } else if (type === 4) {
+      params.type = 1
+      params.status = 2
       params.isReleased = 1
+      response = await getFixedDeposits(params)
+    } else if (type === 5) {
+      params.type = 2
+      response = await getFundTransfers(params)
+    } else if (type === 6) {
+      params.type = 2
+      params.status = 2
       response = await getFixedDeposits(params)
     }
     if (response && response.code === 0) {
@@ -278,12 +291,12 @@ onMounted(() => {
               </el-table-column>
               <el-table-column prop="depositTransferDown" label="下拨" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositTransferDown) }}
+                  <span class="drillable" @click="handleDrill(row, 5)">{{ formattedMoney(row.depositTransferDown) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositToFixed" label="转入定期" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositToFixed) }}
+                  <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.depositToFixed) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="internalDepositBalance" label="小计" width="140" align="right">
@@ -522,6 +535,82 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 5"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="transferDate" label="日期" width="120" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" width="220" />
+        <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="150" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.transferAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="isLoan" label="是否贷款" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.isLoan === 1 ? '是' : '否' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dueDate" label="贷款期限" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.dueDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="200" />
+        <el-table-column prop="transferStatus" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            {{ getTransferStatusLabel(row.transferStatus) }}
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 6"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="seq" label="序号" width="60" align="center" />
+        <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
+        <el-table-column prop="startDate" label="起息日期" width="100" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.startDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.amount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="depositPeriod" label="定存期限" width="100" align="center">
+          <template #default="{ row }">
+            {{ depositPeriodMap.find(item => item.value === String(row.depositPeriod))?.name || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="endDate" label="到期日期" width="100" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.endDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
       </el-table>
 
       <!-- 分页 -->

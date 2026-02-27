@@ -16,3 +16,19 @@ export function getDepositLoanSummary(params: Report.DepositLoanQueryParams) {
     params
   })
 }
+
+export function getInterestDetail(params: Report.InterestDetailQueryParams) {
+  let url
+  if (params.type === 2) {
+    url = "/report/fixed-to-current-interest"
+  } else if (params.type === 3) {
+    url = "/report/daily-fixed-interest"
+  } else {
+    url = "/report/daily-interest"
+  }
+  return request<Report.InterestDetailResponseData>({
+    url,
+    method: "get",
+    params
+  })
+}
