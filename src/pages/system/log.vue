@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getOperationLogs } from "./apis"
+
 interface OperationLog {
   id: number
   logCode: string // 日志编号
@@ -25,7 +27,7 @@ const detailDialogTitle = ref("日志详情")
 const detailData = ref<OperationLog | null>(null)
 
 const searchForm = reactive({
-  userName: "",
+  keyword: "",
   operationModule: "",
   operationType: undefined as number | undefined,
   status: undefined as number | undefined,
@@ -88,98 +90,28 @@ function formatJson(jsonStr: string) {
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                logCode: "LOG202401010001",
-                userName: "admin",
-                realName: "系统管理员",
-                operationModule: "用户管理",
-                operationType: 1,
-                operationDesc: "新增用户",
-                requestUrl: "/api/user/create",
-                requestMethod: "POST",
-                requestParams: "{\"username\":\"testuser\",\"realName\":\"测试用户\"}",
-                responseResult: "{\"code\":200,\"message\":\"创建成功\"}",
-                clientIp: "192.168.1.100",
-                userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                operationTime: "2024-01-01T10:30:00Z",
-                executionTime: 156,
-                status: 1,
-                remark: "用户创建成功"
-              },
-              {
-                id: 2,
-                logCode: "LOG202401010002",
-                userName: "user001",
-                realName: "张三",
-                operationModule: "财务管理",
-                operationType: 2,
-                operationDesc: "修改财务数据",
-                requestUrl: "/api/finance/update",
-                requestMethod: "PUT",
-                requestParams: "{\"id\":123,\"amount\":50000}",
-                responseResult: "{\"code\":200,\"message\":\"更新成功\"}",
-                clientIp: "192.168.1.101",
-                userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                operationTime: "2024-01-01T11:15:30Z",
-                executionTime: 89,
-                status: 1,
-                remark: "财务数据更新"
-              },
-              {
-                id: 3,
-                logCode: "LOG202401010003",
-                userName: "user002",
-                realName: "李四",
-                operationModule: "系统配置",
-                operationType: 3,
-                operationDesc: "删除配置项",
-                requestUrl: "/api/config/delete/456",
-                requestMethod: "DELETE",
-                requestParams: "",
-                responseResult: "{\"code\":500,\"message\":\"删除失败：系统配置不允许删除\"}",
-                clientIp: "192.168.1.102",
-                userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                operationTime: "2024-01-01T12:20:45Z",
-                executionTime: 45,
-                status: 2,
-                remark: "删除系统配置失败"
-              },
-              {
-                id: 4,
-                logCode: "LOG202401010004",
-                userName: "admin",
-                realName: "系统管理员",
-                operationModule: "报表管理",
-                operationType: 5,
-                operationDesc: "导出财务报表",
-                requestUrl: "/api/report/export",
-                requestMethod: "GET",
-                requestParams: "{\"reportType\":\"summary\",\"startDate\":\"2024-01-01\",\"endDate\":\"2024-03-31\"}",
-                responseResult: "{\"code\":200,\"message\":\"导出成功\",\"data\":{\"fileName\":\"财务汇总报表_2024Q1.xlsx\"}}",
-                clientIp: "192.168.1.100",
-                userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                operationTime: "2024-01-01T14:30:15Z",
-                executionTime: 1234,
-                status: 1,
-                remark: "季度财务报表导出"
-              }
-            ],
-            total: 4
-          }
-        })
-      }, 500)
-    })
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      keyword: searchForm.keyword,
+      status: searchForm.status || undefined,
+      startDate: "",
+      endDate: ""
+    }
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
+    const response = await getOperationLogs(params)
 
     const result: any = response
-    tableData.value = result.data.items
+    let count = 1
+    tableData.value = result.data.records.map((item: any) => {
+      return {
+        ...item,
+        seq: count++
+      }
+    })
     pagination.total = result.data.total
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
@@ -241,8 +173,8 @@ onMounted(() => {
     <el-card>
       <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="用户名">
-          <el-input v-model="searchForm.userName" placeholder="请输入用户名" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入用户名、操作描述模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="操作模块">
           <el-input v-model="searchForm.operationModule" placeholder="请输入操作模块" />
@@ -287,9 +219,9 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
-        header-cell-class-name="text-center"
+        header-cell-class-name="header-cell-fix"
       >
-        <el-table-column prop="logCode" label="日志编号" width="140" align="center" />
+        <el-table-column prop="logCode" label="日志编号" width="140" align="center" show-overflow-tooltip />
         <el-table-column prop="userName" label="用户名" width="100" align="center" />
         <el-table-column prop="realName" label="真实姓名" width="100" align="center" />
         <el-table-column prop="operationModule" label="操作模块" width="120" align="center" />
@@ -405,17 +337,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {

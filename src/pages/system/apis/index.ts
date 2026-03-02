@@ -1,16 +1,16 @@
-import type * as Dict from "./type"
+import type * as System from "./type"
 import { request } from "@/http/axios"
 
-export function fetchList(params: Dict.CommonListRequestParams) {
-  return request<Dict.SettingsListResponseData>({
+export function fetchList(params: System.CommonListRequestParams) {
+  return request<System.SettingsListResponseData>({
     url: "settings/list",
     method: "get",
     params
   })
 }
 
-export function batchUpdateSettings(data: Dict.SettingsCreateData[]) {
-  return request<Dict.CommonActionResponseData>({
+export function batchUpdateSettings(data: System.SettingsCreateData[]) {
+  return request<System.CommonActionResponseData>({
     url: `settings/batch`,
     method: "post",
     data: {
@@ -19,24 +19,24 @@ export function batchUpdateSettings(data: Dict.SettingsCreateData[]) {
   })
 }
 
-export function fetchDictList(params: Dict.CommonListRequestParams) {
-  return request<Dict.DictListResponseData>({
+export function fetchDictList(params: System.CommonListRequestParams) {
+  return request<System.DictListResponseData>({
     url: "/system/dicts",
     method: "get",
     params
   })
 }
 
-export function createDict(data: Dict.DictCreateData) {
-  return request<Dict.CommonActionResponseData>({
+export function createDict(data: System.DictCreateData) {
+  return request<System.CommonActionResponseData>({
     url: "dict/",
     method: "post",
     data
   })
 }
 
-export function updateDict(id: number, data: Dict.DictCreateData) {
-  return request<Dict.CommonActionResponseData>({
+export function updateDict(id: number, data: System.DictCreateData) {
+  return request<System.CommonActionResponseData>({
     url: `dict/${id}`,
     method: "put",
     data
@@ -44,15 +44,23 @@ export function updateDict(id: number, data: Dict.DictCreateData) {
 }
 
 export function deleteDict(id: number) {
-  return request<Dict.CommonActionResponseData>({
+  return request<System.CommonActionResponseData>({
     url: `dict/${id}`,
     method: "delete"
   })
 }
 
 export function getPlatformTags(id: number) {
-  return request<Dict.PlatformTagsResponseData>({
+  return request<System.PlatformTagsResponseData>({
     url: `tags/platform/${id}`,
     method: "get"
+  })
+}
+
+export function getOperationLogs(params: System.CommonListRequestParams) {
+  return request<System.OperationLogListResponseData>({
+    url: "/logs/",
+    method: "get",
+    params
   })
 }

@@ -1,3 +1,4 @@
+export interface OperationLogListResponseData extends ApiResponseData<OperationLog> {}
 export interface DictListData {
   id: number
   name: string
@@ -77,4 +78,8 @@ export interface CommonListRequestParams {
 export interface CommonActionResponseData {
   code: number
   message: string
+}
+
+export interface OperationLog {
+  [key: string]: any
 }
