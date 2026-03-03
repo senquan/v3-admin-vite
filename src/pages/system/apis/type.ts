@@ -1,4 +1,6 @@
 export interface OperationLogListResponseData extends ApiResponseData<OperationLog> {}
+export interface SystemConfigListResponseData extends ApiResponseData<SystemConfig> {}
+
 export interface DictListData {
   id: number
   name: string
@@ -82,4 +84,19 @@ export interface CommonActionResponseData {
 
 export interface OperationLog {
   [key: string]: any
+}
+
+export interface SystemConfig {
+  [key: string]: any
+}
+
+export interface SystemConfigUpdateData {
+  id?: number
+  key: string
+  value: string
+  type: number
+  category: string
+  description: string
+  isEnabled: number
+  isSystem: number
 }

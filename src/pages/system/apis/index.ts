@@ -64,3 +64,26 @@ export function getOperationLogs(params: System.CommonListRequestParams) {
     params
   })
 }
+
+export function getSystemConfig(params: System.CommonListRequestParams) {
+  return request<System.SystemConfigListResponseData>({
+    url: "/system/settings",
+    method: "get",
+    params
+  })
+}
+
+export function updateSystemConfig(data: System.SystemConfigUpdateData, id: number) {
+  return request<System.CommonActionResponseData>({
+    url: `system/settings/${id}`,
+    method: "put",
+    data
+  })
+}
+
+export function deleteSystemConfig(id: number) {
+  return request<System.CommonActionResponseData>({
+    url: `system/settings/${id}`,
+    method: "delete"
+  })
+}

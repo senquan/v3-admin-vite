@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import { deleteSystemConfig, getSystemConfig, updateSystemConfig } from "./apis"
 
 interface SystemConfig {
   id: number
-  configKey: string // 配置键
-  configName: string // 配置名称
-  configValue: string // 配置值
-  configType: number // 配置类型：1-字符串，2-数字，3-布尔值，4-JSON
+  key: string // 配置键
+  name: string // 配置名称
+  value: string // 配置值
+  type: number // 配置类型：1-字符串，2-数字，3-布尔值，4-JSON
   category: string // 配置分类
   description: string // 配置描述
-  status: number // 状态：1-启用，2-禁用
+  isEnabled: number // 状态：1-启用，2-禁用
   isSystem: number // 是否系统配置：1-是，2-否
   remark: string
   createdBy: string
@@ -23,10 +24,9 @@ const dialogTitle = ref("新增系统配置")
 const formRef = ref<FormInstance>()
 
 const searchForm = reactive({
-  configName: "",
-  category: "",
+  keyword: "",
   status: undefined as number | undefined,
-  configType: undefined as number | undefined
+  type: undefined as number | undefined
 })
 
 const pagination = reactive({
@@ -39,26 +39,25 @@ const tableData = ref<SystemConfig[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
-  configKey: "",
-  configName: "",
-  configValue: "",
-  configType: 1,
+  key: "",
+  name: "",
+  value: "",
+  type: 1,
   category: "",
   description: "",
-  status: 1,
+  isEnabled: 1,
   isSystem: 2,
   remark: ""
 })
 
 const rules = reactive<FormRules>({
-  configKey: [
+  key: [
     { required: true, message: "请输入配置键", trigger: "blur" },
     { pattern: /^[a-z]\w*$/i, message: "配置键只能包含字母、数字和下划线，且以字母开头", trigger: "blur" }
   ],
-  configName: [{ required: true, message: "请输入配置名称", trigger: "blur" }],
-  configValue: [{ required: true, message: "请输入配置值", trigger: "blur" }],
-  configType: [{ required: true, message: "请选择配置类型", trigger: "change" }],
-  category: [{ required: true, message: "请输入配置分类", trigger: "blur" }]
+  name: [{ required: true, message: "请输入配置名称", trigger: "blur" }],
+  value: [{ required: true, message: "请输入配置值", trigger: "blur" }],
+  type: [{ required: true, message: "请选择配置类型", trigger: "change" }]
 })
 
 // 获取配置类型标签
@@ -99,92 +98,37 @@ function getSystemType(isSystem: number) {
 
 // 格式化配置值显示
 function formatConfigValue(row: SystemConfig) {
-  if (row.configType === 4) {
+  if (row.type === 4) {
     try {
-      return JSON.stringify(JSON.parse(row.configValue), null, 2)
+      return JSON.stringify(JSON.parse(row.value), null, 2)
     } catch {
-      return row.configValue
+      return row.value
     }
   }
-  return row.configValue
+  return row.value
 }
 
 // 查询数据
 async function fetchData() {
   loading.value = true
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              {
-                id: 1,
-                configKey: "system_name",
-                configName: "系统名称",
-                configValue: "财务管理系统",
-                configType: 1,
-                category: "基础配置",
-                description: "系统显示名称",
-                status: 1,
-                isSystem: 1,
-                remark: "系统核心配置，不可修改",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 2,
-                configKey: "max_upload_size",
-                configName: "最大上传文件大小",
-                configValue: "10485760",
-                configType: 2,
-                category: "文件配置",
-                description: "单位：字节",
-                status: 1,
-                isSystem: 2,
-                remark: "可自定义配置",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 3,
-                configKey: "enable_notification",
-                configName: "启用通知功能",
-                configValue: "true",
-                configType: 3,
-                category: "功能配置",
-                description: "是否启用系统通知",
-                status: 1,
-                isSystem: 2,
-                remark: "可自定义配置",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              },
-              {
-                id: 4,
-                configKey: "email_config",
-                configName: "邮件配置",
-                configValue: "{\"host\":\"smtp.example.com\",\"port\":587,\"username\":\"user@example.com\",\"password\":\"password\"}",
-                configType: 4,
-                category: "邮件配置",
-                description: "邮件服务器配置信息",
-                status: 1,
-                isSystem: 2,
-                remark: "JSON格式配置",
-                createdBy: "admin",
-                createdAt: "2024-01-01T00:00:00Z"
-              }
-            ],
-            total: 4
-          }
-        })
-      }, 500)
-    })
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      keyword: searchForm.keyword,
+      status: searchForm.status || undefined,
+      type: searchForm.type || undefined
+    }
+    const response = await getSystemConfig(params)
 
     const result: any = response
-    tableData.value = result.data.items
+    let count = 1
+    tableData.value = result.data.records.map((item: any) => {
+      return {
+        ...item,
+        seq: count++
+      }
+    })
     pagination.total = result.data.total
   } catch (error) {
     ElMessage.error(`获取数据失败: ${error}`)
@@ -202,10 +146,9 @@ function handleSearch() {
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    configName: "",
-    category: "",
+    keyword: "",
     status: undefined,
-    configType: undefined
+    type: undefined
   })
   handleSearch()
 }
@@ -226,13 +169,13 @@ function handleEdit(row: SystemConfig) {
   dialogTitle.value = "编辑系统配置"
   Object.assign(form, {
     id: row.id,
-    configKey: row.configKey,
-    configName: row.configName,
-    configValue: row.configValue,
-    configType: row.configType,
+    key: row.key,
+    name: row.name,
+    value: row.value,
+    type: row.type,
     category: row.category,
     description: row.description,
-    status: row.status,
+    isEnabled: row.isEnabled,
     isSystem: row.isSystem,
     remark: row.remark
   })
@@ -248,14 +191,18 @@ async function handleDelete(row: SystemConfig) {
       return
     }
 
-    await ElMessageBox.confirm(`确定要删除配置 ${row.configName} 吗？`, "提示", {
+    await ElMessageBox.confirm(`确定要删除配置 ${row.name} 吗？`, "提示", {
       type: "warning"
     })
 
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
+    const response = await deleteSystemConfig(row.id || 0)
+
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "删除失败")
+    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
@@ -271,12 +218,23 @@ async function handleSubmit() {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
+    const updateData: any = {}
 
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
+    updateData.name = form.name || null
+    updateData.value = form.value || null
+    updateData.type = form.type || null
+    updateData.description = form.description || null
+    updateData.isEnabled = form.isEnabled || null
+
+    const response = await updateSystemConfig(updateData, form.id || 0)
+
+    if (response.code === 0) {
+      ElMessage.success("更新成功")
+      showCreateDialog.value = false
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "更新失败")
+    }
   } catch (error) {
     console.error("提交失败:", error)
   } finally {
@@ -291,10 +249,10 @@ function resetForm() {
   }
   Object.assign(form, {
     id: undefined,
-    configKey: "",
-    configName: "",
-    configValue: "",
-    configType: 1,
+    key: "",
+    name: "",
+    value: "",
+    type: 1,
     category: "",
     description: "",
     status: 1,
@@ -314,14 +272,11 @@ onMounted(() => {
     <el-card>
       <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="配置名称">
-          <el-input v-model="searchForm.configName" placeholder="请输入配置名称" />
-        </el-form-item>
-        <el-form-item label="配置分类">
-          <el-input v-model="searchForm.category" placeholder="请输入配置分类" />
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="可输入配置名称、类型模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="配置类型">
-          <el-select v-model="searchForm.configType" placeholder="请选择类型" clearable>
+          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable style="width: 120px;">
             <el-option label="字符串" :value="1" />
             <el-option label="数字" :value="2" />
             <el-option label="布尔值" :value="3" />
@@ -329,7 +284,7 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 100px;">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="2" />
           </el-select>
@@ -337,10 +292,10 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="showCreateDialog = true">
+          <!-- <el-button type="primary" @click="showCreateDialog = true">
             <el-icon><Plus /></el-icon>
             新增配置
-          </el-button>
+          </el-button> -->
         </el-form-item>
       </el-form>
 
@@ -350,11 +305,11 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
-        header-cell-class-name="text-center"
+        header-cell-class-name="header-cell-fix"
       >
-        <el-table-column prop="configKey" label="配置键" width="150" align="center" />
-        <el-table-column prop="configName" label="配置名称" min-width="120" />
-        <el-table-column prop="configValue" label="配置值" min-width="180">
+        <el-table-column prop="key" label="配置键" width="150" align="center" />
+        <el-table-column prop="name" label="配置名称" width="180" show-overflow-tooltip />
+        <el-table-column prop="value" label="配置值" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tooltip
               :content="formatConfigValue(row)"
@@ -367,19 +322,18 @@ onMounted(() => {
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="configType" label="配置类型" width="100" align="center">
+        <el-table-column prop="type" label="配置类型" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getConfigTypeType(row.configType) as any">
-              {{ getConfigTypeLabel(row.configType) }}
+            <el-tag :type="getConfigTypeType(row.type) as any">
+              {{ getConfigTypeLabel(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="category" label="配置分类" width="120" align="center" />
         <el-table-column prop="description" label="描述" min-width="150" />
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status) as any">
-              {{ getStatusLabel(row.status) }}
+            <el-tag :type="getStatusType(row.isEnabled) as any">
+              {{ getStatusLabel(row.isEnabled) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -390,27 +344,17 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120" />
-        <el-table-column label="操作" width="180" fixed="right" align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" @click="handleEdit(row)" size="small">
+            <el-button type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
             <el-button
               v-if="row.isSystem !== 1"
               type="danger"
               @click="handleDelete(row)"
-              size="small"
             >
               删除
-            </el-button>
-            <el-button
-              v-else
-              type="info"
-              size="small"
-              disabled
-            >
-              系统配置
             </el-button>
           </template>
         </el-table-column>
@@ -444,18 +388,18 @@ onMounted(() => {
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="配置键" prop="configKey">
+            <el-form-item label="配置键" prop="key">
               <el-input
-                v-model="form.configKey"
+                v-model="form.key"
                 placeholder="请输入配置键"
-                :disabled="!!form.id && form.isSystem === 1"
+                :disabled="true"
               />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="配置名称" prop="configName">
+            <el-form-item label="配置名称" prop="name">
               <el-input
-                v-model="form.configName"
+                v-model="form.name"
                 placeholder="请输入配置名称"
                 :disabled="!!form.id && form.isSystem === 1"
               />
@@ -467,7 +411,7 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="配置类型" prop="configType">
               <el-select
-                v-model="form.configType"
+                v-model="form.type"
                 placeholder="请选择配置类型"
                 :disabled="!!form.id && form.isSystem === 1"
               >
@@ -478,24 +422,14 @@ onMounted(() => {
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="配置分类" prop="category">
-              <el-input
-                v-model="form.category"
-                placeholder="请输入配置分类"
-                :disabled="!!form.id && form.isSystem === 1"
-              />
-            </el-form-item>
-          </el-col>
         </el-row>
 
         <el-form-item label="配置值" prop="configValue">
           <el-input
-            v-model="form.configValue"
+            v-model="form.value"
             type="textarea"
             placeholder="请输入配置值"
             :rows="4"
-            :disabled="!!form.id && form.isSystem === 1"
           />
         </el-form-item>
 
@@ -512,47 +446,23 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="状态" prop="status">
-              <el-select v-model="form.status" placeholder="请选择状态">
+              <el-select v-model="form.isEnabled" placeholder="请选择状态">
                 <el-option label="启用" :value="1" />
                 <el-option label="禁用" :value="2" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="配置类型">
-              <el-tag :type="getSystemType(form.isSystem) as any">
-                {{ getSystemLabel(form.isSystem) }}
-              </el-tag>
-            </el-form-item>
-          </el-col>
         </el-row>
-
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
       </el-form>
 
       <template #footer>
         <el-button @click="showCreateDialog = false">取消</el-button>
         <el-button
-          v-if="!form.id || form.isSystem !== 1"
           type="primary"
           @click="handleSubmit"
           :loading="submitLoading"
         >
           确定
-        </el-button>
-        <el-button
-          v-else
-          type="info"
-          disabled
-        >
-          系统配置不可修改
         </el-button>
       </template>
     </el-dialog>
@@ -566,17 +476,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .config-value {
