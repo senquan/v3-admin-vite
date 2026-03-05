@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { request } from '@/http/axios'
+import { createBackup, deleteBackup, getBackupList, restoreBackup } from "./apis"
 
 interface BackupRecord {
   id: number
@@ -20,7 +20,7 @@ interface BackupRecord {
 const loading = ref(false)
 const backupLoading = ref(false)
 const restoreLoading = ref(false)
-const activeTab = ref('backup')
+const activeTab = ref("backup")
 const showCreateDialog = ref(false)
 const showRestoreDialog = ref(false)
 const selectedBackup = ref<BackupRecord | null>(null)
@@ -108,23 +108,16 @@ async function fetchData() {
       size: pagination.size
     }
 
-    const response = await request<{
-      code: number
-      data: { items: BackupRecord[]; total: number }
-    }>({
-      url: '/api/v1/system/backups',
-      method: 'get',
-      params
-    })
+    const response = await getBackupList(params)
 
     if (response.code === 0) {
       tableData.value = response.data.items
       pagination.total = response.data.total
     } else {
-      ElMessage.error(response.message || '获取数据失败')
+      ElMessage.error("获取数据失败")
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '获取数据失败')
+    ElMessage.error(error.message || "获取数据失败")
   } finally {
     loading.value = false
   }
@@ -158,20 +151,16 @@ function handleCurrentChange(val: number) {
 
 async function handleCreateBackup() {
   if (!backupForm.backupName) {
-    ElMessage.warning('请输入备份名称')
+    ElMessage.warning("请输入备份名称")
     return
   }
 
   backupLoading.value = true
   try {
-    const response = await request<{ code: number; message: string }>({
-      url: '/api/v1/system/backups',
-      method: 'post',
-      data: backupForm
-    })
+    const response = await createBackup(backupForm)
 
     if (response.code === 0) {
-      ElMessage.success('备份任务已创建')
+      ElMessage.success("备份任务已创建")
       showCreateDialog.value = false
       Object.assign(backupForm, {
         backupName: "",
@@ -181,10 +170,10 @@ async function handleCreateBackup() {
       })
       fetchData()
     } else {
-      ElMessage.error(response.message || '创建备份失败')
+      ElMessage.error(response.message || "创建备份失败")
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '创建备份失败')
+    ElMessage.error(error.message || "创建备份失败")
   } finally {
     backupLoading.value = false
   }
@@ -192,15 +181,15 @@ async function handleCreateBackup() {
 
 function handleDownload(row: BackupRecord) {
   if (row.status !== 2) {
-    ElMessage.warning('备份未完成，无法下载')
+    ElMessage.warning("备份未完成，无法下载")
     return
   }
-  window.open(row.fileUrl || `/api/v1/system/backups/${row.id}/download`, '_blank')
+  window.open(row.fileUrl || `/api/v1/system/backups/${row.id}/download`, "_blank")
 }
 
 function handleRestore(row: BackupRecord) {
   if (row.status !== 2) {
-    ElMessage.warning('备份未完成，无法恢复')
+    ElMessage.warning("备份未完成，无法恢复")
     return
   }
   selectedBackup.value = row
@@ -212,19 +201,16 @@ async function confirmRestore() {
 
   restoreLoading.value = true
   try {
-    const response = await request<{ code: number; message: string }>({
-      url: `/api/v1/system/backups/${selectedBackup.value.id}/restore`,
-      method: 'post'
-    })
+    const response = await restoreBackup(selectedBackup.value.id)
 
     if (response.code === 0) {
-      ElMessage.success('恢复任务已创建，请等待恢复完成')
+      ElMessage.success("恢复任务已创建，请等待恢复完成")
       showRestoreDialog.value = false
     } else {
-      ElMessage.error(response.message || '恢复失败')
+      ElMessage.error(response.message || "恢复失败")
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '恢复失败')
+    ElMessage.error(error.message || "恢复失败")
   } finally {
     restoreLoading.value = false
   }
@@ -232,24 +218,21 @@ async function confirmRestore() {
 
 async function handleDelete(row: BackupRecord) {
   try {
-    await ElMessageBox.confirm(`确定要删除备份 "${row.backupName}" 吗？`, '提示', {
-      type: 'warning'
+    await ElMessageBox.confirm(`确定要删除备份 "${row.backupName}" 吗？`, "提示", {
+      type: "warning"
     })
 
-    const response = await request<{ code: number; message: string }>({
-      url: `/api/v1/system/backups/${row.id}`,
-      method: 'delete'
-    })
+    const response = await deleteBackup(`${row.backupName}.sql`)
 
     if (response.code === 0) {
-      ElMessage.success('删除成功')
+      ElMessage.success("删除成功")
       fetchData()
     } else {
-      ElMessage.error(response.message || '删除失败')
+      ElMessage.error(response.message || "删除失败")
     }
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
+    if (error !== "cancel") {
+      ElMessage.error(error.message || "删除失败")
     }
   }
 }
@@ -265,7 +248,7 @@ function closeCreateDialog() {
 }
 
 function handleSaveConfig() {
-  ElMessage.success('配置保存成功')
+  ElMessage.success("配置保存成功")
 }
 
 onMounted(() => {
@@ -283,20 +266,20 @@ onMounted(() => {
               <el-input v-model="searchForm.backupName" placeholder="请输入备份名称" />
             </el-form-item>
             <el-form-item label="备份类型">
-              <el-select v-model="searchForm.backupType" placeholder="请选择类型" clearable>
+              <el-select v-model="searchForm.backupType" placeholder="请选择类型" clearable style="width: 120px;">
                 <el-option label="完整备份" :value="1" />
                 <el-option label="增量备份" :value="2" />
                 <el-option label="差异备份" :value="3" />
               </el-select>
             </el-form-item>
             <el-form-item label="备份方式">
-              <el-select v-model="searchForm.backupMode" placeholder="请选择方式" clearable>
+              <el-select v-model="searchForm.backupMode" placeholder="请选择方式" clearable style="width: 100px;">
                 <el-option label="手动" :value="1" />
                 <el-option label="自动" :value="2" />
               </el-select>
             </el-form-item>
             <el-form-item label="状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 100px;">
                 <el-option label="进行中" :value="1" />
                 <el-option label="成功" :value="2" />
                 <el-option label="失败" :value="3" />
@@ -328,10 +311,10 @@ onMounted(() => {
             border
             stripe
             v-loading="loading"
-            header-cell-class-name="text-center"
+            header-cell-class-name="header-cell-fix"
           >
-            <el-table-column prop="backupCode" label="备份编号" width="150" align="center" />
-            <el-table-column prop="backupName" label="备份名称" min-width="150" />
+            <el-table-column prop="backupCode" label="备份编号" width="150" align="center" show-overflow-tooltip />
+            <el-table-column prop="backupName" label="备份名称" min-width="150" show-overflow-tooltip />
             <el-table-column prop="backupType" label="备份类型" width="100" align="center">
               <template #default="{ row }">
                 <el-tag :type="getBackupTypeType(row.backupType) as any">
@@ -339,7 +322,7 @@ onMounted(() => {
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="backupMode" label="备份方式" width="80" align="center">
+            <el-table-column prop="backupMode" label="备份方式" width="100" align="center">
               <template #default="{ row }">
                 {{ getBackupModeLabel(row.backupMode) }}
               </template>
@@ -349,7 +332,7 @@ onMounted(() => {
                 {{ formatFileSize(row.fileSize) }}
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="80" align="center">
+            <el-table-column prop="status" label="状态" width="90" align="center">
               <template #default="{ row }">
                 <el-tag :type="getStatusType(row.status) as any">
                   {{ getStatusLabel(row.status) }}
@@ -364,15 +347,15 @@ onMounted(() => {
             </el-table-column>
             <el-table-column prop="completedAt" label="完成时间" width="160" align="center">
               <template #default="{ row }">
-                {{ formatTime(row.completedAt || '') }}
+                {{ formatTime(row.completedAt || "") }}
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="120" />
-            <el-table-column label="操作" width="200" fixed="right" align="center">
+            <el-table-column label="操作" width="260" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" size="small" @click="handleDownload(row)">下载</el-button>
-                <el-button type="warning" size="small" @click="handleRestore(row)">恢复</el-button>
-                <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+                <el-button type="primary" @click="handleDownload(row)">下载</el-button>
+                <el-button type="warning" @click="handleRestore(row)">恢复</el-button>
+                <el-button type="danger" @click="handleDelete(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -389,9 +372,9 @@ onMounted(() => {
           />
         </el-tab-pane>
 
-        <el-tab-pane label="恢复记录" name="restore">
+        <!-- <el-tab-pane label="恢复记录" name="restore">
           <el-empty description="恢复记录功能开发中" />
-        </el-tab-pane>
+        </el-tab-pane> -->
 
         <el-tab-pane label="自动备份配置" name="config">
           <el-form label-width="150px" class="config-form">
@@ -414,7 +397,7 @@ onMounted(() => {
             </el-form-item>
             <el-form-item label="备份日期" v-if="backupConfig.frequency === 2">
               <el-select v-model="backupConfig.weekday" placeholder="选择星期" :disabled="!autoBackupEnabled">
-                <el-option v-for="i in 7" :key="i" :label="['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i-1]" :value="i" />
+                <el-option v-for="i in 7" :key="i" :label="['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i - 1]" :value="i" />
               </el-select>
             </el-form-item>
             <el-form-item label="备份日期" v-if="backupConfig.frequency === 3">
@@ -486,7 +469,7 @@ onMounted(() => {
       />
       <p>您确定要从备份 "<strong>{{ selectedBackup?.backupName }}</strong>" 恢复数据吗？</p>
       <p style="color: #909399; font-size: 12px; margin-top: 10px;">
-        备份时间：{{ formatTime(selectedBackup?.createdAt || '') }}
+        备份时间：{{ formatTime(selectedBackup?.createdAt || "") }}
       </p>
       <template #footer>
         <el-button @click="showRestoreDialog = false">取消</el-button>
@@ -503,17 +486,15 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 10px;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.text-center {
+:deep(.el-table .header-cell-fix) {
   text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {

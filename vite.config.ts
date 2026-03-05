@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 
+import fs from "node:fs"
 import { resolve } from "node:path"
 import vue from "@vitejs/plugin-vue"
 import UnoCSS from "unocss/vite"
@@ -12,8 +13,17 @@ import svgLoader from "vite-svg-loader"
 
 // Configuring Vite: https://cn.vite.dev/config
 export default defineConfig(({ mode }) => {
-  const { VITE_PUBLIC_PATH } = loadEnv(mode, process.cwd(), "") as ImportMetaEnv
+  const env = loadEnv(mode, process.cwd(), "")
+  const { VITE_PORT, VITE_PUBLIC_PATH } = env
+
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const BUILD_DATE = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+
   return {
+    define: {
+      "import.meta.env.VITE_APP_BUILD": JSON.stringify(BUILD_DATE)
+    },
     // 开发或打包构建时用到的公共基础路径
     base: VITE_PUBLIC_PATH,
     resolve: {
@@ -29,19 +39,30 @@ export default defineConfig(({ mode }) => {
       // 是否监听所有地址
       host: true,
       // 端口号
-      port: 3333,
+      port: Number(VITE_PORT) || 3333,
       // 端口被占用时，是否直接退出
       strictPort: false,
       // 是否自动打开浏览器
       open: true,
+      // 启用 HTTPS
+      https: {
+        key: fs.readFileSync("./certs/crscsh.com.cn.key"),
+        cert: fs.readFileSync("./certs/crscsh.com.cn_bundle.pem")
+      },
       // 反向代理
       proxy: {
         "/api": {
           target: "http://localhost:5006/",
           changeOrigin: true,
           rewrite: path => path
+        },
+        "/uploads": {
+          target: "http://localhost:5006/",
+          changeOrigin: true,
+          rewrite: path => path
         }
       },
+      allowedHosts: ["fms.crscsh.com.cn"],
       // 是否允许跨域
       cors: true,
       // 预热常用文件，提高初始页面加载速度
@@ -51,6 +72,9 @@ export default defineConfig(({ mode }) => {
           "./src/pinia/**/*.*",
           "./src/router/**/*.*"
         ]
+      },
+      fs: {
+        allow: ["..", "./public"]
       }
     },
     // 构建配置

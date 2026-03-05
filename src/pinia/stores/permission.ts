@@ -83,7 +83,7 @@ export const usePermissionStore = defineStore("permission", () => {
       const res = await getUserPermissions()
       if (res.code === 0 && res.data) {
         // 提取权限编码
-        const permissionCodes = res.data.permissions.map(item => item.code)
+        const permissionCodes = res.data.permissions.map((item: Permission) => item.code)
         permissions.value = permissionCodes
 
         // 将权限转换为路由

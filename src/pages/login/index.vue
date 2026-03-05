@@ -6,16 +6,10 @@ import { Key, Loading, Lock, Picture, User } from "@element-plus/icons-vue"
 import { useSettingsStore } from "@/pinia/stores/settings"
 import { useUserStore } from "@/pinia/stores/user"
 import { getCaptchaApi, loginApi, registerApi } from "./apis"
-import Owl from "./components/Owl.vue"
-import { useFocus } from "./composables/useFocus"
-
-const route = useRoute()
 
 const router = useRouter()
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
-
-const { isFocus, handleBlur, handleFocus } = useFocus()
 
 const loginFormRef = ref<FormInstance | null>(null)
 const registerFormRef = ref<FormInstance | null>(null)
@@ -108,7 +102,9 @@ function handleLogin() {
       } else {
         localStorage.removeItem("rememberedUsername")
       }
-      router.push("/")
+      // 登录成功后跳转到原始页面或首页
+      const redirect = router.currentRoute.value.query.redirect as string
+      router.push(redirect || "/")
     }).catch(() => {
       createCode()
       loginFormData.password = ""
@@ -181,12 +177,17 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="bg-container">
+    <img src="@@/assets/images/layouts/login-bg.png" class="responsive-bg desktop-bg">
+  </div>
   <div class="login-container">
     <ThemeSwitch v-if="settingsStore.showThemeSwitch" class="theme-switch" />
-    <Owl :close-eyes="isFocus" />
     <div class="login-card">
       <div class="title">
-        <img src="@@/assets/images/layouts/logo-text-2.png">
+        <div class="login-form-logo">
+          <img src="@@/assets/images/layouts/logo-text-2.png">
+        </div>
+        <span class="login-title">财务管理系统</span>
       </div>
       <div class="content">
         <!-- 登录表单 -->
@@ -209,8 +210,6 @@ onMounted(() => {
               :prefix-icon="Lock"
               size="large"
               show-password
-              @blur="handleBlur"
-              @focus="handleFocus"
             />
           </el-form-item>
           <el-form-item prop="code">
@@ -221,8 +220,6 @@ onMounted(() => {
               :prefix-icon="Key"
               maxlength="7"
               size="large"
-              @blur="handleBlur"
-              @focus="handleFocus"
             >
               <template #append>
                 <el-image :src="codeImage" draggable="false" @click="createCode">
@@ -273,8 +270,6 @@ onMounted(() => {
               :prefix-icon="Lock"
               size="large"
               show-password
-              @blur="handleBlur"
-              @focus="handleFocus"
             />
           </el-form-item>
           <el-form-item prop="confirmPassword">
@@ -286,8 +281,6 @@ onMounted(() => {
               :prefix-icon="Lock"
               size="large"
               show-password
-              @blur="handleBlur"
-              @focus="handleFocus"
             />
           </el-form-item>
           <el-form-item prop="inviteCode">
@@ -297,8 +290,6 @@ onMounted(() => {
               tabindex="4"
               :prefix-icon="Key"
               size="large"
-              @blur="handleBlur"
-              @focus="handleFocus"
             />
           </el-form-item>
           <el-form-item prop="code">
@@ -309,8 +300,6 @@ onMounted(() => {
               :prefix-icon="Key"
               maxlength="7"
               size="large"
-              @blur="handleBlur"
-              @focus="handleFocus"
             >
               <template #append>
                 <el-image :src="codeImage" draggable="false" @click="createCode">
@@ -343,6 +332,119 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+/* 基础样式重置 */
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  line-height: 1.6;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+/* 全屏容器 */
+.hero {
+  min-height: 100vh;
+  position: relative;
+  background-color: #1e3a5f; /* 备用背景色 */
+}
+
+/* 背景图片优化处理 */
+.bg-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* 响应式背景处理 */
+.responsive-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: none;
+}
+
+/* 内容图层优化 */
+.content {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 5rem 2rem;
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  max-width: 800px;
+}
+
+p {
+  font-size: 1.35rem;
+  max-width: 700px;
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cta-button {
+  display: inline-block;
+  background: #ffffff;
+  color: #1e3a5f;
+  text-decoration: none;
+  padding: 1rem 2.5rem;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  text-shadow: none;
+}
+
+.cta-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* 响应式布局优化 */
+@media (min-width: 1200px) {
+  .desktop-bg {
+    display: block;
+  }
+  .content {
+    padding-top: 15%;
+  }
+  h1 {
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 1199px) and (min-width: 768px) {
+  .tablet-bg {
+    display: block;
+  }
+  .content {
+    padding-top: 10%;
+  }
+  h1 {
+    font-size: 3.2rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-bg {
+    display: block;
+  }
+  .content {
+    padding-top: 8%;
+  }
+  h1 {
+    font-size: 2.6rem;
+  }
+}
 .login-container {
   display: flex;
   flex-direction: column;
@@ -364,12 +466,17 @@ onMounted(() => {
     background-color: var(--el-bg-color);
     overflow: hidden;
     .title {
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: block;
+      text-align: center;
       height: 150px;
-      img {
-        height: 100%;
+      .login-form-logo {
+        background: url("@@/assets/images/layouts/logo-bg.png") repeat-x;
+        width: 100%;
+      }
+      .login-title {
+        line-height: 100px;
+        font-size: 30px;
+        font-weight: bold;
       }
     }
     .content {

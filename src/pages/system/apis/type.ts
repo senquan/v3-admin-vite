@@ -1,5 +1,6 @@
 export interface OperationLogListResponseData extends ApiResponseData<OperationLog> {}
 export interface SystemConfigListResponseData extends ApiResponseData<SystemConfig> {}
+export interface BackupListResponseData extends ApiResponseData<BackupRecord> {}
 
 export interface DictListData {
   id: number
@@ -99,4 +100,12 @@ export interface SystemConfigUpdateData {
   description: string
   isEnabled: number
   isSystem: number
+}
+
+export interface BackupCreateData {
+  [key: string]: any
+}
+
+export interface BackupRecord {
+  [key: string]: any
 }

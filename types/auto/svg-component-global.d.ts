@@ -9,18 +9,18 @@ declare module 'vue' {
   export interface GlobalComponents {
     SvgIcon: import("vue").DefineComponent<{
         name: {
-            type: import("vue").PropType<"advance-expense" | "backup-restore" | "chart-line" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "settlement" | "summary" | "transfer">;
+            type: import("vue").PropType<"advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger2" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
             default: string;
             required: true;
         };
     }, {}, unknown, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").VNodeProps & import("vue").AllowedComponentProps & import("vue").ComponentCustomProps, Readonly<import("vue").ExtractPropTypes<{
         name: {
-            type: import("vue").PropType<"advance-expense" | "backup-restore" | "chart-line" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "settlement" | "summary" | "transfer">;
+            type: import("vue").PropType<"advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger2" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
             default: string;
             required: true;
         };
     }>>, {
-        name: "advance-expense" | "backup-restore" | "chart-line" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "settlement" | "summary" | "transfer";
+        name: "advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "ledger2" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer";
     }>;
   }
 }

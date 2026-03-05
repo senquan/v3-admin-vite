@@ -87,3 +87,34 @@ export function deleteSystemConfig(id: number) {
     method: "delete"
   })
 }
+
+export function getBackupList(params: System.CommonListRequestParams) {
+  return request<System.BackupListResponseData>({
+    url: "/system/backups",
+    method: "get",
+    params
+  })
+}
+
+export function createBackup(data: System.BackupCreateData) {
+  return request<System.CommonActionResponseData>({
+    url: "/system/backups",
+    method: "post",
+    data
+  })
+}
+
+export function deleteBackup(file: string) {
+  return request<System.CommonActionResponseData>({
+    url: `system/backups`,
+    method: "delete",
+    data: { fileName: file }
+  })
+}
+
+export function restoreBackup(id: number) {
+  return request<System.CommonActionResponseData>({
+    url: `system/backups/${id}/restore`,
+    method: "post"
+  })
+}
