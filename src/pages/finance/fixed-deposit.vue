@@ -188,6 +188,21 @@ function handleEdit(row: FixedDeposit) {
   showCreateDialog.value = true
 }
 
+async function handleRelease(row: FixedDeposit) {
+  try {
+    await ElMessageBox.confirm(`确定要提前释放存款记录 ${row.depositCode} 吗？`, "提示", {
+      type: "warning"
+    })
+    await new Promise(resolve => setTimeout(resolve, 500))
+    ElMessage.success("释放成功")
+    fetchData()
+  } catch (error) {
+    if (error !== "cancel") {
+      ElMessage.error("释放失败")
+    }
+  }
+}
+
 async function handleDelete(row: FixedDeposit) {
   try {
     await ElMessageBox.confirm(`确定要删除存款记录 ${row.depositCode} 吗？`, "提示", {
@@ -334,7 +349,11 @@ onMounted(() => {
         <el-table-column width="50" type="selection" align="center" />
         <el-table-column prop="seq" label="序号" width="80" align="center" />
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
+        <el-table-column prop="depositType" label="存款类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.depositType === 1 ? '定期' : '活期转定期' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
           <template #default="{ row }">
             {{ formatDate(row.startDate) }}
@@ -381,8 +400,9 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="batchNo" label="导入批次" width="130" align="right" show-overflow-tooltip />
         <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="right" />
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="260" fixed="right" align="center">
           <template #default="{ row }">
+            <el-button type="success" @click="handleRelease(row)">提前释放</el-button>
             <el-button type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(row)">删除</el-button>
           </template>

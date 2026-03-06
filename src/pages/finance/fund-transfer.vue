@@ -411,7 +411,7 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="150" />
-            <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
+            <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
             <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
               <template #default="{ row }">
                 {{ formatDate(row.createdAt) }}

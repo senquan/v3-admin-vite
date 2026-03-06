@@ -88,6 +88,7 @@ async function fetchData() {
         })
         item.seq = count++
         item.loanTotal = item.loanBalance + item.loanInterest
+        console.log(item)
         item.depositCurrentTotal = item.depositIncoming + item.depositTransferUp + item.depositFromFixed - item.depositTransferDown - item.depositToFixed
         for (const key in item.depositFixed) {
           if (Object.prototype.hasOwnProperty.call(item.depositFixed, key)) {
@@ -276,7 +277,7 @@ onMounted(() => {
             <el-table-column label="活期存款" class-name="header-current-deposit">
               <el-table-column prop="depositIncoming" label="到款" width="140" align="right">
                 <template #default="{ row }">
-                  <span class="drillable" @click="handleDrill(row, 2)">{{ formattedMoney(row.depositTransferUp) }}</span>
+                  <span class="drillable" @click="handleDrill(row, 2)">{{ formattedMoney(row.depositIncoming) }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositTransferUp" label="上划" width="140" align="right">

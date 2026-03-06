@@ -317,9 +317,9 @@ onMounted(() => {
         <el-table-column prop="receiveBank" label="到款银行" width="120" align="center" />
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
         <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
-        <el-table-column prop="receiptDate" label="托收日期" width="120" align="center">
+        <el-table-column prop="collectionDate" label="托收日期" width="120" align="center">
           <template #default="{ row }">
-            {{ formatDate(row.receiptDate) }}
+            {{ formatDate(row.collectionDate) }}
           </template>
         </el-table-column>
         <el-table-column prop="received" label="是否已到账" width="80" align="center">
@@ -348,7 +348,7 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="批次号" width="130" />
+        <el-table-column prop="batchNo" label="批次号" width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="danger" @click="handleDelete(row)">删除</el-button>
