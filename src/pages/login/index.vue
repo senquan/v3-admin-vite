@@ -78,9 +78,9 @@ const registerFormRules: FormRules = {
       trigger: "blur"
     }
   ],
-  inviteCode: [
-    { required: true, message: "请输入邀请码", trigger: "blur" }
-  ],
+  // inviteCode: [
+  //   { required: true, message: "请输入邀请码", trigger: "blur" }
+  // ],
   code: [
     { required: true, message: "请输入验证码", trigger: "blur" }
   ]
@@ -126,6 +126,7 @@ function handleRegister() {
       if (res.code === 0) {
         ElMessage.success("注册成功，请登录")
         showRegister.value = false
+        resetForm("register")
         createCode()
       } else {
         ElMessage.error(res.message)
@@ -165,6 +166,15 @@ function createCode() {
 
 // 初始化验证码
 createCode()
+
+// 重置表单
+function resetForm(type: "login" | "register") {
+  if (type === "login") {
+    loginFormRef.value?.resetFields()
+  } else {
+    registerFormRef.value?.resetFields()
+  }
+}
 
 // 检查是否有保存的用户名
 onMounted(() => {
@@ -283,7 +293,7 @@ onMounted(() => {
               show-password
             />
           </el-form-item>
-          <el-form-item prop="inviteCode">
+          <!-- <el-form-item prop="inviteCode">
             <el-input
               v-model.trim="registerFormData.inviteCode"
               placeholder="邀请码"
@@ -291,7 +301,7 @@ onMounted(() => {
               :prefix-icon="Key"
               size="large"
             />
-          </el-form-item>
+          </el-form-item> -->
           <el-form-item prop="code">
             <el-input
               v-model.trim="registerFormData.code"

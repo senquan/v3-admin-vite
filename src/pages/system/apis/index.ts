@@ -3,7 +3,7 @@ import { request } from "@/http/axios"
 
 export function fetchList(params: System.CommonListRequestParams) {
   return request<System.SettingsListResponseData>({
-    url: "settings/list",
+    url: "system/settings",
     method: "get",
     params
   })
@@ -116,5 +116,36 @@ export function restoreBackup(id: number) {
   return request<System.CommonActionResponseData>({
     url: `system/backups/${id}/restore`,
     method: "post"
+  })
+}
+
+export function getUsers(params: System.CommonListRequestParams) {
+  return request<System.UserListResponseData>({
+    url: "users/local",
+    method: "get",
+    params
+  })
+}
+
+export function updateUserRole(id: number, data: System.UserRoleData) {
+  return request<System.CommonActionResponseData>({
+    url: `users/${id}/role`,
+    method: "put",
+    data
+  })
+}
+
+export function fetchUserRole(id: number) {
+  return request<System.UserRolesResponseData>({
+    url: `users/${id}/roles`,
+    method: "get"
+  })
+}
+
+export function updateUser(id: number, data: System.UserUpdateData) {
+  return request<System.CommonActionResponseData>({
+    url: `users/${id}`,
+    method: "put",
+    data
   })
 }

@@ -62,6 +62,15 @@ export const constantRoutes: RouteRecordRaw[] = [
           svgIcon: "dashboard",
           affix: true
         }
+      },
+      {
+        path: "profile",
+        component: () => import("@/pages/dashboard/profile.vue"),
+        name: "Profile",
+        meta: {
+          title: "个人信息",
+          hidden: true
+        }
       }
     ]
   }

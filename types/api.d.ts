@@ -11,6 +11,12 @@ interface ApiResponseData<T> {
   }
 }
 
+interface ApiResponseSingleData<T> {
+  code: number
+  message: string
+  data: T
+}
+
 interface BaseQueryParams {
   keyword?: string
   page?: number

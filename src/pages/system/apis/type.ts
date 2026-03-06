@@ -1,6 +1,8 @@
 export interface OperationLogListResponseData extends ApiResponseData<OperationLog> {}
 export interface SystemConfigListResponseData extends ApiResponseData<SystemConfig> {}
 export interface BackupListResponseData extends ApiResponseData<BackupRecord> {}
+export interface UserListResponseData extends ApiResponseData<User> {}
+export interface UserRolesResponseData extends ApiResponseData<Role> {}
 
 export interface DictListData {
   id: number
@@ -108,4 +110,26 @@ export interface BackupCreateData {
 
 export interface BackupRecord {
   [key: string]: any
+}
+
+export interface User {
+  [key: string]: any
+}
+
+export interface Role {
+  id: number
+  name: string
+  code: number
+}
+
+export interface UserRoleData {
+  roles: number[]
+}
+
+export interface UserUpdateData {
+  id?: number
+  name: string
+  companyId: number
+  status: number
+  notes: string
 }

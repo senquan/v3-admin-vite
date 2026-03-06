@@ -48,17 +48,13 @@ function logout() {
       <Notify v-if="showNotify" class="right-menu-item" />
       <el-dropdown>
         <div class="right-menu-item user">
-          <el-avatar :icon="UserFilled" :size="30" />
+          <el-avatar v-if="userStore.avatar" :size="30" :src="userStore.avatar" />
+          <el-avatar v-else :icon="UserFilled" :size="30" />
           <span>{{ userStore.username }}</span>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <a target="_blank" href="https://github.com/un-pany/v3-admin-vite">
-              <el-dropdown-item>GitHub</el-dropdown-item>
-            </a>
-            <a target="_blank" href="https://gitee.com/un-pany/v3-admin-vite">
-              <el-dropdown-item>Gitee</el-dropdown-item>
-            </a>
+            <el-dropdown-item @click="router.push('/profile')">个人信息</el-dropdown-item>
             <el-dropdown-item divided @click="logout">
               退出登录
             </el-dropdown-item>
