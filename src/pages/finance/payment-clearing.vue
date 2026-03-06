@@ -29,7 +29,7 @@ interface PaymentReceive {
   createdBy: string
   creator: { name: string }
   createdAt: string
-  updator: { name: string }
+  updater: { name: string }
   updatedAt: string
   batchNo: string
 }
@@ -38,6 +38,10 @@ const loading = ref(false)
 const selectedRow = ref<PaymentReceive | null>(null)
 const showEditDialog = ref(false)
 const receiveImportRef = ref<any>(null)
+
+const discountDisabled = computed(() => {
+  return editForm.discountDate === ""
+})
 
 const searchForm = reactive({
   keyword: "",
@@ -132,6 +136,7 @@ function importSuccess() {
 
 function handleEdit(row: PaymentReceive) {
   selectedRow.value = row
+  console.log(row)
   editForm.id = row.id
   editForm.receiveAmount = Number(row.receiveAmount)
   editForm.collectionDate = row.collectionDate || ""
@@ -141,6 +146,7 @@ function handleEdit(row: PaymentReceive) {
   editForm.accountAmount = Number(row.accountAmount)
   editForm.received = row.received || 0
   showEditDialog.value = true
+  console.log(editForm.discountDate)
 }
 
 async function handleSaveEdit() {
@@ -219,7 +225,7 @@ function handleDateChange() {
 }
 
 function handleReceive() {
-  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.receiveType === 2 && row.received === 0)
+  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.receiveType === 2 && row.received === 0 && row.status === 2)
   if (selected.length === 0) {
     ElMessage.warning("请选择要操作的记录，票据类型并且未到账。")
     return
@@ -249,6 +255,10 @@ function handleSizeChange(val: number) {
 function handleCurrentChange(val: number) {
   pagination.page = val
   fetchData()
+}
+
+function discountChange() {
+  editForm.accountAmount = (editForm.discountAmount || 0) + (editForm.discountFee || 0)
 }
 
 onMounted(() => {
@@ -324,7 +334,9 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="received" label="是否已到账" width="80" align="center">
           <template #default="{ row }">
-            {{ row.received === 1 ? "已到账" : "未到账" }}
+            <span :class="{'text-success': row.received === 1, 'text-danger': row.received === 0}">
+              {{ row.received === 1 ? "已到账" : "未到账" }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="discountDate" label="贴现日期" width="120" align="center">
@@ -351,7 +363,7 @@ onMounted(() => {
         <el-table-column prop="batchNo" label="批次号" width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -430,6 +442,8 @@ onMounted(() => {
                   v-model="editForm.discountAmount"
                   :min="0"
                   :precision="2"
+                  :disabled="discountDisabled"
+                  @change="discountChange"
                 />
               </el-form-item>
             </el-col>
@@ -441,6 +455,8 @@ onMounted(() => {
                   v-model="editForm.discountFee"
                   :min="0"
                   :precision="2"
+                  :disabled="discountDisabled"
+                  @change="discountChange"
                 />
               </el-form-item>
             </el-col>
@@ -469,7 +485,7 @@ onMounted(() => {
           <el-row :gutter="10">
             <el-col :span="12">
               <el-form-item label="修改人">
-                <el-input :model-value="selectedRow?.updator.name" disabled />
+                <el-input :model-value="selectedRow?.updater?.name" disabled />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -530,5 +546,13 @@ onMounted(() => {
 
 :deep(.el-tabs__content) {
   padding-top: 10px;
+}
+
+.text-success {
+  color: #409eff;
+}
+
+.text-danger {
+  color: #f56c6c;
 }
 </style>

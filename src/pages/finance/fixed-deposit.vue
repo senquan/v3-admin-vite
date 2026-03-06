@@ -3,28 +3,36 @@ import type { FormInstance, FormRules } from "element-plus"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { depositConfirm, getFixedDeposits } from "./apis"
+import { depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
   id: number
   depositCode: string
+  depositType: number
   companyId: number
-  companyName: string
+  company: { companyName: string }
   depositAmount: number
   depositPeriod: number
   interestRate: number
   startDate: string
   endDate: string
-  expectedIncome: number
-  actualIncome: number
+  amount: number
+  remainingAmount: number
+  earlyRelease: number
+  releaseDate: string
+  interestDays: number
+  releaseAmount: number
   status: number
-  createdBy: string
+  creator: any
   createdAt: string
+  updater: { name: string }
+  updatedAt: string
   remark: string
 }
 
 const loading = ref(false)
+const selectedRow = ref<FixedDeposit | null>(null)
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
 const dialogTitle = ref("新增存款")
@@ -33,6 +41,7 @@ const depositImportRef = ref<any>([])
 
 const systemParamsStore = useSystemParamsStore()
 const depositPeriodMap = systemParamsStore.getArrayDict(3)
+const depositTypeMap = systemParamsStore.getArrayDict(1)
 
 const searchForm = reactive({
   keyword: "",
@@ -48,27 +57,41 @@ const pagination = reactive({
 
 const tableRef = ref<any>(null)
 const tableData = ref<FixedDeposit[]>([])
-const companyOptions = ref<{ id: number, companyName: string }[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
-  depositCode: "",
-  companyId: undefined as number | undefined,
-  depositAmount: undefined as number | undefined,
-  depositPeriod: undefined as number | undefined,
-  interestRate: undefined as number | undefined,
-  startDate: "",
-  remark: ""
+  earlyRelease: 0,
+  releaseDate: "" as string,
+  interestDays: 0,
+  releaseAmount: 0,
 })
 
-const rules = reactive<FormRules>({
-  depositCode: [{ required: true, message: "请输入存款编号", trigger: "blur" }],
-  companyId: [{ required: true, message: "请选择存款单位", trigger: "change" }],
-  depositAmount: [{ required: true, message: "请输入存款金额", trigger: "blur" }],
-  depositPeriod: [{ required: true, message: "请选择存款期限", trigger: "change" }],
-  interestRate: [{ required: true, message: "请输入年利率", trigger: "blur" }],
-  startDate: [{ required: true, message: "请选择起息日期", trigger: "change" }]
+const rules = computed<FormRules>(() => {
+  const isEarlyRelease = form.earlyRelease === 1
+  return {
+    releaseDate: [
+      { required: isEarlyRelease, message: "请选择释放日期", trigger: "change" }
+    ],
+    interestDays: [
+      { required: isEarlyRelease, message: "请输入已计息天数", trigger: "blur" }
+    ],
+    releaseAmount: [
+      { required: isEarlyRelease, message: "请输入释放金额", trigger: "blur" },
+      { 
+        validator: (rule: any, value: any, callback: any) => {
+          if (isEarlyRelease && (!value || value <= 0)) {
+            callback(new Error("释放金额必须大于0"))
+          } else {
+            callback()
+          }
+        }, 
+        trigger: "blur" 
+      }
+    ]
+  }
 })
+
+const remainingAmount = ref(0)
 
 function getStatusLabel(status: number) {
   const labels = { 1: "待确认", 2: "已生效", 3: "已删除" }
@@ -82,14 +105,6 @@ function getStatusType(status: number) {
 
 function formatDate(date: string) {
   return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
-}
-
-function calculateExpectedIncome() {
-  if (form.depositAmount && form.depositPeriod && form.interestRate) {
-    const years = form.depositPeriod / 12
-    return form.depositAmount * (form.interestRate / 100) * years
-  }
-  return 0
 }
 
 async function fetchData() {
@@ -125,29 +140,6 @@ async function fetchData() {
   }
 }
 
-async function getCompanies() {
-  try {
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, companyName: "上海工程局一分公司" },
-              { id: 2, companyName: "上海工程局二分公司" }
-            ]
-          }
-        })
-      }, 300)
-    })
-
-    const result: any = response
-    companyOptions.value = result.data.items
-  } catch (error) {
-    console.error("获取单位列表失败:", error)
-  }
-}
-
 function handleSearch() {
   pagination.page = 1
   fetchData()
@@ -173,34 +165,18 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
-function handleEdit(row: FixedDeposit) {
-  dialogTitle.value = "编辑存款"
+function handleRelease(row: FixedDeposit) {
+  dialogTitle.value = "提前释放存款"
+  selectedRow.value = row
+  remainingAmount.value = row.remainingAmount
   Object.assign(form, {
     id: row.id,
-    depositCode: row.depositCode,
-    companyId: row.companyId,
-    depositAmount: row.depositAmount,
-    depositPeriod: row.depositPeriod,
-    interestRate: row.interestRate,
-    startDate: row.startDate,
-    remark: row.remark
+    earlyRelease: row.earlyRelease,
+    releaseDate: row.releaseDate || "",
+    interestDays: row.interestDays || 0,
+    releaseAmount: row.releaseAmount || 0,
   })
   showCreateDialog.value = true
-}
-
-async function handleRelease(row: FixedDeposit) {
-  try {
-    await ElMessageBox.confirm(`确定要提前释放存款记录 ${row.depositCode} 吗？`, "提示", {
-      type: "warning"
-    })
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("释放成功")
-    fetchData()
-  } catch (error) {
-    if (error !== "cancel") {
-      ElMessage.error("释放失败")
-    }
-  }
 }
 
 async function handleDelete(row: FixedDeposit) {
@@ -221,12 +197,19 @@ async function handleDelete(row: FixedDeposit) {
 async function handleSubmit() {
   if (!formRef.value) return
   try {
-    await formRef.value.validate()
-    submitLoading.value = true
-    await new Promise(resolve => setTimeout(resolve, 800))
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
+    const valid = await formRef.value.validate()
+    if (!valid) return
+    if (form.earlyRelease === 1) {
+      submitLoading.value = true
+      const response = await releaseFixedDeposit(form)
+      if (response.code === 0) {
+        ElMessage.success(response.message || "释放成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "释放失败")
+      }
+    }
     showCreateDialog.value = false
-    fetchData()
   } catch (error) {
     console.error("提交失败:", error)
   } finally {
@@ -248,23 +231,11 @@ function resetForm() {
   }
   Object.assign(form, {
     id: undefined,
-    depositCode: "",
-    companyId: undefined,
-    depositAmount: undefined,
-    depositPeriod: undefined,
-    interestRate: undefined,
-    startDate: "",
-    remark: ""
+    earlyRelease: 0,
+    releaseDate: "",
+    interestDays: 0,
+    releaseAmount: 0,
   })
-}
-
-function generateDepositCode() {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0")
-  form.depositCode = `FD${year}${month}${day}${random}`
 }
 
 async function handleConfirm() {
@@ -290,9 +261,12 @@ async function handleConfirm() {
   }
 }
 
+function updateRemainingAmount() {
+  remainingAmount.value = (selectedRow.value?.remainingAmount || 0) - form.releaseAmount
+}
+
 onMounted(() => {
   fetchData()
-  getCompanies()
 })
 </script>
 
@@ -351,7 +325,7 @@ onMounted(() => {
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="depositType" label="存款类型" width="100" align="center">
           <template #default="{ row }">
-            {{ row.depositType === 1 ? '定期' : '活期转定期' }}
+            {{ depositTypeMap.find(item => item.value === String(row.depositType))?.name || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
@@ -400,11 +374,10 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="batchNo" label="导入批次" width="130" align="right" show-overflow-tooltip />
         <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="right" />
-        <el-table-column label="操作" width="260" fixed="right" align="center">
+        <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="success" @click="handleRelease(row)">提前释放</el-button>
-            <el-button type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button type="success" v-if="row.status === 2" @click="handleRelease(row)">提前释放</el-button>
+            <el-button type="danger" v-if="row.status === 1" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -429,101 +402,150 @@ onMounted(() => {
     >
       <el-form
         :model="form"
-        :rules="rules"
         ref="formRef"
+        :rules="rules"
         label-width="100px"
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="存款编号" prop="depositCode">
-              <el-input v-model="form.depositCode" placeholder="请输入存款编号">
-                <template #append>
-                  <el-button @click="generateDepositCode">生成</el-button>
-                </template>
-              </el-input>
+            <el-form-item label="存款编号">
+              <el-input :model-value="selectedRow?.depositCode" disabled />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="存款单位" prop="companyId">
-              <el-select v-model="form.companyId" placeholder="请选择存款单位" filterable>
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
+            <el-form-item label="存款类型">
+              <el-input :model-value="depositTypeMap.find(item => item.value === String(selectedRow?.depositType))?.name || '-'" disabled />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="存款金额" prop="depositAmount">
-              <el-input-number
-                v-model="form.depositAmount"
-                placeholder="请输入存款金额"
-                :min="0"
-                :step="10000"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="存款期限" prop="depositPeriod">
-              <el-select v-model="form.depositPeriod" placeholder="请选择存款期限">
-                <el-option label="3个月" :value="3" />
-                <el-option label="6个月" :value="6" />
-                <el-option label="12个月" :value="12" />
-                <el-option label="24个月" :value="24" />
-                <el-option label="36个月" :value="36" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="年利率(%)" prop="interestRate">
-              <el-input-number
-                v-model="form.interestRate"
-                placeholder="请输入年利率"
-                :min="0"
-                :step="0.1"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="起息日期" prop="startDate">
               <el-date-picker
-                v-model="form.startDate"
+                :model-value="selectedRow?.startDate"
                 type="date"
                 placeholder="请选择起息日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
                 style="width: 100%"
+                disabled
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="单位名称">
+              <el-input :model-value="selectedRow?.company.companyName" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="金额">
+              <el-input :model-value="selectedRow?.amount" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="定存期限">
+              <el-input :model-value="depositPeriodMap.find(item => item.value === String(selectedRow?.depositPeriod))?.name || '-'" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="备注">
+              <el-input
+                :model-value="selectedRow?.remark"
+                type="textarea"
+                placeholder="请输入备注信息"
+                :rows="2"
+                disabled
               />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-form-item label="预期收益">
-          <el-input :value="formattedMoney(calculateExpectedIncome())" disabled>
+        <el-row :gutter="10">
+          <el-col :span="12">
+            <el-form-item label="创建人">
+              <el-input :model-value="selectedRow?.creator.name" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="创建日期">
+              <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="10">
+          <el-col :span="12">
+            <el-form-item label="修改人">
+              <el-input :model-value="selectedRow?.updater?.name" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="修改日期">
+              <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="10">
+          <el-col :span="12">
+            <el-form-item label="是否提前释放" label-width="100px" prop="earlyRelease">
+              <el-select v-model="form.earlyRelease" :disabled="new Date(selectedRow?.endDate || '') < new Date()">
+                <el-option label="是" :value="1" />
+                <el-option label="否" :value="0" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="释放日期" prop="releaseDate">
+              <el-date-picker
+                v-model="form.releaseDate"
+                type="date"
+                placeholder="选择释放日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                :disabled="form.earlyRelease === 0"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="10">
+          <el-col :span="12">
+            <el-form-item label="已计息天数" label-width="100px" prop="interestDays">
+              <el-input-number
+                v-model="form.interestDays"
+                :min="0"
+                :precision="0"
+                :disabled="form.earlyRelease === 0"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="释放金额" label-width="100px" prop="releaseAmount">
+              <el-input-number
+                v-model="form.releaseAmount"
+                :min="0"
+                :precision="2"
+                @change="updateRemainingAmount"
+                :disabled="form.earlyRelease === 0"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="剩余金额">
+          <el-input :model-value="formattedMoney(remainingAmount)" readonly>
             <template #prepend>￥</template>
           </el-input>
         </el-form-item>
 
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
+        
       </el-form>
 
       <template #footer>

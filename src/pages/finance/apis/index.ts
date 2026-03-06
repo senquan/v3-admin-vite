@@ -24,6 +24,14 @@ export function getFixedDeposits(params: Finance.FixedDepositsParams) {
   })
 }
 
+export function releaseFixedDeposit(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/fixed-deposits/${data.id}/release`,
+    method: "put",
+    data
+  })
+}
+
 export function getPaymentClearings(params: Finance.PaymentClearingParams) {
   return request<Finance.PaymentClearingResponseData>({
     url: "/finance/payment-receives",
