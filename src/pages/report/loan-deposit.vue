@@ -307,7 +307,7 @@ onMounted(() => {
               </el-table-column>
             </el-table-column>
             <el-table-column label="定期存款" class-name="header-fixed-deposit">
-              <el-table-column v-for="(type, index) in fixedDepositTypes" :key="index" :label="type" width="140" align="right">
+              <el-table-column v-for="(type, index) in fixedDepositTypes" :key="index" :label="depositPeriodMap.find(item => item.value === String(type))?.name || type" width="140" align="right">
                 <template #default="{ row }">
                   {{ formattedMoney(row.depositFixed[type]) }}
                 </template>
