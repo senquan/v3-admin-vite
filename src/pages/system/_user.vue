@@ -41,7 +41,6 @@ function open(options = {
       }
     })
   }
-  console.log(formData.value)
   if (options.companies) {
     companyOptions.value = options.companies
   }

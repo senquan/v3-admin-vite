@@ -33,7 +33,7 @@ const downTableRef = ref<any>(null)
 
 const searchForm = reactive({
   keyword: "",
-  status: undefined as number | undefined,
+  status: 0,
   dateRange: [] as string[]
 })
 
@@ -158,7 +158,7 @@ function handleSearch() {
 function resetSearch() {
   Object.assign(searchForm, {
     keyword: "",
-    status: undefined,
+    status: 0,
     dateRange: []
   })
   handleSearch()
@@ -176,20 +176,20 @@ function handleCurrentChange(val: number) {
 }
 
 // 编辑
-function handleEdit(row: FundTransfer) {
-  dialogTitle.value = "编辑转账"
-  Object.assign(form, {
-    id: row.id,
-    companyName: row.companyName,
-    transferAmount: row.transferAmount,
-    transferType: row.transferType,
-    transferDate: row.transferDate,
-    transferStatus: row.transferStatus,
-    bankAccount: row.bankAccount,
-    remark: row.remark
-  })
-  showCreateDialog.value = true
-}
+// function handleEdit(row: FundTransfer) {
+//   dialogTitle.value = "编辑转账"
+//   Object.assign(form, {
+//     id: row.id,
+//     companyName: row.companyName,
+//     transferAmount: row.transferAmount,
+//     transferType: row.transferType,
+//     transferDate: row.transferDate,
+//     transferStatus: row.transferStatus,
+//     bankAccount: row.bankAccount,
+//     remark: row.remark
+//   })
+//   showCreateDialog.value = true
+// }
 
 // 删除
 async function handleDelete(row: FundTransfer) {
@@ -351,7 +351,7 @@ onMounted(() => {
               <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="转账状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
                 <el-option label="全部" :value="0" />
                 <el-option label="待确认" :value="1" />
                 <el-option label="已生效" :value="2" />
@@ -420,10 +420,10 @@ onMounted(() => {
             <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
             <el-table-column label="操作" width="160" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" @click="handleEdit(row)">
+                <!-- <el-button type="primary" @click="handleEdit(row)">
                   编辑
-                </el-button>
-                <el-button type="danger" @click="handleDelete(row)">
+                </el-button> -->
+                <el-button v-if="row.transferStatus === 1" type="danger" @click="handleDelete(row)">
                   删除
                 </el-button>
               </template>
@@ -450,7 +450,7 @@ onMounted(() => {
               <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="转账状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
                 <el-option label="全部" :value="0" />
                 <el-option label="待确认" :value="1" />
                 <el-option label="已生效" :value="2" />
@@ -496,7 +496,7 @@ onMounted(() => {
                 {{ formatDate(row.transferDate) }}
               </template>
             </el-table-column>
-            <el-table-column prop="companyName" label="单位名称" min-width="150" />
+            <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
             <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="150" align="right">
               <template #default="{ row }">
                 {{ formattedMoney(row.transferAmount) }}
@@ -529,10 +529,10 @@ onMounted(() => {
             <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
             <el-table-column label="操作" width="150" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" @click="handleEdit(row)" size="small">
+                <!-- <el-button type="primary" @click="handleEdit(row)">
                   编辑
-                </el-button>
-                <el-button type="danger" @click="handleDelete(row)" size="small">
+                </el-button> -->
+                <el-button v-if="row.transferStatus === 1" type="danger" @click="handleDelete(row)">
                   删除
                 </el-button>
               </template>

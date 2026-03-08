@@ -21,7 +21,7 @@ const show = ref(false)
   height: 48px;
   background-color: var(--v3-rightpanel-button-bg-color);
   position: fixed;
-  top: 45%;
+  top: 95%;
   right: 0;
   border-radius: 6px 0 0 6px;
   z-index: 2000;

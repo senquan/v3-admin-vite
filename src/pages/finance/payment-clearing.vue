@@ -334,7 +334,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="received" label="是否已到账" width="80" align="center">
           <template #default="{ row }">
-            <span :class="{'text-success': row.received === 1, 'text-danger': row.received === 0}">
+            <span :class="{ 'text-success': row.received === 1, 'text-danger': row.received === 0 }">
               {{ row.received === 1 ? "已到账" : "未到账" }}
             </span>
           </template>

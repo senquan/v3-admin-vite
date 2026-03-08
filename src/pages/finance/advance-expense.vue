@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { advanceExpenseConfirm, getAdvanceExpenses } from "./apis"
+import { getCompaniesTree } from "../basic/apis"
+import { advanceExpenseConfirm, createAdvanceExpense, getAdvanceExpenses, getExpenseDetailTypes } from "./apis"
 import AdvanceImport from "./forms/_advance-import.vue"
 
 interface AdvanceExpense {
   id: number
   advanceCode: string // 垫资编号
   expenseType: string // 类型
-  companyCode: string // 单位编号
-  companyName: string // 单位名称
+  companyId: number // 单位编号
+  company: any // 单位
   businessYear: string // 年度
   amount: number // 垫资金额
   status: number // 状态：1-待确认，2-已确认，3-已删除
@@ -32,9 +34,15 @@ const formRef = ref<FormInstance>()
 const tableRef = ref<any>(null)
 const advanceImportRef = ref<any>(null)
 const currentRow = ref<AdvanceExpense | null>(null)
+const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
+const expenseDetailTypeOptions = ref<{ id: number, label: string }[]>([])
 
 const systemParamsStore = useSystemParamsStore()
 const expenseTypeMap = systemParamsStore.getArrayDict(2)
+expenseTypeOptions.value = expenseTypeMap.map((item: any) => ({
+  id: item.value,
+  label: item.name
+}))
 
 const searchForm = reactive({
   keyword: "",
@@ -50,28 +58,19 @@ const pagination = reactive({
 
 const tableData = ref<AdvanceExpense[]>([])
 const newItemTableData = ref<any[]>([])
-const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
-
-const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
+const companyOptions = ref<CompanyTree[]>([])
 
 const isAmountDisabled = computed(() => {
-  return expenseTypeMap.find(item => item.id === form.expenseType)?.label === "代垫费用"
+  return expenseTypeMap.find(item => item.value === String(form.expenseType))?.name === "代垫费用"
 })
 
 const form = reactive({
   id: undefined as number | undefined,
   businessYear: new Date().getFullYear(),
   companyId: undefined as number | undefined,
-  companyName: "",
   expenseType: undefined as number | undefined,
   amount: undefined as number | undefined,
-  advanceDate: "",
-  repaymentDate: "",
-  actualRepaymentDate: "",
-  repaymentAmount: undefined as number | undefined,
-  advanceStatus: 1,
-  interestRate: undefined as number | undefined,
-  interestAmount: undefined as number | undefined,
+  expenseDetail: [] as any[],
   remark: ""
 })
 
@@ -127,29 +126,27 @@ async function fetchData() {
   }
 }
 
+async function fetchExpenseDetailTypes() {
+  try {
+    const response = await getExpenseDetailTypes()
+    expenseDetailTypeOptions.value = response.data.records.map((item: any) => ({
+      id: item.id,
+      label: item.name
+    }))
+  } catch (error) {
+    console.error("获取费用细目类型失败:", error)
+  }
+}
+
 // 获取单位列表
 async function getCompanies() {
   try {
-    // 模拟API调用
-    const response = await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          code: 200,
-          data: {
-            items: [
-              { id: 1, companyName: "上海工程局", companyCode: "SH001" },
-              { id: 2, companyName: "上海工程局二分公司", companyCode: "SH002" },
-              { id: 3, companyName: "上海工程局三分公司", companyCode: "SH003" }
-            ]
-          }
-        })
-      }, 300)
-    })
-
-    const result: any = response
-    companyOptions.value = result.data.items
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
   } catch (error) {
-    console.error("获取单位列表失败:", error)
+    console.error("获取上级单位失败:", error)
   }
 }
 
@@ -210,14 +207,20 @@ async function handleSubmit() {
 
   try {
     await formRef.value.validate()
+    form.expenseDetail = newItemTableData.value.filter((item: any) => Number(item.amount) > 0).map((item: any) => ({
+      name: item.name,
+      amount: Number(item.amount)
+    }))
     submitLoading.value = true
 
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
+    const response = await createAdvanceExpense(form)
+    if (response.code === 0) {
+      ElMessage.success(response.message || "新增成功")
+      showCreateDialog.value = false
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "新增失败")
+    }
   } catch (error) {
     console.error("提交失败:", error)
   } finally {
@@ -232,29 +235,20 @@ function resetForm() {
   }
   Object.assign(form, {
     id: undefined,
-    advanceCode: "",
-    companyCode: "",
-    companyName: "",
-    projectCode: "",
-    projectName: "",
+    businessYear: new Date().getFullYear(),
+    companyId: undefined,
+    expenseType: undefined,
     amount: undefined,
-    advanceDate: "",
-    repaymentDate: "",
-    actualRepaymentDate: "",
-    repaymentAmount: undefined,
-    advanceStatus: 1,
-    interestRate: undefined,
-    interestAmount: undefined,
+    expenseDetail: [] as any[],
     remark: ""
   })
 }
 
-// 选择单位
-function onCompanyChange(companyId: number) {
-  const company = companyOptions.value.find(item => item.id === companyId)
-  if (company) {
-    form.companyName = company.companyName
-  }
+function handleCreate() {
+  resetForm()
+  getCompanies().then(() => {
+    showCreateDialog.value = true
+  })
 }
 
 async function handleImport() {
@@ -299,10 +293,18 @@ function onAddItem() {
   })
 }
 
+function handleAmountChange() {
+  let total = 0
+  newItemTableData.value.forEach((item: any) => {
+    total += Number(item.amount)
+  })
+  form.amount = total
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
-  getCompanies()
+  fetchExpenseDetailTypes()
 })
 </script>
 
@@ -315,7 +317,7 @@ onMounted(() => {
           <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
             <el-option label="全部" :value="0" />
             <el-option label="待确认" :value="1" />
             <el-option label="已生效" :value="2" />
@@ -325,7 +327,7 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="showCreateDialog = true">
+          <el-button type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增垫资
           </el-button>
@@ -416,20 +418,15 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单位名称" prop="companyName">
-              <el-select
-                v-model="form.companyName"
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                v-model="form.companyId"
+                :data="companyOptions"
                 placeholder="请选择单位"
-                filterable
-                @change="onCompanyChange"
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -474,14 +471,49 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-table :data="newItemTableData" style="width: 100%" max-height="300">
-          <el-table-column fixed prop="name" label="费用名称" width="300" />
-          <el-table-column prop="amount" label="金额" min-width="200" />
+        <el-table
+          v-if="isAmountDisabled"
+          :data="newItemTableData"
+          style="width: 100%"
+          max-height="300"
+        >
+          <el-table-column fixed prop="name" label="费用名称" width="300">
+            <template #default="scope">
+              <el-select
+                v-model="scope.row.name"
+                filterable
+                allow-create
+                default-first-option
+                :reserve-keyword="false"
+                placeholder="选择或输入费用名称"
+                style="width: 240px"
+              >
+                <el-option
+                  v-for="item in expenseDetailTypeOptions"
+                  :key="item.id"
+                  :label="item.label"
+                  :value="item.label"
+                />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column prop="amount" label="金额" min-width="200">
+            <template #default="scope">
+              <el-input-number
+                v-model="scope.row.amount"
+                placeholder="请输入金额"
+                :min="0"
+                :step="1"
+                :precision="2"
+                controls-position="right"
+                @change="handleAmountChange"
+              />
+            </template>
+          </el-table-column>
           <el-table-column fixed="right" label="操作" width="120">
             <template #default="scope">
               <el-button
                 type="danger"
-                size="small"
                 @click.prevent="deleteRow(scope.$index)"
               >
                 删除
@@ -489,7 +521,7 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
-        <el-button class="mt-4" style="width: 100%" @click="onAddItem">
+        <el-button v-if="isAmountDisabled" class="mt-4" style="width: 100%" @click="onAddItem">
           添加费用
         </el-button>
       </el-form>
@@ -527,7 +559,7 @@ onMounted(() => {
                 单位名称
               </div>
             </template>
-            {{ currentRow?.companyName }}
+            {{ currentRow?.company?.companyName }}
           </el-descriptions-item>
           <el-descriptions-item>
             <template #label>

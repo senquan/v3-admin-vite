@@ -3,6 +3,7 @@ export interface PaymentClearingResponseData extends ApiResponseData<PaymentClea
 export interface FundTransferResponseData extends ApiResponseData<FundTransfer> {}
 export interface AdvanceExpenseResponseData extends ApiResponseData<AdvanceExpense> {}
 export interface ExpenseTypeResponseData extends ApiResponseData<ExpenseType> {}
+export interface ExpenseDetailTypeResponseData extends ApiResponseData<ExpenseDetailType> {}
 export interface ProfitPaymentResponseData extends ApiResponseData<ProfitPayment> {}
 export interface CompaniesResponseData extends ApiResponseData<Company> {}
 
@@ -80,6 +81,11 @@ export interface AdvanceExpense {
 }
 
 export interface ExpenseType {
+  id: number
+  name: string
+}
+
+export interface ExpenseDetailType {
   id: number
   name: string
 }

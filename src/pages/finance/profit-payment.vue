@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getCompanies, getProfitPayments, profitConfirm } from "./apis"
+import { getCompaniesTree } from "../basic/apis"
+import { getProfitPayments, profitConfirm } from "./apis"
 import ProfitImport from "./forms/_profit-import.vue"
 
 interface ProfitPayment {
@@ -41,7 +43,7 @@ const pagination = reactive({
 
 const tableRef = ref<any>(null)
 const tableData = ref<ProfitPayment[]>([])
-const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
+const companyOptions = ref<CompanyTree[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
@@ -102,16 +104,14 @@ async function fetchData() {
 }
 
 // 获取单位列表
-async function fetchCompanies() {
+async function getCompanies() {
   try {
-    const response = await getCompanies()
-    if (response.code === 0) {
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
       companyOptions.value = response.data.records
-    } else {
-      companyOptions.value = []
     }
   } catch (error) {
-    console.error("获取单位列表失败:", error)
+    console.error("获取上级单位失败:", error)
   }
 }
 
@@ -124,9 +124,8 @@ function handleSearch() {
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
-    companyName: "",
-    projectCode: "",
-    paymentStatus: undefined,
+    keyword: "",
+    status: 0,
     dateRange: []
   })
   handleSearch()
@@ -146,7 +145,9 @@ function handleCurrentChange(val: number) {
 function handleCreate() {
   dialogStatus.value = "create"
   resetForm()
-  showCreateDialog.value = true
+  getCompanies().then(() => {
+    showCreateDialog.value = true
+  })
 }
 
 // 编辑
@@ -258,7 +259,6 @@ function importSuccess() {
 // 初始化
 onMounted(() => {
   fetchData()
-  fetchCompanies()
 })
 </script>
 
@@ -271,7 +271,7 @@ onMounted(() => {
           <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
             <el-option label="全部" :value="0" />
             <el-option label="待确认" :value="1" />
             <el-option label="已生效" :value="2" />
@@ -382,19 +382,15 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单位名称" prop="companyName">
-              <el-select
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
                 v-model="form.companyId"
+                :data="companyOptions"
                 placeholder="请选择单位"
-                filterable
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+              />
             </el-form-item>
           </el-col>
         </el-row>

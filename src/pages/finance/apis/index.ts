@@ -56,6 +56,21 @@ export function getAdvanceExpenses(params: Finance.AdvanceExpenseParams) {
   })
 }
 
+export function getExpenseDetailTypes() {
+  return request<Finance.ExpenseDetailTypeResponseData>({
+    url: "/finance/expense-detail-types",
+    method: "get"
+  })
+}
+
+export function createAdvanceExpense(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/advance-expense",
+    method: "post",
+    data
+  })
+}
+
 export function getExpenseTypes() {
   return request<Finance.ExpenseTypeResponseData>({
     url: "/finance/expense-types",

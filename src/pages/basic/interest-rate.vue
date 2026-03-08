@@ -18,7 +18,7 @@ const formRef = ref<FormInstance>()
 
 const searchForm = reactive({
   rateType: 0,
-  status: undefined as number | undefined,
+  status: 0,
   dateRange: [] as string[]
 })
 
@@ -231,6 +231,7 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 100px;">
+            <el-option label="全部" :value="0" />
             <el-option label="生效" :value="1" />
             <el-option label="失效" :value="2" />
           </el-select>

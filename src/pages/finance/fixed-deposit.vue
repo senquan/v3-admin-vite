@@ -29,6 +29,7 @@ interface FixedDeposit {
   updater: { name: string }
   updatedAt: string
   remark: string
+  lastInterestDate?: string
 }
 
 const loading = ref(false)
@@ -45,7 +46,7 @@ const depositTypeMap = systemParamsStore.getArrayDict(1)
 
 const searchForm = reactive({
   keyword: "",
-  status: "0",
+  status: 0,
   dateRange: [] as string[]
 })
 
@@ -63,7 +64,7 @@ const form = reactive({
   earlyRelease: 0,
   releaseDate: "" as string,
   interestDays: 0,
-  releaseAmount: 0,
+  releaseAmount: 0
 })
 
 const rules = computed<FormRules>(() => {
@@ -77,15 +78,15 @@ const rules = computed<FormRules>(() => {
     ],
     releaseAmount: [
       { required: isEarlyRelease, message: "请输入释放金额", trigger: "blur" },
-      { 
+      {
         validator: (rule: any, value: any, callback: any) => {
           if (isEarlyRelease && (!value || value <= 0)) {
             callback(new Error("释放金额必须大于0"))
           } else {
             callback()
           }
-        }, 
-        trigger: "blur" 
+        },
+        trigger: "blur"
       }
     ]
   }
@@ -149,7 +150,7 @@ function resetSearch() {
   Object.assign(searchForm, {
     companyName: "",
     batchNo: "",
-    status: "0",
+    status: 0,
     dateRange: []
   })
   handleSearch()
@@ -174,7 +175,7 @@ function handleRelease(row: FixedDeposit) {
     earlyRelease: row.earlyRelease,
     releaseDate: row.releaseDate || "",
     interestDays: row.interestDays || 0,
-    releaseAmount: row.releaseAmount || 0,
+    releaseAmount: row.releaseAmount || 0
   })
   showCreateDialog.value = true
 }
@@ -234,7 +235,7 @@ function resetForm() {
     earlyRelease: 0,
     releaseDate: "",
     interestDays: 0,
-    releaseAmount: 0,
+    releaseAmount: 0
   })
 }
 
@@ -373,10 +374,10 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="batchNo" label="导入批次" width="130" align="right" show-overflow-tooltip />
-        <el-table-column prop="recentInterestDate" label="最近计息日" width="150" align="right" />
+        <el-table-column prop="lastInterestDate" label="最近计息日" width="150" align="center" />
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="success" v-if="row.status === 2" @click="handleRelease(row)">提前释放</el-button>
+            <el-button type="success" v-if="row.status === 2 && new Date(row.endDate) > new Date()" @click="handleRelease(row)">提前释放</el-button>
             <el-button type="danger" v-if="row.status === 1" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -544,8 +545,6 @@ onMounted(() => {
             <template #prepend>￥</template>
           </el-input>
         </el-form-item>
-
-        
       </el-form>
 
       <template #footer>

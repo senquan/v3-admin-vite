@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { CompanyTree } from "../basic/apis/type"
-import { getUsers } from "./apis"
 import { formatDateTime } from "@@/utils/datetime"
 import { getCompaniesTree } from "../basic/apis"
 import RoleForm from "./_role.vue"
 import UserForm from "./_user.vue"
+import { getUsers } from "./apis"
 
 const loading = ref(false)
 const roleFormRef = ref<any>([])
