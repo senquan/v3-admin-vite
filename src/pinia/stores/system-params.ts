@@ -1,6 +1,6 @@
 import type { SettingsListData } from "@/pages/system/apis/type"
 import { defineStore } from "pinia"
-import { fetchDictList, fetchList as fetchParamList } from "@/pages/system/apis"
+import { getDictList, fetchList as fetchParamList } from "@/pages/system/apis"
 import { pinia } from "@/pinia"
 
 export const useSystemParamsStore = defineStore("systemParams", () => {
@@ -36,7 +36,7 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
   // 加载系统字典
   const loadDicts = async () => {
     try {
-      const res = await fetchDictList({
+      const res = await getDictList({
         page: 1,
         size: 100 // 获取足够多的系统字典
       })
@@ -98,10 +98,15 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
     return dict ? dict.value : null
   }
 
+  // 获取字典根目录
+  const getRootDict = (): any[] => {
+    return dicts.value[0] || []
+  }
+
   // 获取字典列表
   const getArrayDict = (group: number): any[] => {
     if (dicts.value[0].some((item: any) => item.value === String(group))) {
-      const idx = dicts.value[0].find((item: any) => item.value === String(group))?.id as number
+      const idx = dicts.value[0].find((item: any) => item.value === String(group))?.value as number
       return dicts.value[idx] || []
     }
     return []
@@ -152,7 +157,8 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
     getNumberArrayParam,
     getStringArrayParam,
     getDictValue,
-    getArrayDict
+    getArrayDict,
+    getRootDict
   }
 })
 

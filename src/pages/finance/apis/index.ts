@@ -1,4 +1,4 @@
-import type * as Finance from "./type"
+ import type * as Finance from "./type"
 import { request } from "@/http/axios"
 
 export function getLoanDepositSummary(params: Finance.LoanDepositSummaryParams) {
@@ -71,6 +71,14 @@ export function createAdvanceExpense(data: any) {
   })
 }
 
+export function deleteAdvanceExpense(id: number) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/advance-expense`,
+    method: "delete",
+    data: { id }
+  })
+}
+
 export function getExpenseTypes() {
   return request<Finance.ExpenseTypeResponseData>({
     url: "/finance/expense-types",
@@ -78,11 +86,52 @@ export function getExpenseTypes() {
   })
 }
 
-export function getProfitPayments(params: Finance.ProfitPaymentParams) {
+export function getProfitPayments(params: Finance.ProfitPaymentLogParams) {
   return request<Finance.ProfitPaymentResponseData>({
     url: "/finance/profit-payments",
     method: "get",
     params
+  })
+}
+
+export function createProfitPayment(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/profit-payment",
+    method: "post",
+    data
+  })
+}
+
+export function createTurnOver(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/profit-payment/${data.id}/turn-over`,
+    method: "post",
+    data
+  })
+}
+
+// 获取利润支付日志
+export function getProfitPaymentLogs(params: Finance.ProfitPaymentLogParams) {
+  return request<Finance.ProfitPaymentLogResponseData>({
+    url: "/finance/profit-payment/logs",
+    method: "get",
+    params
+  })
+}
+
+export function updateProfitPayment(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/profit-payment/${data.id}`,
+    method: "put",
+    data
+  })
+}
+
+export function deleteProfitPayment(id: number) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/profit-payment`,
+    method: "delete",
+    data: { id }
   })
 }
 

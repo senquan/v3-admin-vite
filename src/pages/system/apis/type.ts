@@ -52,6 +52,7 @@ export interface DictCreateData {
   remark: string
   value: string
   group: number
+  sort?: number
 }
 
 export interface DictListResponseData {

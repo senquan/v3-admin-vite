@@ -333,6 +333,34 @@ function importSuccess() {
   handleSearch()
 }
 
+function getSummaries(param: any) {
+  const { columns, data } = param
+  const sums: (string | VNode)[] = []
+  columns.forEach((column: any, index: number) => {
+    if (index === 2) {
+      sums[index] = "合计"
+      return
+    }
+    if (column.property === "transferAmount") {
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => Number.isNaN(value))) {
+        sums[index] = `${values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!Number.isNaN(value)) {
+            return prev + value
+          } else {
+            return prev
+          }
+        }, 0)}`
+      } else {
+        sums[index] = 'N/A'
+      }
+      sums[index] = formattedMoney(sums[index])
+    }
+  })
+  return sums
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
@@ -386,6 +414,8 @@ onMounted(() => {
             :data="upTableData"
             border
             stripe
+            :summary-method="getSummaries"
+            show-summary
             v-loading="loading"
             header-cell-class-name="header-cell-fix"
           >
@@ -414,7 +444,7 @@ onMounted(() => {
             <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
             <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
               <template #default="{ row }">
-                {{ formatDate(row.createdAt) }}
+                {{ formatDateTime(row.createdAt) }}
               </template>
             </el-table-column>
             <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
@@ -485,6 +515,8 @@ onMounted(() => {
             :data="downTableData"
             border
             stripe
+            :summary-method="getSummaries"
+            show-summary
             v-loading="loading"
             header-cell-class-name="header-cell-fix"
           >

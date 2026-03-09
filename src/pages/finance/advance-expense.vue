@@ -5,7 +5,13 @@ import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
-import { advanceExpenseConfirm, createAdvanceExpense, getAdvanceExpenses, getExpenseDetailTypes } from "./apis"
+import {
+  advanceExpenseConfirm,
+  createAdvanceExpense,
+  deleteAdvanceExpense,
+  getAdvanceExpenses,
+  getExpenseDetailTypes
+} from "./apis"
 import AdvanceImport from "./forms/_advance-import.vue"
 
 interface AdvanceExpense {
@@ -190,10 +196,13 @@ async function handleDelete(row: AdvanceExpense) {
       type: "warning"
     })
 
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
+    const response = await deleteAdvanceExpense(row.id)
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "删除失败")
+    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")

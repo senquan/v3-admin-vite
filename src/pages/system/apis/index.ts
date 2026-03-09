@@ -19,7 +19,7 @@ export function batchUpdateSettings(data: System.SettingsCreateData[]) {
   })
 }
 
-export function fetchDictList(params: System.CommonListRequestParams) {
+export function getDictList(params: System.CommonListRequestParams) {
   return request<System.DictListResponseData>({
     url: "/system/dicts",
     method: "get",
@@ -29,7 +29,7 @@ export function fetchDictList(params: System.CommonListRequestParams) {
 
 export function createDict(data: System.DictCreateData) {
   return request<System.CommonActionResponseData>({
-    url: "dict/",
+    url: "/system/dicts",
     method: "post",
     data
   })
@@ -37,7 +37,7 @@ export function createDict(data: System.DictCreateData) {
 
 export function updateDict(id: number, data: System.DictCreateData) {
   return request<System.CommonActionResponseData>({
-    url: `dict/${id}`,
+    url: `/system/dicts/${id}`,
     method: "put",
     data
   })
@@ -45,7 +45,7 @@ export function updateDict(id: number, data: System.DictCreateData) {
 
 export function deleteDict(id: number) {
   return request<System.CommonActionResponseData>({
-    url: `dict/${id}`,
+    url: `/system/dicts/${id}`,
     method: "delete"
   })
 }

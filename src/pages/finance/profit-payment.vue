@@ -4,7 +4,15 @@ import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { getCompaniesTree } from "../basic/apis"
-import { getProfitPayments, profitConfirm } from "./apis"
+import {
+  createProfitPayment,
+  createTurnOver,
+  deleteProfitPayment,
+  getProfitPayments,
+  getProfitPaymentLogs,
+  profitConfirm,
+  updateProfitPayment
+} from "./apis"
 import ProfitImport from "./forms/_profit-import.vue"
 
 interface ProfitPayment {
@@ -15,16 +23,26 @@ interface ProfitPayment {
   dueProfit2: number
   actualAmount: number
   remainingProfit: number
+  status: number
   creator: any
   createdAt: string
   updater: any
   updatedAt: string
 }
 
+interface ProfitPaymentLog {
+  id: number
+  amount: number
+  creator: any
+  createdAt: string
+}
+
 const loading = ref(false)
+const logLoading = ref(false)
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
 const dialogStatus = ref("create")
+const isTurnOver = ref(false)
 const formRef = ref<FormInstance>()
 const profitImportRef = ref<any>(null)
 const currentRow = ref<ProfitPayment | null>(null)
@@ -43,6 +61,7 @@ const pagination = reactive({
 
 const tableRef = ref<any>(null)
 const tableData = ref<ProfitPayment[]>([])
+const tableLogData = ref<ProfitPaymentLog[]>([])
 const companyOptions = ref<CompanyTree[]>([])
 
 const form = reactive({
@@ -50,7 +69,8 @@ const form = reactive({
   businessYear: undefined as number | undefined,
   companyId: undefined as number | undefined,
   dueProfit1: undefined as number | undefined,
-  dueProfit2: undefined as number | undefined
+  dueProfit2: undefined as number | undefined,
+  currentTurnOverAmount: undefined as number | undefined
 })
 
 const rules = reactive<FormRules>({
@@ -58,6 +78,13 @@ const rules = reactive<FormRules>({
   companyId: [{ required: true, message: "请选择单位", trigger: "change" }],
   dueProfit1: [{ required: true, message: "请输入金额", trigger: "blur" }],
   dueProfit2: [{ required: true, message: "请输入金额", trigger: "blur" }]
+})
+
+watch(showCreateDialog, (newVal) => {
+  if (!newVal) {
+    resetForm()
+    isTurnOver.value = false
+  }
 })
 
 // 获取状态标签
@@ -103,6 +130,30 @@ async function fetchData() {
   }
 }
 
+// 获取利润支付日志
+async function fetchProfitPaymentLog(id: number) {
+  logLoading.value = true
+  try {
+    const response = await getProfitPaymentLogs({ id })
+    if (response.code === 0) {
+      let count = 1
+      const data = response.data.records.map((item: any) => ({
+        ...item,
+        seq: count++
+      })) || []
+      tableLogData.value = data
+    } else {
+      tableLogData.value = []
+    }
+  } catch (error) {
+    ElMessage.error(`获取上缴记录失败: ${error}`)
+  } finally {
+    logLoading.value = false
+  }
+}
+
+
+
 // 获取单位列表
 async function getCompanies() {
   try {
@@ -144,7 +195,6 @@ function handleCurrentChange(val: number) {
 
 function handleCreate() {
   dialogStatus.value = "create"
-  resetForm()
   getCompanies().then(() => {
     showCreateDialog.value = true
   })
@@ -161,15 +211,19 @@ function handleEdit(row: ProfitPayment) {
     dueProfit1: Number(row.dueProfit1),
     dueProfit2: Number(row.dueProfit2)
   })
-  showCreateDialog.value = true
+  getCompanies().then(() => {
+    showCreateDialog.value = true
+  })
+  fetchProfitPaymentLog(row.id)
 }
 
 function handleTurnOver(row: ProfitPayment) {
-  console.log("上缴:", row)
+  isTurnOver.value = true
+  handleEdit(row)
 }
 
 function handleDetail(row: ProfitPayment) {
-  console.log("详情:", row)
+  handleEdit(row)
 }
 
 async function handleConfirm() {
@@ -202,14 +256,35 @@ async function handleDelete(row: ProfitPayment) {
       type: "warning"
     })
 
-    // 模拟删除API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
+    fetchProfitPaymentLog(row.id).then( async () => {
+      if (tableLogData.value.length > 0) {
+        await ElMessageBox.confirm(`${row.businessYear} 年度 ${row.company?.companyName}存在上缴记录，请再次确认是否进行删除？`, "提示", {
+          type: "warning"
+        }).then(async () => {
+          doDelete(row.id)
+        })
+      } else {
+        doDelete(row.id)
+      }
+    })
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
     }
+  }
+}
+
+async function doDelete(id: number) {
+  try {
+    const response = await deleteProfitPayment(id)
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "删除失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "删除失败")
   }
 }
 
@@ -221,16 +296,25 @@ async function handleSubmit() {
     await formRef.value.validate()
     submitLoading.value = true
 
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
+    const data = { ...form }
+    const response = dialogStatus.value === "create"
+      ? await createProfitPayment(data)
+      : isTurnOver.value
+        ? await createTurnOver({ id: form.id, amount: form.currentTurnOverAmount })
+        : await updateProfitPayment(data)
 
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
-  } catch (error) {
+    if (response.code === 0) {
+      ElMessage.success(form.id ? "更新成功" : "创建成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "提交失败")
+    }
+  } catch (error: any) {
     console.error("提交失败:", error)
+    ElMessage.error(error.message || "提交失败")
   } finally {
     submitLoading.value = false
+    showCreateDialog.value = false
   }
 }
 
@@ -244,7 +328,8 @@ function resetForm() {
     businessYear: undefined,
     companyId: undefined,
     dueProfit1: undefined,
-    dueProfit2: undefined
+    dueProfit2: undefined,
+    currentTurnOverAmount: undefined
   })
 }
 
@@ -331,13 +416,13 @@ onMounted(() => {
         <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip />
         <el-table-column label="操作" width="310" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button v-if="row.status === 2 && row.remainingProfit > 0" type="success" @click="handleTurnOver(row)">
-              上缴
-            </el-button>
             <el-button type="primary" @click="handleDetail(row)">
               详情
             </el-button>
-            <el-button type="primary" @click="handleEdit(row)">
+            <el-button v-if="row.status === 2 && row.remainingProfit > 0" type="success" @click="handleTurnOver(row)">
+              上缴
+            </el-button>
+            <el-button v-if="row.status === 1" type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
             <el-button type="danger" @click="handleDelete(row)">
@@ -364,7 +449,7 @@ onMounted(() => {
     <el-dialog
       v-model="showCreateDialog"
       :title="`利润上缴计划${dialogStatus === 'create' ? '新增' : '编辑'}`"
-      width="700px"
+      width="800px"
       @close="resetForm"
     >
       <el-form
@@ -376,7 +461,10 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="年度" prop="businessYear">
-              <el-select v-model="form.businessYear" placeholder="请选择年度">
+              <el-select
+                v-model="form.businessYear"
+                placeholder="请选择年度"
+                :disabled="isTurnOver || currentRow?.status === 2">
                 <el-option v-for="value in range(new Date().getFullYear(), 10)" :key="value" :value="value" />
               </el-select>
             </el-form-item>
@@ -390,6 +478,7 @@ onMounted(() => {
                 :render-after-expand="false"
                 :check-strictly="true"
                 clearable
+                :disabled="isTurnOver || currentRow?.status === 2"
               />
             </el-form-item>
           </el-col>
@@ -406,6 +495,7 @@ onMounted(() => {
                 :step="1"
                 controls-position="right"
                 style="width: 100%"
+                :disabled="isTurnOver || currentRow?.status === 2"
               />
             </el-form-item>
           </el-col>
@@ -419,6 +509,7 @@ onMounted(() => {
                 :step="1"
                 controls-position="right"
                 style="width: 100%"
+                :disabled="isTurnOver || currentRow?.status === 2"
               />
             </el-form-item>
           </el-col>
@@ -471,12 +562,55 @@ onMounted(() => {
               </el-form-item>
             </el-col>
           </el-row>
+
+          <div v-if="isTurnOver">
+            <el-divider content-position="right">本次上缴信息</el-divider>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="本次上缴金额" prop="currentTurnOverAmount" label-width="130px">
+                  <el-input-number
+                    v-model="form.currentTurnOverAmount"
+                    placeholder="请输入金额"
+                    :min="0"
+                    :precision="2"
+                    :step="1"
+                    controls-position="right"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
+          <el-divider content-position="right">上缴记录</el-divider>
+
+          <el-table
+            v-if="tableLogData.length > 0"
+            :data="tableLogData"
+            border
+            max-height="300px"
+            v-loading="logLoading"
+            header-cell-class-name="header-cell-fix"
+          >
+            <el-table-column prop="seq" label="序号" width="60" align="center" />
+            <el-table-column prop="amount" label="上缴金额" min-width="120" align="right">
+              <template #default="{ row }">
+                {{ formattedMoney(row.amount) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="creator.name" label="填报人" width="160" align="center" />
+            <el-table-column prop="createdAt" label="填报时间" width="160" align="center">
+              <template #default="{ row }">
+                {{ formatDateTime(row.createdAt) }}
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
       </el-form>
 
       <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
+        <el-button @click="showCreateDialog = false">关闭</el-button>
+        <el-button v-if="currentRow?.status === 1 || isTurnOver || dialogStatus === 'create'" type="primary" @click="handleSubmit" :loading="submitLoading">
           确定
         </el-button>
       </template>

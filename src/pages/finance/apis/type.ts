@@ -5,6 +5,7 @@ export interface AdvanceExpenseResponseData extends ApiResponseData<AdvanceExpen
 export interface ExpenseTypeResponseData extends ApiResponseData<ExpenseType> {}
 export interface ExpenseDetailTypeResponseData extends ApiResponseData<ExpenseDetailType> {}
 export interface ProfitPaymentResponseData extends ApiResponseData<ProfitPayment> {}
+export interface ProfitPaymentLogResponseData extends ApiResponseData<ProfitPaymentLog> {}
 export interface CompaniesResponseData extends ApiResponseData<Company> {}
 
 export interface LoanDepositSummaryParams extends BaseQueryParams {
@@ -39,6 +40,10 @@ export interface AdvanceExpenseParams extends BaseQueryParams {
 
 export interface ProfitPaymentParams extends BaseQueryParams {
   status?: number
+}
+
+export interface ProfitPaymentLogParams extends BaseQueryParams {
+  id: number
 }
 
 export interface CommonActionResult {
@@ -92,6 +97,13 @@ export interface ExpenseDetailType {
 
 export interface ProfitPayment {
   [key: string]: any
+}
+
+export interface ProfitPaymentLog {
+  id: number
+  amount: number
+  creator: any
+  createdAt: string
 }
 
 export interface Company {
