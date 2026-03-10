@@ -87,6 +87,7 @@ async function fetchData() {
     const response = await getInterestDetail(params)
     if (response && response.code === 0) {
       let count = 1
+      tableData[activeTab.value as keyof typeof tableData] = []
       response.data.records.forEach((item: any) => {
         item.seq = count++
         tableData[activeTab.value as keyof typeof tableData].push(item)
