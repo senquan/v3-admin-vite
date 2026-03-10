@@ -21,7 +21,8 @@ export function snapshotClearingSummary(data: Report.SnapshotClearingSummaryRequ
   return request<Report.BaseActionData>({
     url: `/report/clearing-snapshots`,
     method: "post",
-    data
+    data,
+    timeout: 20000
   })
 }
 

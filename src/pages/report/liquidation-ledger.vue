@@ -138,17 +138,34 @@ function handleCurrentChange(val: number) {
 }
 
 async function handleSave() {
-  await ElMessageBox.confirm(`确定要保存快照吗？`, "提示", {
-    type: "warning"
-  }).then(async () => {
-    const response = await snapshotClearingSummary({})
+  try {
+    await ElMessageBox.confirm('确定要保存当前台账的快照吗？', '保存快照', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info',
+    });
+  } catch (e) {
+    return ElMessage.info('已取消保存');
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在生成快照，请稍候...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  });
+
+  try {
+    const response = await snapshotClearingSummary({});
     if (response.code === 0) {
-      ElMessage.success("保存快照成功")
-      fetchData()
+      ElMessage.success("保存快照成功");
     } else {
-      ElMessage.error(response.message || "保存快照失败")
+      ElMessage.error(response.message || "保存快照失败");
     }
-  })
+  } catch (error: any) {
+    ElMessage.error(error.message || "保存快照失败");
+  } finally {
+    loadingInstance.close();
+  }
 }
 
 function handleDrill(row: any, type: number) {
