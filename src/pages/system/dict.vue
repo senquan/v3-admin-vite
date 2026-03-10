@@ -126,6 +126,7 @@ onMounted(() => {
         :tree-config="{ transform: true, rowField: 'id', parentField: 'parent_id' }"
         :data="tableData"
         :loading="loading"
+        header-cell-class-name="header-cell-fix"
       >
         <vxe-column field="id" title="序号" width="80">
           <template #default="{ row }">
@@ -171,6 +172,12 @@ onMounted(() => {
   padding: 20px 20px 0 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
+}
+
+:deep(.vxe-table .header-cell-fix) {
+  text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .pagination {

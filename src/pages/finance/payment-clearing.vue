@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
 import ReceiveImport from "./forms/_receive-import.vue"
 
@@ -33,6 +34,12 @@ interface PaymentReceive {
   updatedAt: string
   batchNo: string
 }
+
+const systemParamsStore = useSystemParamsStore()
+const banksMap = systemParamsStore.getArrayDict(4).reduce((acc, cur) => {
+  acc[cur.value] = cur.name
+  return acc
+}, {} as Record<string, string>)
 
 const loading = ref(false)
 const selectedRow = ref<PaymentReceive | null>(null)
@@ -324,7 +331,11 @@ onMounted(() => {
             {{ formatAmount(row.accountAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center" />
+        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center">
+          <template #default="{ row }">
+            {{ banksMap[row.receiveBank] || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
         <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
         <el-table-column prop="collectionDate" label="托收日期" width="120" align="center">
