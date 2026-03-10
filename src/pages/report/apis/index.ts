@@ -9,6 +9,14 @@ export function getClearingSummary(params: BaseQueryParams) {
   })
 }
 
+export function updateClearingSummary(data: Report.UpdateClearingSummaryRequestData, id: number) {
+  return request<Report.BaseActionData>({
+    url: `/report/clearing-summary/${id}`,
+    method: "put",
+    data
+  })
+}
+
 export function getDepositLoanSummary(params: Report.DepositLoanQueryParams) {
   return request<Report.DepositLoanSummaryResponseData>({
     url: "/report/deposit-loan-summary",

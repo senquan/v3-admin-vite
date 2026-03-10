@@ -3,7 +3,7 @@ import { formattedMoney } from "@@/utils"
 import { useRouter } from "vue-router"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getAdvanceExpenses, getProfitPayments } from "../finance/apis"
-import { getClearingSummary } from "./apis"
+import { getClearingSummary, updateClearingSummary } from "./apis"
 
 const router = useRouter()
 const systemParamsStore = useSystemParamsStore()
@@ -31,8 +31,10 @@ const drillLoading = ref(false)
 const currentDrillType = ref(0)
 const currentCompanyId = ref(0)
 const showDrillDialog = ref(false)
+const showEditDialog = ref(false)
 const drillData = reactive<any>({})
 
+const editTitle = ref("")
 const dialogTitle = {
   1: "内部存款",
   2: "所得税清算",
@@ -47,6 +49,12 @@ const advanceExpenseDetailColumns = ref<any[]>([])
 
 const searchForm = reactive({
   keyword: ""
+})
+
+const editForm = reactive({
+  id: 0,
+  billAmount: 0,
+  other: 0
 })
 
 const pagination = reactive({
@@ -110,6 +118,14 @@ function resetSearch() {
   handleSearch()
 }
 
+function resetEdit() {
+  Object.assign(editForm, {
+    id: 0,
+    billAmount: 0,
+    other: 0
+  })
+}
+
 // 分页变化
 function handleSizeChange(val: number) {
   pagination.size = val
@@ -129,6 +145,7 @@ function handleDrill(row: any, type: number) {
   currentDrillType.value = type
   currentCompanyId.value = row.companyId
   if (type === 1) {
+    // 跳转内部存款详情页
     router.push({
       name: "Internal Loan Deposit",
       query: {
@@ -141,13 +158,24 @@ function handleDrill(row: any, type: number) {
   }
 }
 
+function handleEdit(row: any) {
+  Object.assign(editForm, {
+    id: row.id,
+    billAmount: row.billAmount,
+    other: row.other
+  })
+  editTitle.value = row.company.companyName
+  showEditDialog.value = true
+}
+
 async function loadDrillData(type: number) {
   drillLoading.value = true
   try {
     const params: any = {
       page: drillPagination.page,
       size: drillPagination.size,
-      companyId: currentCompanyId.value
+      companyId: currentCompanyId.value,
+      status: 2
     }
 
     let response
@@ -155,7 +183,6 @@ async function loadDrillData(type: number) {
       params.type = getExpensesType(type)
       response = await getAdvanceExpenses(params)
     } else {
-      params.status = 2
       response = await getProfitPayments(params)
     }
     if (response && response.code === 0) {
@@ -193,6 +220,31 @@ function handleSizeChangeDrill(val: number) {
 function handleCurrentChangeDrill(val: number) {
   drillPagination.page = val
   loadDrillData(currentDrillType.value)
+}
+
+async function handleSubmit() {
+  try {
+    const updateData: any = {}
+    updateData.billAmount = editForm.billAmount || 0
+    updateData.other = editForm.other || 0
+
+    const response = await updateClearingSummary(updateData, editForm.id)
+
+    if (response.code === 0) {
+      ElMessage.success("更新成功")
+      showEditDialog.value = false
+      handleSearch()
+    } else {
+      ElMessage.error(response.message || "更新失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "更新失败")
+  }
+}
+
+function closeEdit() {
+  showEditDialog.value = false
+  resetEdit()
 }
 
 // 根据穿透类型获取代垫费用类型
@@ -351,12 +403,12 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="billAmount" label="代开票据金额" width="170" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.billAmount) }}
+            <span class="drillable" @click="handleEdit(row)">{{ formattedMoney(row.billAmount) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="other" label="其他" width="170" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.other) }}
+            <span class="drillable" @click="handleEdit(row)">{{ formattedMoney(row.other) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="contactBalance" label="往来余额" width="170" align="right">
@@ -455,6 +507,31 @@ onMounted(() => {
         class="pagination"
       />
     </el-dialog>
+
+    <el-dialog
+      v-model="showEditDialog"
+      :title="`编辑其他费用项 - ${editTitle}`"
+      width="40%"
+      @close="closeEdit"
+    >
+      <el-form
+        :model="editForm"
+        ref="editFormRef"
+        label-width="120px"
+        class="search-form"
+      >
+        <el-form-item label="代开票据金额" prop="billAmount">
+          <el-input-number v-model="editForm.billAmount" :step="1" :precision="2" style="width: 300px; margin-bottom: 10px;" />
+        </el-form-item>
+        <el-form-item label="其他" prop="other">
+          <el-input-number v-model="editForm.other" :step="1" :precision="2" style="width: 300px;" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeEdit">关闭</el-button>
+        <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -468,6 +545,12 @@ onMounted(() => {
   padding: 20px;
   background-color: #f5f7fa;
   border-radius: 4px;
+}
+
+:deep(.el-table .header-cell-fix) {
+  text-align: center;
+  background-color: #f5f7fa;
+  height: 50px;
 }
 
 .summary-cards {

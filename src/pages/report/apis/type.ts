@@ -6,10 +6,22 @@ export interface DepositLoanQueryParams extends BaseQueryParams {
   companyId?: string
 }
 
+export interface BaseActionData {
+  code: number
+  message: string
+  data?: any
+}
+
 export interface InterestDetailQueryParams extends BaseQueryParams {
   type: number
   keyword?: string
   companyId?: string
+}
+
+export interface UpdateClearingSummaryRequestData {
+  id?: number
+  billAmount: number
+  other: number
 }
 
 export interface ClearingSummary {
