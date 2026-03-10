@@ -24,6 +24,12 @@ export interface UpdateClearingSummaryRequestData {
   other: number
 }
 
+export interface SnapshotClearingSummaryRequestData {
+  name?: string
+  cutoffDate?: string
+  companyId?: number
+}
+
 export interface ClearingSummary {
   [key: string]: any
 }

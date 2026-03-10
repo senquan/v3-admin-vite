@@ -17,6 +17,14 @@ export function updateClearingSummary(data: Report.UpdateClearingSummaryRequestD
   })
 }
 
+export function snapshotClearingSummary(data: Report.SnapshotClearingSummaryRequestData) {
+  return request<Report.BaseActionData>({
+    url: `/report/clearing-snapshots`,
+    method: "post",
+    data
+  })
+}
+
 export function getDepositLoanSummary(params: Report.DepositLoanQueryParams) {
   return request<Report.DepositLoanSummaryResponseData>({
     url: "/report/deposit-loan-summary",

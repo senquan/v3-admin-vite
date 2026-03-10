@@ -194,15 +194,15 @@ async function handleDelete(row: AdvanceExpense) {
   try {
     await ElMessageBox.confirm(`确定要删除垫资记录 ${row.advanceCode} 吗？`, "提示", {
       type: "warning"
+    }).then(async () => {
+      const response = await deleteAdvanceExpense(row.id)
+      if (response.code === 0) {
+        ElMessage.success("删除成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "删除失败")
+      }
     })
-
-    const response = await deleteAdvanceExpense(row.id)
-    if (response.code === 0) {
-      ElMessage.success("删除成功")
-      fetchData()
-    } else {
-      ElMessage.error(response.message || "删除失败")
-    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")

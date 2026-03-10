@@ -3,7 +3,7 @@ import { formattedMoney } from "@@/utils"
 import { useRouter } from "vue-router"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getAdvanceExpenses, getProfitPayments } from "../finance/apis"
-import { getClearingSummary, updateClearingSummary } from "./apis"
+import { getClearingSummary, snapshotClearingSummary, updateClearingSummary } from "./apis"
 
 const router = useRouter()
 const systemParamsStore = useSystemParamsStore()
@@ -137,8 +137,18 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
-function handleSave() {
-  ElMessage.success("保存快照成功")
+async function handleSave() {
+  await ElMessageBox.confirm(`确定要保存快照吗？`, "提示", {
+    type: "warning"
+  }).then(async () => {
+    const response = await snapshotClearingSummary({})
+    if (response.code === 0) {
+      ElMessage.success("保存快照成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "保存快照失败")
+    }
+  })
 }
 
 function handleDrill(row: any, type: number) {
