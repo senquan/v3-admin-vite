@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { FormInstance, FormRules } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { getCompaniesTree } from "../basic/apis"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
+import { getPaymentClearings, receiveConfirm, receiveDelete, updateReceive, createReceive } from "./apis"
 import ReceiveImport from "./forms/_receive-import.vue"
 
 interface PaymentReceive {
@@ -36,15 +39,43 @@ interface PaymentReceive {
 }
 
 const systemParamsStore = useSystemParamsStore()
-const banksMap = systemParamsStore.getArrayDict(4).reduce((acc, cur) => {
-  acc[cur.value] = cur.name
-  return acc
-}, {} as Record<string, string>)
+const receiveBankMap = systemParamsStore.getArrayDict(4).reduce((prev, cur) => {
+  prev[cur.value] = cur.name
+  return prev
+}, {} as Record<number, string>)
 
 const loading = ref(false)
 const selectedRow = ref<PaymentReceive | null>(null)
 const showEditDialog = ref(false)
+const dialogTitle = ref("贴现填报")
+const formRef = ref<FormInstance>()
 const receiveImportRef = ref<any>(null)
+const isCreate = ref(false)
+const companyOptions = ref<CompanyTree[]>([])
+
+const rules = computed<FormRules>(() => {
+  const isCreateReceive = isCreate.value
+  return {
+    receiveType: [
+      { required: isCreateReceive, message: "请选择到款类型", trigger: "change" }
+    ],
+    receiveDate: [
+      { required: isCreateReceive, message: "请选择到款日期", trigger: "change" }
+    ],
+    companyId: [
+      { required: isCreateReceive, message: "请选择单位", trigger: "change" }
+    ],
+    accountAmount: [
+      { required: true, message: "请输入到款金额", trigger: "blur" }
+    ],
+    billAmount: [
+      { required: editForm.receiveType === 2, message: "请输入票据金额", trigger: "blur" }
+    ],
+    dueDate: [
+      { required: editForm.receiveType === 2, message: "请选择到期日", trigger: "change" }
+    ]
+  }
+})
 
 const discountDisabled = computed(() => {
   return editForm.discountDate === ""
@@ -67,13 +98,23 @@ const tableData = ref<PaymentReceive[]>([])
 
 const editForm = reactive({
   id: 0,
-  receiveAmount: undefined as number | undefined,
+  sapCode: "",
+  companyId: undefined as number | undefined,
+  projectName: "",
+  receiveType: undefined as number | undefined,
+  receiveDate: "" as string,
+  accountAmount: 0 as number | undefined,
+  receiveAmount: 0 as number | undefined,
+  customerName: "",
   collectionDate: "",
   discountDate: "",
-  discountAmount: undefined as number | undefined,
-  discountFee: undefined as number | undefined,
+  discountAmount: 0 as number | undefined,
+  discountFee: 0 as number | undefined,
+  billAmount: 0 as number | undefined,
+  billNo: "",
+  dueDate: "",
+  receiveBank: undefined as string | undefined,
   received: 0 as number,
-  accountAmount: undefined as number | undefined
 })
 
 // function getReceiveTypeLabel(type: number) {
@@ -141,43 +182,64 @@ function importSuccess() {
   handleSearch()
 }
 
-function handleEdit(row: PaymentReceive) {
-  selectedRow.value = row
-  console.log(row)
-  editForm.id = row.id
-  editForm.receiveAmount = Number(row.receiveAmount)
-  editForm.collectionDate = row.collectionDate || ""
-  editForm.discountDate = row.discountDate || ""
-  editForm.discountAmount = Number(row.discountAmount)
-  editForm.discountFee = Number(row.discountFee)
-  editForm.accountAmount = Number(row.accountAmount)
-  editForm.received = row.received || 0
+function handleCreate() {
+  dialogTitle.value = "新增到款"
+  isCreate.value = true
+  resetForm()
   showEditDialog.value = true
-  console.log(editForm.discountDate)
 }
 
-async function handleSaveEdit() {
+function handleEdit(row: any) {
+  dialogTitle.value = "到款信息编辑"
+  isCreate.value = false
+  Object.assign(editForm, {
+    id: row.id,
+    sapCode: row.sapCode,
+    companyId: row.companyId,
+    projectName: row.projectName,
+    receiveType: row.receiveType,
+    receiveDate: row.receiveDate,
+    accountAmount: row.accountAmount,
+    receiveAmount: row.receiveAmount,
+    customerName: row.customerName,
+    collectionDate: row.collectionDate || "",
+    discountDate: row.discountDate || "",
+    discountAmount: row.discountAmount,
+    discountFee: row.discountFee,
+    billAmount: row.billAmount,
+    billNo: row.billNo || "",
+    dueDate: row.dueDate || "",
+    receiveBank: row.receiveBank ? String(row.receiveBank) : undefined,
+    received: row.received,
+  })
+  showEditDialog.value = true
+}
+
+async function handleSubmit() {
+  if (!formRef.value) return
+  
   try {
-    const updateData: any = {}
+    const valid = await formRef.value.validate()
+    if (!valid) return
 
-    updateData.collectionDate = editForm.collectionDate || null
-    updateData.discountDate = editForm.discountDate || null
-    updateData.discountAmount = editForm.discountAmount
-    updateData.discountFee = editForm.discountFee
-    updateData.accountAmount = editForm.accountAmount
-    updateData.received = editForm.received
-
-    const response = await updateReceive(updateData, editForm.id)
+    const submitData = { ...editForm }
+    
+    let response
+    if (isCreate.value) {
+      response = await createReceive(submitData)
+    } else {
+      response = await updateReceive(submitData, editForm.id)
+    }
 
     if (response.code === 0) {
-      ElMessage.success("更新成功")
+      ElMessage.success(isCreate.value ? "创建成功" : "更新成功")
       showEditDialog.value = false
       fetchData()
     } else {
-      ElMessage.error(response.message || "更新失败")
+      ElMessage.error(response.message || (isCreate.value ? "创建失败" : "更新失败"))
     }
-  } catch (error: any) {
-    ElMessage.error(error.message || "更新失败")
+  } catch (error) {
+    console.error("提交失败:", error)
   }
 }
 
@@ -254,6 +316,29 @@ function resetSearch() {
   handleSearch()
 }
 
+function resetForm() {
+  Object.assign(editForm, {
+    id: 0,
+    sapCode: "",
+    companyId: undefined,
+    projectName: "",
+    receiveType: undefined,
+    receiveDate: "",
+    accountAmount: 0,
+    receiveAmount: 0,
+    customerName: "",
+    collectionDate: "",
+    discountDate: "",
+    discountAmount: 0,
+    discountFee: 0,
+    billAmount: 0,
+    billNo: "",
+    dueDate: "",
+    receiveBank: undefined,
+    received: 0,
+  })
+}
+
 function handleSizeChange(val: number) {
   pagination.size = val
   fetchData()
@@ -268,8 +353,20 @@ function discountChange() {
   editForm.accountAmount = (editForm.discountAmount || 0) + (editForm.discountFee || 0)
 }
 
+async function getCompanies() {
+  try {
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
+  } catch (error) {
+    console.error("获取上级单位失败:", error)
+  }
+}
+
 onMounted(() => {
   fetchData()
+  getCompanies()
 })
 </script>
 
@@ -291,6 +388,10 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
+          <el-button type="primary" @click="handleCreate">
+            <el-icon><Plus /></el-icon>
+            新增到款
+          </el-button>
           <el-button type="primary" @click="handleImport">
             <SvgIcon name="import" />
             导入到款
@@ -333,7 +434,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="receiveBank" label="到款银行" width="120" align="center">
           <template #default="{ row }">
-            {{ banksMap[row.receiveBank] || "-" }}
+            {{ receiveBankMap[row.receiveBank] || "-" }}
           </template>
         </el-table-column>
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
@@ -379,136 +480,204 @@ onMounted(() => {
         </el-table-column>
       </el-table>
 
-      <el-dialog v-model="showEditDialog" title="贴现填报" width="600px">
-        <el-form :model="editForm" label-width="80px">
-          <el-row :gutter="10">
+      <el-dialog v-model="showEditDialog" :title="dialogTitle" width="700px">
+        <el-form ref="formRef" :model="editForm" :rules="rules" label-width="100px">
+          <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="SAP代码">
-                <el-input :model-value="selectedRow?.sapCode" disabled />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="单位名称">
-                <el-input :model-value="selectedRow?.companyName" disabled />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="10">
-            <el-col :span="12">
-              <el-form-item label="项目名称">
-                <el-input :model-value="selectedRow?.projectName" disabled />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="票据金额">
-                <el-input :model-value="selectedRow?.billAmount" disabled />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="10">
-            <el-col :span="24">
-              <el-form-item label="客户名称">
-                <el-input :model-value="selectedRow?.customerName" disabled />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="10">
-            <el-col :span="12">
-              <el-form-item label="托收日期">
-                <el-date-picker
-                  v-model="editForm.collectionDate"
-                  type="date"
-                  placeholder="选择托收日期"
-                  format="YYYY-MM-DD"
-                  value-format="YYYY-MM-DD"
-                  @change="handleDateChange"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="是否已到账" label-width="100px">
-                <el-select v-model="editForm.received">
-                  <el-option label="已到账" :value="1" />
-                  <el-option label="未到账" :value="0" />
+              <el-form-item label="到款类型" prop="receiveType">
+                <el-select v-model="editForm.receiveType" placeholder="请选择到款类型" :disabled="!isCreate" style="width: 100%">
+                  <el-option label="银行到款" :value="1" />
+                  <el-option label="票据到款" :value="2" />
                 </el-select>
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="10">
             <el-col :span="12">
-              <el-form-item label="贴现日期">
+              <el-form-item label="到款日期" prop="receiveDate">
                 <el-date-picker
-                  v-model="editForm.discountDate"
+                  v-model="editForm.receiveDate"
                   type="date"
-                  placeholder="选择贴现日期"
+                  placeholder="请选择到款日期"
                   format="YYYY-MM-DD"
                   value-format="YYYY-MM-DD"
+                  style="width: 100%"
+                  :disabled="!isCreate"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="单位名称" prop="companyId">
+                <el-tree-select
+                  v-model="editForm.companyId"
+                  :data="companyOptions"
+                  placeholder="请选择单位"
+                  :render-after-expand="false"
+                  :check-strictly="true"
+                  clearable
+                  :disabled="!isCreate"
                   style="width: 100%"
                 />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="贴现到款金额" label-width="100px">
-                <el-input-number
-                  v-model="editForm.discountAmount"
-                  :min="0"
-                  :precision="2"
-                  :disabled="discountDisabled"
-                  @change="discountChange"
-                />
+              <el-form-item label="SAP代码" prop="sapCode">
+                <el-input v-model="editForm.sapCode" placeholder="请输入SAP代码" :disabled="!isCreate" />
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="10">
+
+          <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="贴现手续费" label-width="100px">
-                <el-input-number
-                  v-model="editForm.discountFee"
-                  :min="0"
-                  :precision="2"
-                  :disabled="discountDisabled"
-                  @change="discountChange"
-                />
+              <el-form-item label="到款银行" prop="receiveBank">
+                <el-select v-model="editForm.receiveBank" placeholder="请选择银行" :disabled="!isCreate" style="width: 100%">
+                  <el-option v-for="(item, key) in receiveBankMap" :key="key" :label="item" :value="key" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="到款金额" label-width="100px">
-                <el-input-number
-                  v-model="editForm.accountAmount"
-                  :min="0"
-                  :precision="2"
-                />
+              <el-form-item label="项目名称" prop="projectName">
+                <el-input v-model="editForm.projectName" placeholder="请输入项目名称" :disabled="!isCreate" />
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="10">
+
+          <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="创建人">
-                <el-input :model-value="selectedRow?.creator.name" disabled />
+              <el-form-item label="客户名称" prop="customerName">
+                <el-input v-model="editForm.customerName" placeholder="请输入客户名称" :disabled="!isCreate" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="创建日期">
-                <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="10">
-            <el-col :span="12">
-              <el-form-item label="修改人">
-                <el-input :model-value="selectedRow?.updater?.name" disabled />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="修改日期">
-                <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
+              <el-form-item label="到账金额" prop="accountAmount">
+                <el-input-number v-model="editForm.accountAmount" :precision="2" :step="1000" style="width: 100%" />
               </el-form-item>
             </el-col>
           </el-row>
+
+          <div v-if="editForm.receiveType === 2">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="票据号码" prop="billNo">
+                  <el-input v-model="editForm.billNo" placeholder="请输入票据号码" :disabled="!isCreate" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="票据金额" prop="billAmount">
+                  <el-input-number v-model="editForm.billAmount" :precision="2" :step="1000" style="width: 100%" :disabled="!isCreate" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="到期日" prop="dueDate">
+                  <el-date-picker
+                    v-model="editForm.dueDate"
+                    type="date"
+                    placeholder="请选择到期日"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                    :disabled="!isCreate"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="托收日期" prop="collectionDate">
+                  <el-date-picker
+                    v-model="editForm.collectionDate"
+                    type="date"
+                    placeholder="选择托收日期"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                    @change="handleDateChange"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="是否已到账" prop="received">
+                  <el-select v-model="editForm.received" style="width: 100%">
+                    <el-option label="已到账" :value="1" />
+                    <el-option label="未到账" :value="0" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="贴现日期" prop="discountDate">
+                  <el-date-picker
+                    v-model="editForm.discountDate"
+                    type="date"
+                    placeholder="选择贴现日期"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="贴现到款金额" prop="discountAmount">
+                  <el-input-number
+                    v-model="editForm.discountAmount"
+                    :min="0"
+                    :precision="2"
+                    :disabled="discountDisabled"
+                    @change="discountChange"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="贴现手续费" prop="discountFee">
+                  <el-input-number
+                    v-model="editForm.discountFee"
+                    :min="0"
+                    :precision="2"
+                    :disabled="discountDisabled"
+                    @change="discountChange"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
+          <div v-if="!isCreate" style="margin-top: 20px">
+            <el-divider content-position="left">系统信息</el-divider>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="创建人">
+                  <el-input :model-value="selectedRow?.creator.name" disabled />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="创建日期">
+                  <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="修改人">
+                  <el-input :model-value="selectedRow?.updater?.name" disabled />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="修改日期">
+                  <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
         </el-form>
         <template #footer>
           <el-button @click="showEditDialog = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveEdit">保存</el-button>
+          <el-button type="primary" @click="handleSubmit">保存</el-button>
         </template>
       </el-dialog>
 

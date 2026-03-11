@@ -152,8 +152,6 @@ async function fetchProfitPaymentLog(id: number) {
   }
 }
 
-
-
 // 获取单位列表
 async function getCompanies() {
   try {
@@ -425,7 +423,7 @@ onMounted(() => {
             <el-button v-if="row.status === 1" type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button type="danger" @click="handleDelete(row)">
+            <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>

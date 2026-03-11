@@ -24,6 +24,14 @@ export function getFixedDeposits(params: Finance.FixedDepositsParams) {
   })
 }
 
+export function createFixedDeposit(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/fixed-deposits",
+    method: "post",
+    data
+  })
+}
+
 export function releaseFixedDeposit(data: any) {
   return request<Finance.CommonActionResult>({
     url: `/finance/fixed-deposits/${data.id}/release`,
@@ -37,6 +45,14 @@ export function getPaymentClearings(params: Finance.PaymentClearingParams) {
     url: "/finance/payment-receives",
     method: "get",
     params
+  })
+}
+
+export function createReceive(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/receive",
+    method: "post",
+    data
   })
 }
 

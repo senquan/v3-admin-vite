@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { getCompaniesTree } from "../basic/apis"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
+import { depositConfirm, getFixedDeposits, releaseFixedDeposit, createFixedDeposit } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
@@ -39,10 +41,18 @@ const showCreateDialog = ref(false)
 const dialogTitle = ref("新增存款")
 const formRef = ref<FormInstance>()
 const depositImportRef = ref<any>([])
+const isCreate = ref(false)
+const companyOptions = ref<CompanyTree[]>([])
 
 const systemParamsStore = useSystemParamsStore()
-const depositPeriodMap = systemParamsStore.getArrayDict(3)
-const depositTypeMap = systemParamsStore.getArrayDict(1)
+const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((prev, cur) => {
+  prev[cur.value] = cur.name
+  return prev
+}, {} as Record<number, string>)
+const depositTypeMap = systemParamsStore.getArrayDict(1).reduce((prev, cur) => {
+  prev[cur.value] = cur.name
+  return prev
+}, {} as Record<number, string>)
 
 const searchForm = reactive({
   keyword: "",
@@ -61,6 +71,13 @@ const tableData = ref<FixedDeposit[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
+  depositCode: "" as string,
+  depositType: undefined as number | undefined,
+  companyId: undefined as number | undefined,
+  amount: 0,
+  depositPeriod: undefined as number | undefined,
+  startDate: "" as string,
+  remark: "" as string,
   earlyRelease: 0,
   releaseDate: "" as string,
   interestDays: 0,
@@ -69,7 +86,26 @@ const form = reactive({
 
 const rules = computed<FormRules>(() => {
   const isEarlyRelease = form.earlyRelease === 1
+  const isCreateDeposit = isCreate.value
   return {
+    depositCode: [
+      { required: isCreateDeposit, message: "请输入存款编号", trigger: "blur" }
+    ],
+    depositType: [
+      { required: isCreateDeposit, message: "请选择存款类型", trigger: "change" }
+    ],
+    companyId: [
+      { required: isCreateDeposit, message: "请选择公司", trigger: "change" }
+    ],
+    amount: [
+      { required: isCreateDeposit, message: "请输入金额", trigger: "blur" }
+    ],
+    depositPeriod: [
+      { required: isCreateDeposit, message: "请选择定存期限", trigger: "change" }
+    ],
+    startDate: [
+      { required: isCreateDeposit, message: "请选择开始日期", trigger: "change" }
+    ],
     releaseDate: [
       { required: isEarlyRelease, message: "请选择释放日期", trigger: "change" }
     ],
@@ -166,12 +202,26 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
+function handleCreate() {
+  dialogTitle.value = "新增存款"
+  resetForm()
+  isCreate.value = true
+  showCreateDialog.value = true
+}
+
 function handleRelease(row: FixedDeposit) {
   dialogTitle.value = "提前释放存款"
   selectedRow.value = row
   remainingAmount.value = row.remainingAmount
   Object.assign(form, {
     id: row.id,
+    depositCode: row.depositCode,
+    depositType: row.depositType,
+    companyId: row.companyId,
+    amount: row.amount,
+    depositPeriod: row.depositPeriod,
+    startDate: row.startDate || "",
+    remark: row.remark || "",
     earlyRelease: row.earlyRelease,
     releaseDate: row.releaseDate || "",
     interestDays: row.interestDays || 0,
@@ -200,17 +250,31 @@ async function handleSubmit() {
   try {
     const valid = await formRef.value.validate()
     if (!valid) return
-    if (form.earlyRelease === 1) {
-      submitLoading.value = true
+    
+    submitLoading.value = true
+    if (isCreate.value) {
+      // 新增模式
+      const response = await createFixedDeposit(form)
+      if (response.code === 0) {
+        ElMessage.success(response.message || "创建成功")
+        showCreateDialog.value = false
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "创建失败")
+      }
+    } else if (form.earlyRelease === 1) {
+      // 提前释放模式
       const response = await releaseFixedDeposit(form)
       if (response.code === 0) {
         ElMessage.success(response.message || "释放成功")
+        showCreateDialog.value = false
         fetchData()
       } else {
         ElMessage.error(response.message || "释放失败")
       }
+    } else {
+      showCreateDialog.value = false
     }
-    showCreateDialog.value = false
   } catch (error) {
     console.error("提交失败:", error)
   } finally {
@@ -232,11 +296,19 @@ function resetForm() {
   }
   Object.assign(form, {
     id: undefined,
+    depositCode: "",
+    depositType: undefined,
+    companyId: undefined,
+    amount: 0,
+    depositPeriod: undefined,
+    startDate: "",
+    remark: "",
     earlyRelease: 0,
     releaseDate: "",
     interestDays: 0,
     releaseAmount: 0
   })
+  isCreate.value = false
 }
 
 async function handleConfirm() {
@@ -266,8 +338,21 @@ function updateRemainingAmount() {
   remainingAmount.value = (selectedRow.value?.remainingAmount || 0) - form.releaseAmount
 }
 
+// 获取单位列表
+async function getCompanies() {
+  try {
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
+  } catch (error) {
+    console.error("获取上级单位失败:", error)
+  }
+}
+
 onMounted(() => {
   fetchData()
+  getCompanies()
 })
 </script>
 
@@ -301,10 +386,10 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <!-- <el-button type="primary" @click="showCreateDialog = true">
+          <el-button type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增存款
-          </el-button> -->
+          </el-button>
           <el-button type="primary" @click="handleImport">
             <SvgIcon name="import" />
             导入定期存款
@@ -326,7 +411,7 @@ onMounted(() => {
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="depositType" label="存款类型" width="100" align="center">
           <template #default="{ row }">
-            {{ depositTypeMap.find(item => item.value === String(row.depositType))?.name || '-' }}
+            {{ depositPeriodMap[row.depositPeriod] || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
@@ -342,7 +427,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="depositPeriod" label="定存期限" width="100" align="center">
           <template #default="{ row }">
-            {{ depositPeriodMap.find(item => item.value === String(row.depositPeriod))?.name || '-' }}
+            {{ depositPeriodMap[row.depositPeriod] || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="endDate" label="到期日期" width="100" align="center">
@@ -398,7 +483,7 @@ onMounted(() => {
     <el-dialog
       v-model="showCreateDialog"
       :title="dialogTitle"
-      width="600px"
+      width="700px"
       @close="resetForm"
     >
       <el-form
@@ -409,13 +494,15 @@ onMounted(() => {
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="存款编号">
-              <el-input :model-value="selectedRow?.depositCode" disabled />
+            <el-form-item label="存款编号" prop="depositCode">
+              <el-input v-model="form.depositCode" :disabled="!isCreate" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="存款类型">
-              <el-input :model-value="depositTypeMap.find(item => item.value === String(selectedRow?.depositType))?.name || '-'" disabled />
+            <el-form-item label="存款类型" prop="depositType">
+              <el-select v-model="form.depositType" placeholder="请选择存款类型" :disabled="!isCreate">
+                <el-option v-for="(item, key) in depositTypeMap" :key="key" :label="item" :value="Number(key)" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -424,127 +511,139 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="起息日期" prop="startDate">
               <el-date-picker
-                :model-value="selectedRow?.startDate"
+                v-model="form.startDate"
                 type="date"
                 placeholder="请选择起息日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
                 style="width: 100%"
-                disabled
+                :disabled="!isCreate"
               />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单位名称">
-              <el-input :model-value="selectedRow?.company.companyName" disabled />
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                v-model="form.companyId"
+                :data="companyOptions"
+                placeholder="请选择单位"
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+                :disabled="!isCreate"
+              />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="金额">
-              <el-input :model-value="selectedRow?.amount" disabled />
+            <el-form-item label="金额" prop="amount">
+              <el-input-number v-model="form.amount" :step="1" :precision="2" :disabled="!isCreate" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="定存期限">
-              <el-input :model-value="depositPeriodMap.find(item => item.value === String(selectedRow?.depositPeriod))?.name || '-'" disabled />
+            <el-form-item label="定存期限" prop="depositPeriod">
+              <el-select v-model="form.depositPeriod" placeholder="请选择定存期限" :disabled="!isCreate" style="width: 100%">
+                <el-option v-for="(item, key) in depositPeriodMap" :key="key" :label="item" :value="Number(key)" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="20">
           <el-col :span="24">
-            <el-form-item label="备注">
+            <el-form-item label="备注" prop="remark">
               <el-input
-                :model-value="selectedRow?.remark"
+                v-model="form.remark"
                 type="textarea"
                 placeholder="请输入备注信息"
                 :rows="2"
-                disabled
+                :disabled="!isCreate"
               />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-row :gutter="10">
-          <el-col :span="12">
-            <el-form-item label="创建人">
-              <el-input :model-value="selectedRow?.creator.name" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="创建日期">
-              <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="10">
-          <el-col :span="12">
-            <el-form-item label="修改人">
-              <el-input :model-value="selectedRow?.updater?.name" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="修改日期">
-              <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <div v-if="!isCreate">
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="创建人">
+                <el-input :model-value="selectedRow?.creator.name" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="创建日期">
+                <el-input :model-value="formatDateTime(selectedRow?.createdAt)" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="修改人">
+                <el-input :model-value="selectedRow?.updater?.name" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="修改日期">
+                <el-input :model-value="formatDateTime(selectedRow?.updatedAt)" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-        <el-row :gutter="10">
-          <el-col :span="12">
-            <el-form-item label="是否提前释放" label-width="100px" prop="earlyRelease">
-              <el-select v-model="form.earlyRelease" :disabled="new Date(selectedRow?.endDate || '') < new Date()">
-                <el-option label="是" :value="1" />
-                <el-option label="否" :value="0" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="释放日期" prop="releaseDate">
-              <el-date-picker
-                v-model="form.releaseDate"
-                type="date"
-                placeholder="选择释放日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                :disabled="form.earlyRelease === 0"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="是否提前释放" label-width="100px" prop="earlyRelease">
+                <el-select v-model="form.earlyRelease" :disabled="new Date(selectedRow?.endDate || '') < new Date()">
+                  <el-option label="是" :value="1" />
+                  <el-option label="否" :value="0" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="释放日期" prop="releaseDate">
+                <el-date-picker
+                  v-model="form.releaseDate"
+                  type="date"
+                  placeholder="选择释放日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  :disabled="form.earlyRelease === 0"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-        <el-row :gutter="10">
-          <el-col :span="12">
-            <el-form-item label="已计息天数" label-width="100px" prop="interestDays">
-              <el-input-number
-                v-model="form.interestDays"
-                :min="0"
-                :precision="0"
-                :disabled="form.earlyRelease === 0"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="释放金额" label-width="100px" prop="releaseAmount">
-              <el-input-number
-                v-model="form.releaseAmount"
-                :min="0"
-                :precision="2"
-                @change="updateRemainingAmount"
-                :disabled="form.earlyRelease === 0"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="已计息天数" label-width="100px" prop="interestDays">
+                <el-input-number
+                  v-model="form.interestDays"
+                  :min="0"
+                  :precision="0"
+                  :disabled="form.earlyRelease === 0"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="释放金额" label-width="100px" prop="releaseAmount">
+                <el-input-number
+                  v-model="form.releaseAmount"
+                  :min="0"
+                  :precision="2"
+                  @change="updateRemainingAmount"
+                  :disabled="form.earlyRelease === 0"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-        <el-form-item label="剩余金额">
-          <el-input :model-value="formattedMoney(remainingAmount)" readonly>
-            <template #prepend>￥</template>
-          </el-input>
-        </el-form-item>
+          <el-form-item label="剩余金额">
+            <el-input :model-value="formattedMoney(remainingAmount)" readonly>
+              <template #prepend>￥</template>
+            </el-input>
+          </el-form-item>
+        </div>
       </el-form>
 
       <template #footer>
