@@ -31,7 +31,14 @@ const showDrillDialog = ref(false)
 const drillData = reactive<any>({})
 
 const systemParamsStore = useSystemParamsStore()
-const depositPeriodMap = systemParamsStore.getArrayDict(3)
+const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((acc, cur) => {
+  acc[cur.value] = cur.name;
+  return acc;
+}, {} as Record<string, number>);
+const depositTypeMap = systemParamsStore.getArrayDict(1).reduce((acc, cur) => {
+  acc[cur.value] = cur.name;
+  return acc;
+}, {} as Record<string, number>);
 
 const searchForm = reactive({
   keyword: ""
@@ -55,7 +62,8 @@ const dialogTitle = {
   3: "活期存款上划",
   4: "活期存款定期转入",
   5: "活期存款下拨",
-  6: "活期存款转入定期"
+  6: "活期存款转入定期",
+  7: "定期存款",
 }
 
 const tableData = ref<LoanDeposit[]>([])
@@ -158,14 +166,14 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
-function handleDrill(row: any, type: number) {
+function handleDrill(row: any, type: number, fixedType?: string) {
   currentDrillType.value = type
   currentCompanyId.value = row.companyId
   showDrillDialog.value = true
-  loadDrillData(type)
+  loadDrillData(type, fixedType)
 }
 
-async function loadDrillData(type: number) {
+async function loadDrillData(type: number, fixedType?: string) {
   drillLoading.value = true
   try {
     const params: any = {
@@ -197,6 +205,10 @@ async function loadDrillData(type: number) {
     } else if (type === 6) {
       params.type = 2
       params.status = 2
+      response = await getFixedDeposits(params)
+    } else if (type === 7) {
+      params.status = 2
+      params.depositPeriod = fixedType
       response = await getFixedDeposits(params)
     }
     if (response && response.code === 0) {
@@ -307,9 +319,9 @@ onMounted(() => {
               </el-table-column>
             </el-table-column>
             <el-table-column label="定期存款" class-name="header-fixed-deposit">
-              <el-table-column v-for="(type, index) in fixedDepositTypes" :key="index" :label="depositPeriodMap.find(item => item.value === String(type))?.name || type" width="140" align="right">
+              <el-table-column v-for="(type, index) in fixedDepositTypes" :key="index" :label="depositPeriodMap[type] || type" width="140" align="right">
                 <template #default="{ row }">
-                  {{ formattedMoney(row.depositFixed[type]) }}
+                  <span class="drillable" @click="handleDrill(row, 7, type)">{{ formattedMoney(row.depositFixed[type]) || "-" }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositFixedTotal" label="小计" width="140" align="right">
@@ -501,7 +513,11 @@ onMounted(() => {
       >
         <el-table-column prop="seq" label="序号" width="80" align="center" />
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
+        <el-table-column prop="depositType" label="存款类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ depositTypeMap[row.depositType] }}
+          </template>
+        </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
           <template #default="{ row }">
             {{ formatDate(row.startDate) }}
@@ -513,9 +529,9 @@ onMounted(() => {
             {{ formattedMoney(row.amount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="depositTerm" label="定存期限" width="100" align="center">
+        <el-table-column prop="depositPeriod" label="定存期限" width="100" align="center">
           <template #default="{ row }">
-            {{ row.depositTerm }}个月
+            {{ depositPeriodMap[row.depositPeriod] || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="endDate" label="到期日期" width="100" align="center">
@@ -573,7 +589,7 @@ onMounted(() => {
       </el-table>
 
       <el-table
-        v-if="currentDrillType === 6"
+        v-if="currentDrillType === 6 || currentDrillType === 7"
         border
         stripe
         v-loading="drillLoading"
@@ -582,21 +598,25 @@ onMounted(() => {
       >
         <el-table-column prop="seq" label="序号" width="60" align="center" />
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="depositType" label="存款类型" width="100" align="center" />
+        <el-table-column prop="depositType" label="存款类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ depositTypeMap[row.depositType] }}
+          </template>
+        </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
           <template #default="{ row }">
             {{ formatDate(row.startDate) }}
           </template>
         </el-table-column>
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+        <el-table-column prop="remainingAmount" label="金额(元)" width="120" align="right">
           <template #default="{ row }">
-            {{ formattedMoney(row.amount) }}
+            {{ formattedMoney(row.remainingAmount) }}
           </template>
         </el-table-column>
         <el-table-column prop="depositPeriod" label="定存期限" width="100" align="center">
           <template #default="{ row }">
-            {{ depositPeriodMap.find(item => item.value === String(row.depositPeriod))?.name || '-' }}
+            {{ depositPeriodMap[row.depositPeriod] || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="endDate" label="到期日期" width="100" align="center">

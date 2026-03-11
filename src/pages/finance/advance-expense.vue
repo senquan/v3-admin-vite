@@ -52,6 +52,7 @@ expenseTypeOptions.value = expenseTypeMap.map((item: any) => ({
 
 const searchForm = reactive({
   keyword: "",
+  expenseType: undefined as number | undefined,
   status: 0,
   dateRange: [] as string[]
 })
@@ -109,6 +110,7 @@ async function fetchData() {
       page: pagination.page,
       size: pagination.size
     }
+    if (searchForm.expenseType) params.type = searchForm.expenseType
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.status) params.status = searchForm.status
 
@@ -323,7 +325,7 @@ onMounted(() => {
       <!-- 搜索条件 -->
       <el-form :model="searchForm" inline class="search-form">
         <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
+          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 200px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
@@ -331,6 +333,21 @@ onMounted(() => {
             <el-option label="待确认" :value="1" />
             <el-option label="已生效" :value="2" />
             <el-option label="已删除" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="代垫类型">
+          <el-select
+            v-model="searchForm.expenseType"
+            clearable
+            placeholder="请选择类型"
+             style="width: 160px;"
+          >
+            <el-option
+              v-for="item in expenseTypeOptions"
+              :key="item.id"
+              :label="item.label"
+              :value="item.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item>

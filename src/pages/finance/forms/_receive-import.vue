@@ -182,7 +182,11 @@ async function processFile() {
                 else
                   item[fieldName] = row[j]
               } else {
-                if (fieldName && fieldName !== "collectionDate" && !fieldName.includes("discount")) {
+                if (fieldName
+                  && fieldName !== "collectionDate"
+                  && !fieldName.includes("discount")
+                  && (receiveType.value !== 1 && fieldName === "billNo")
+                ) {
                   errorCount.value++
                   errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行必填项 ${header}。`)
                   hasError = true
