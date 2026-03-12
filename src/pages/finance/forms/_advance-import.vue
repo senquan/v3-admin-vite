@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { calculateSum } from "@@/utils"
+import { customUploadRequest } from "@@/utils/upload"
 import { formatDateTime } from "@@/utils/datetime"
-import { ElMessage } from "element-plus"
+import { ElMessage, UploadProps } from "element-plus"
 import * as XLSX from "xlsx"
-import { importAdvance } from "../apis"
+import { importAdvance, updateBatchFile } from "../apis"
 
 const emit = defineEmits(["success", "close"])
 const visible = ref(false)
@@ -76,14 +77,45 @@ function beforeUpload(file: any) {
     return false
   }
   fileList.value = [file]
-  console.log("fileList.value", fileList.value)
-  return false // 阻止自动上传
+  console.log("beforeUpload: fileList.value", fileList.value)
+  return true
 }
 
 function handleFileChange(file: any, list: any[]) {
   console.log("文件变化", file, list)
   if (file && file.raw) {
     fileList.value = [file]
+  }
+}
+
+const lastProcessedBatchNo = ref<string>("")
+
+const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
+  // 增加防抖/去重判断，防止 handleFileSuccess 被重复触发执行业务逻辑
+  if (response.code !== 0 || lastProcessedBatchNo.value === batchNo.value) {
+    if (response.code !== 0) ElMessage.error(response.message || "文件上传失败")
+    return
+  }
+  
+  lastProcessedBatchNo.value = batchNo.value
+  const form = {
+    url: response.data.url,
+    batchNo: batchNo.value
+  }
+  try {
+    const result = await updateBatchFile(form)
+    if (result.code === 0) {
+      ElMessage.success(`导入完成，新增: ${successCount.value}，失败: ${errorCount.value}`)
+      emit("success")
+      resetData()
+    } else {
+      ElMessage.error(result.message || "更新批次文件失败")
+      importing.value = false
+    }
+  } catch (error: any) {
+    console.error("updateBatchFile error", error)
+    ElMessage.error(error.message || "更新批次文件失败")
+    importing.value = false
   }
 }
 
@@ -242,8 +274,6 @@ async function processFile() {
             } catch (error: any) {
               errorCount.value += batch.length
               errorMessages.value.push(error.message || "批量导入失败")
-            } finally {
-              fileList.value = []
             }
 
             // 更新进度
@@ -251,20 +281,19 @@ async function processFile() {
             progress.value = Math.floor((processedRows.value / totalRows.value) * 100)
           }
 
-          ElMessage.success(`导入完成，新增: ${successCount.value}，失败: ${errorCount.value}`)
-          emit("success")
+          // 上传文件
+          uploadRef.value!.submit()
         } else {
           ElMessage.warning("没有有效的到款数据可导入")
+          importing.value = false
         }
       } catch (error: any) {
         ElMessage.error(`解析Excel文件失败: ${error.message}`)
         errorMessages.value.push(`解析Excel文件失败: ${error.message}`)
+        importing.value = false
       }
-
-      importing.value = false
     }
 
-    // 修改这里，使用 actualFile 而不是 file
     reader.readAsArrayBuffer(actualFile)
   } catch (error: any) {
     importing.value = false
@@ -289,14 +318,15 @@ defineExpose({
       <div class="upload-area">
         <el-upload
           ref="uploadRef"
-          action="#"
           :auto-upload="false"
           :limit="1"
           :on-exceed="handleExceed"
           :on-remove="handleRemove"
           :before-upload="beforeUpload"
           :on-change="handleFileChange"
+          :on-success="handleFileSuccess"
           :file-list="fileList"
+          :http-request="customUploadRequest"
           accept=".xlsx,.xls"
           drag
         >

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
+import { getCompaniesTree } from "../basic/apis"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getFundTransfers, transferConfirm, transferDelete } from "./apis"
+import { createTransfer, getFundTransfers, transferConfirm, transferDelete } from "./apis"
 import TransferImport from "./forms/_transfer-import.vue"
 
 interface FundTransfer {
@@ -25,6 +27,8 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
 const dialogTitle = ref("新增转账")
+const isCreate = ref(false)
+const companyOptions = ref<CompanyTree[]>([])
 const formRef = ref<FormInstance>()
 const activeTab = ref("up")
 const transferImportRef = ref<any>(null)
@@ -45,28 +49,21 @@ const pagination = reactive({
 
 const upTableData = ref<FundTransfer[]>([])
 const downTableData = ref<FundTransfer[]>([])
-const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
-  transferCode: "",
-  fromCompanyCode: "",
-  fromCompanyName: "",
-  toCompanyCode: "",
-  toCompanyName: "",
-  transferAmount: undefined as number | undefined,
   transferType: undefined as number | undefined,
+  companyId: undefined as number | undefined,
+  transferAmount: 0 as number | undefined,
   transferDate: "",
-  transferStatus: 1,
-  bankAccount: "",
+  isLoan: 0,
+  dueDate: "",
   remark: ""
 })
 
 const rules = reactive<FormRules>({
-  fromCompanyName: [{ required: true, message: "请选择拨出单位", trigger: "change" }],
-  toCompanyName: [{ required: true, message: "请选择拨入单位", trigger: "change" }],
+  companyId: [{ required: true, message: "请选择拨出单位", trigger: "change" }],
   transferAmount: [{ required: true, message: "请输入转账金额", trigger: "blur" }],
-  transferType: [{ required: true, message: "请选择转账类型", trigger: "change" }],
   transferDate: [{ required: true, message: "请选择转账日期", trigger: "change" }]
 })
 
@@ -85,16 +82,6 @@ function getTransferStatusType(status: number) {
 // 格式化日期
 function formatDate(date: string) {
   return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
-}
-
-// 生成转账编号
-function generateTransferCode() {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
-  form.transferCode = `FT${year}${month}${day}${random}`
 }
 
 // 查询数据
@@ -135,16 +122,12 @@ async function fetchData() {
 // 获取单位列表
 async function getCompanies() {
   try {
-    // const response = await request({
-    //   url: '/finance/companies',
-    //   method: 'get'
-    // })
-
-    // if (response.code === 200) {
-    //   companyOptions.value = response.data.items || []
-    // }
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
   } catch (error) {
-    console.error("获取单位列表失败:", error)
+    console.error("获取上级单位失败:", error)
   }
 }
 
@@ -173,6 +156,14 @@ function handleSizeChange(val: number) {
 function handleCurrentChange(val: number) {
   pagination.page = val
   fetchData()
+}
+
+// 新增
+function handleCreate() {
+  dialogTitle.value = "新增转账"
+  isCreate.value = true
+  resetForm()
+  showCreateDialog.value = true
 }
 
 // 编辑
@@ -213,43 +204,24 @@ async function handleDelete(row: FundTransfer) {
 
 // 提交表单
 async function handleSubmit() {
-  // if (!formRef.value) return
+  if (!formRef.value) return
 
-  // try {
-  //   await formRef.value.validate()
-  //   submitLoading.value = true
+  try {
+    await formRef.value.validate()
+    submitLoading.value = true
 
-  //   const url = form.id ? `/finance/fund-transfer/${form.id}` : '/finance/fund-transfer'
-  //   const method = form.id ? 'put' : 'post'
-
-  //   const response = await request({
-  //     url,
-  //     method,
-  //     data: {
-  //       transferCode: form.transferCode,
-  //       fromCompanyCode: form.fromCompanyCode,
-  //       fromCompanyName: form.fromCompanyName,
-  //       toCompanyCode: form.toCompanyCode,
-  //       toCompanyName: form.toCompanyName,
-  //       transferAmount: form.transferAmount,
-  //       transferType: form.transferType,
-  //       transferDate: form.transferDate,
-  //       transferStatus: form.transferStatus,
-  //       bankAccount: form.bankAccount,
-  //       remark: form.remark
-  //     }
-  //   })
-
-  //   if (response.code === 200) {
-  //     ElMessage.success(form.id ? "更新成功" : "创建成功")
-  //     showCreateDialog.value = false
-  //     fetchData()
-  //   }
-  // } catch (error) {
-  //   console.error("提交失败:", error)
-  // } finally {
-  //   submitLoading.value = false
-  // }
+    const submitData = { ...form }
+    const response = await createTransfer(submitData)
+    if (response.code === 0) {
+      ElMessage.success(form.id ? "更新成功" : "创建成功")
+      showCreateDialog.value = false
+      fetchData()
+    }
+  } catch (error) {
+    console.error("提交失败:", error)
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 // 重置表单
@@ -259,36 +231,14 @@ function resetForm() {
   }
   Object.assign(form, {
     id: undefined,
-    transferCode: "",
-    fromCompanyCode: "",
-    fromCompanyName: "",
-    toCompanyCode: "",
-    toCompanyName: "",
-    transferAmount: undefined,
-    transferType: undefined,
+    transferType: activeTab.value === "up" ? 1 : 2,
+    companyId: undefined,
+    transferAmount: 0,
     transferDate: "",
-    transferStatus: 1,
-    bankAccount: "",
+    isLoan: 0,
+    dueDate: "",
     remark: ""
   })
-}
-
-// 选择拨出单位
-function onFromCompanyChange(companyId: number) {
-  const company = companyOptions.value.find(item => item.id === companyId)
-  if (company) {
-    form.fromCompanyCode = company.companyCode
-    form.fromCompanyName = company.companyName
-  }
-}
-
-// 选择拨入单位
-function onToCompanyChange(companyId: number) {
-  const company = companyOptions.value.find(item => item.id === companyId)
-  if (company) {
-    form.toCompanyCode = company.companyCode
-    form.toCompanyName = company.companyName
-  }
 }
 
 async function handleConfirm() {
@@ -400,6 +350,10 @@ onMounted(() => {
             <el-form-item>
               <el-button type="primary" @click="handleSearch">查询</el-button>
               <el-button @click="resetSearch">重置</el-button>
+              <el-button type="primary" @click="handleCreate">
+                <el-icon><Plus /></el-icon>
+                新增上划
+              </el-button>
               <el-button type="primary" @click="handleImport">
                 <SvgIcon name="import" />
                 导入
@@ -501,6 +455,10 @@ onMounted(() => {
             <el-form-item>
               <el-button type="primary" @click="handleSearch">查询</el-button>
               <el-button @click="resetSearch">重置</el-button>
+              <el-button type="primary" @click="handleCreate">
+                <el-icon><Plus /></el-icon>
+                新增下拨
+              </el-button>
               <el-button type="primary" @click="handleImport">
                 <SvgIcon name="import" />
                 导入
@@ -606,57 +564,25 @@ onMounted(() => {
       >
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="转账编号" prop="transferCode">
-              <el-input v-model="form.transferCode" placeholder="请输入转账编号">
-                <template #append>
-                  <el-button @click="generateTransferCode">生成</el-button>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="转账类型" prop="transferType">
-              <el-select v-model="form.transferType" placeholder="请选择转账类型">
+              <el-select v-model="form.transferType" placeholder="请选择转账类型" disabled>
                 <el-option label="上划" :value="1" />
                 <el-option label="下拨" :value="2" />
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="拨出单位" prop="fromCompanyName">
-              <el-select
-                v-model="form.fromCompanyName"
-                placeholder="请选择拨出单位"
-                filterable
-                @change="onFromCompanyChange"
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                  v-model="form.companyId"
+                  :data="companyOptions"
+                  placeholder="请选择单位"
+                  :render-after-expand="false"
+                  :check-strictly="true"
+                  clearable
+                  :disabled="!isCreate"
+                  style="width: 100%"
                 />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="拨入单位" prop="toCompanyName">
-              <el-select
-                v-model="form.toCompanyName"
-                placeholder="请选择拨入单位"
-                filterable
-                @change="onToCompanyChange"
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -668,7 +594,8 @@ onMounted(() => {
                 v-model="form.transferAmount"
                 placeholder="请输入转账金额"
                 :min="0"
-                :step="10000"
+                :step="1"
+                :precision="2"
                 controls-position="right"
                 style="width: 100%"
               />
@@ -688,18 +615,30 @@ onMounted(() => {
           </el-col>
         </el-row>
 
-        <el-form-item label="银行账户" prop="bankAccount">
-          <el-input v-model="form.bankAccount" placeholder="请输入银行账户" />
-        </el-form-item>
-
-        <el-form-item label="转账状态" prop="transferStatus">
-          <el-select v-model="form.transferStatus" placeholder="请选择转账状态" disabled>
-            <el-option label="待处理" :value="1" />
-            <el-option label="处理中" :value="2" />
-            <el-option label="已完成" :value="3" />
-            <el-option label="已取消" :value="4" />
-          </el-select>
-        </el-form-item>
+        <div v-if="activeTab ==='down'">
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="是否贷款" prop="isLoan">
+                <el-select v-model="form.isLoan" placeholder="请选择是否贷款">
+                  <el-option label="是" :value="1" />
+                  <el-option label="否" :value="0" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="贷款期限" prop="dueDate">
+                <el-date-picker
+                  v-model="form.dueDate"
+                  type="date"
+                  placeholder="请选择贷款期限日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </div>
 
         <el-form-item label="备注" prop="remark">
           <el-input

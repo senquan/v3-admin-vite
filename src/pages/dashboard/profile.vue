@@ -122,7 +122,6 @@ function customUploadRequest(options: any) {
       }
     }
   }).then((response: any) => {
-    onSuccess(response)
     return response
   }).catch((error: any) => {
     onError(error)

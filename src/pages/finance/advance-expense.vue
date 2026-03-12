@@ -359,7 +359,7 @@ onMounted(() => {
           </el-button>
           <el-button type="primary" @click="handleImport">
             <SvgIcon name="import" />
-            导入
+            导入代垫
           </el-button>
           <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>

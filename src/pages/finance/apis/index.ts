@@ -56,6 +56,14 @@ export function createReceive(data: any) {
   })
 }
 
+export function createTransfer(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/fund-transfer",
+    method: "post",
+    data
+  })
+}
+
 export function getFundTransfers(params: Finance.FundTransferParams) {
   return request<Finance.FundTransferResponseData>({
     url: "/finance/fund-transfers",
@@ -269,5 +277,13 @@ export function importProfit(data: any, batchNo: string) {
       profits: data,
       batchNo
     }
+  })
+}
+
+export function updateBatchFile(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/batch-file",
+    method: "post",
+    data
   })
 }

@@ -43,6 +43,7 @@ const formRef = ref<FormInstance>()
 const depositImportRef = ref<any>([])
 const isCreate = ref(false)
 const companyOptions = ref<CompanyTree[]>([])
+const statusOptions = { 1: "待确认", 2: "已生效", 3: "已删除" }
 
 const systemParamsStore = useSystemParamsStore()
 const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((prev, cur) => {
@@ -131,8 +132,7 @@ const rules = computed<FormRules>(() => {
 const remainingAmount = ref(0)
 
 function getStatusLabel(status: number) {
-  const labels = { 1: "待确认", 2: "已生效", 3: "已删除" }
-  return labels[status as keyof typeof labels] || "未知"
+  return statusOptions[status as keyof typeof statusOptions] || "未知"
 }
 
 function getStatusType(status: number) {
@@ -366,9 +366,7 @@ onMounted(() => {
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
             <el-option label="全部" :value="0" />
-            <el-option label="存续中" :value="1" />
-            <el-option label="已到期" :value="2" />
-            <el-option label="已支取" :value="3" />
+            <el-option v-for="(value, key) in statusOptions" :label="`${value}`" :value="key" /> 
           </el-select>
         </el-form-item>
         <el-form-item label="到期日期">
