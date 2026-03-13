@@ -8,8 +8,8 @@ import {
   createProfitPayment,
   createTurnOver,
   deleteProfitPayment,
-  getProfitPayments,
   getProfitPaymentLogs,
+  getProfitPayments,
   profitConfirm,
   updateProfitPayment
 } from "./apis"
@@ -254,7 +254,7 @@ async function handleDelete(row: ProfitPayment) {
       type: "warning"
     })
 
-    fetchProfitPaymentLog(row.id).then( async () => {
+    fetchProfitPaymentLog(row.id).then(async () => {
       if (tableLogData.value.length > 0) {
         await ElMessageBox.confirm(`${row.businessYear} 年度 ${row.company?.companyName}存在上缴记录，请再次确认是否进行删除？`, "提示", {
           type: "warning"
@@ -370,7 +370,7 @@ onMounted(() => {
           </el-button>
           <el-button type="primary" @click="handleImport">
             <SvgIcon name="import" />
-            导入
+            导入上缴
           </el-button>
           <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>

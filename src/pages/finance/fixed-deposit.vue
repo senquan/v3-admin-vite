@@ -3,9 +3,9 @@ import type { FormInstance, FormRules } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getCompaniesTree } from "../basic/apis"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { depositConfirm, getFixedDeposits, releaseFixedDeposit, createFixedDeposit } from "./apis"
+import { getCompaniesTree } from "../basic/apis"
+import { createFixedDeposit, depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
@@ -250,7 +250,7 @@ async function handleSubmit() {
   try {
     const valid = await formRef.value.validate()
     if (!valid) return
-    
+
     submitLoading.value = true
     if (isCreate.value) {
       // 新增模式
@@ -366,7 +366,7 @@ onMounted(() => {
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
             <el-option label="全部" :value="0" />
-            <el-option v-for="(value, key) in statusOptions" :label="`${value}`" :value="key" /> 
+            <el-option v-for="(value, key) in statusOptions" :key="key" :label="`${value}`" :value="key" />
           </el-select>
         </el-form-item>
         <el-form-item label="到期日期">

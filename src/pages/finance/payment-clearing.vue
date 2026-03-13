@@ -192,6 +192,7 @@ function handleCreate() {
 function handleEdit(row: any) {
   dialogTitle.value = "到款信息编辑"
   isCreate.value = false
+  selectedRow.value = row
   Object.assign(editForm, {
     id: row.id,
     sapCode: row.sapCode,
@@ -199,14 +200,14 @@ function handleEdit(row: any) {
     projectName: row.projectName,
     receiveType: row.receiveType,
     receiveDate: row.receiveDate,
-    accountAmount: row.accountAmount,
+    accountAmount: Number(row.accountAmount),
     receiveAmount: row.receiveAmount,
     customerName: row.customerName,
     collectionDate: row.collectionDate || "",
     discountDate: row.discountDate || "",
-    discountAmount: row.discountAmount,
-    discountFee: row.discountFee,
-    billAmount: row.billAmount,
+    discountAmount: Number(row.discountAmount),
+    discountFee: Number(row.discountFee),
+    billAmount: Number(row.billAmount),
     billNo: row.billNo || "",
     dueDate: row.dueDate || "",
     receiveBank: row.receiveBank ? String(row.receiveBank) : undefined,
@@ -293,13 +294,8 @@ function handleDateChange() {
   editForm.received = 1
 }
 
-function handleReceive() {
-  const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.receiveType === 2 && row.received === 0 && row.status === 2)
-  if (selected.length === 0) {
-    ElMessage.warning("请选择要操作的记录，票据类型并且未到账。")
-    return
-  }
-  handleEdit(selected.pop())
+function handleReceive(row: any) {
+  handleEdit(row)
 }
 
 function handleSearch() {
@@ -396,10 +392,6 @@ onMounted(() => {
             <SvgIcon name="import" />
             导入到款
           </el-button>
-          <el-button type="primary" @click="handleReceive">
-            <el-icon><DocumentChecked /></el-icon>
-            到账填报
-          </el-button>
           <el-button type="warning" @click="handleConfirm">批量确认</el-button>
         </el-form-item>
       </el-form>
@@ -476,6 +468,9 @@ onMounted(() => {
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button v-if="row.status === 2  && row.receiveType === 2 && row.received === 0" type="success" @click="handleReceive(row)">
+              到账填报
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

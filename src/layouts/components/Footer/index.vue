@@ -6,7 +6,7 @@ const VITE_APP_BUILD = import.meta.env.VITE_APP_BUILD
 
 <template>
   <footer class="layout-footer">
-    MIT © 2021-PRESENT {{ VITE_APP_TITLE }} Ver: {{ VITE_APP_VERSION }} Build: {{ VITE_APP_BUILD }}
+    MIT © 2026-PRESENT {{ VITE_APP_TITLE }} Ver: {{ VITE_APP_VERSION }} Build: {{ VITE_APP_BUILD }}
   </footer>
 </template>
 

@@ -1,8 +1,9 @@
 <script lang="ts" setup>
+import type { UploadProps } from "element-plus"
 import { calculateSum } from "@@/utils"
-import { customUploadRequest } from "@@/utils/upload"
 import { formatDateTime } from "@@/utils/datetime"
-import { ElMessage, UploadProps } from "element-plus"
+import { customUploadRequest } from "@@/utils/upload"
+import { ElMessage } from "element-plus"
 import * as XLSX from "xlsx"
 import { importAdvance, updateBatchFile } from "../apis"
 
@@ -96,25 +97,27 @@ const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
     if (response.code !== 0) ElMessage.error(response.message || "文件上传失败")
     return
   }
-  
+
   lastProcessedBatchNo.value = batchNo.value
+  const statMessage = `新增: ${successCount.value}，失败: ${errorCount.value}`
   const form = {
     url: response.data.url,
-    batchNo: batchNo.value
+    batchNo: batchNo.value,
+    remark: statMessage
   }
   try {
     const result = await updateBatchFile(form)
     if (result.code === 0) {
-      ElMessage.success(`导入完成，新增: ${successCount.value}，失败: ${errorCount.value}`)
+      ElMessage.success(`导入完成，${statMessage}`)
       emit("success")
-      resetData()
     } else {
       ElMessage.error(result.message || "更新批次文件失败")
-      importing.value = false
     }
   } catch (error: any) {
     console.error("updateBatchFile error", error)
     ElMessage.error(error.message || "更新批次文件失败")
+  } finally {
+    fileList.value = []
     importing.value = false
   }
 }
