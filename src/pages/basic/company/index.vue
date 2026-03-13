@@ -2,6 +2,7 @@
 import type { FormInstance, FormRules } from "element-plus"
 import type { Company, CompanyTree } from "../apis/type"
 import { formatDateTime } from "@@/utils/datetime"
+import { formattedMoney } from "@/common/utils"
 import { createCompany, deleteCompany, getCompaniesTree, getCompanyList, updateCompany } from "../apis"
 
 const loading = ref(false)
@@ -32,7 +33,8 @@ const form = reactive({
   accountName: "",
   parentCompanyId: undefined as number | undefined,
   companyLevel: 1,
-  status: 1
+  status: 1,
+  initCurrentBalance: 0
 })
 
 const rules = reactive<FormRules>({
@@ -237,6 +239,11 @@ onMounted(() => {
         <el-table-column prop="parentCompany.companyName" label="上级单位" width="150" show-overflow-tooltip />
         <el-table-column prop="accountCode" label="账套编号" width="170" show-overflow-tooltip />
         <el-table-column prop="accountName" label="账套名称" width="170" show-overflow-tooltip />
+        <el-table-column prop="initCurrentBalance" label="活期期初额" width="160" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.initCurrentBalance) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="companyLevel" label="层级" width="80" align="center">
           <template #default="{ row }">
             {{ getLevelLabel(row.companyLevel) }}
@@ -293,7 +300,7 @@ onMounted(() => {
         :model="form"
         :rules="rules"
         ref="formRef"
-        label-width="100px"
+        label-width="130px"
       >
         <el-form-item label="单位编号" prop="companyCode">
           <el-input v-model="form.companyCode" placeholder="请输入单位编号" />
@@ -306,6 +313,9 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="账套名称" prop="accountName">
           <el-input v-model="form.accountName" placeholder="请输入账套名称" />
+        </el-form-item>
+        <el-form-item v-if="dialogStatus === 'create'" label="活期存款期初额" prop="initCurrentBalance">
+          <el-input-number v-model="form.initCurrentBalance" :min="0" :step="1" :precision="2" style="width: 190px;" />&nbsp;&nbsp;账套建立后不可修改
         </el-form-item>
         <el-form-item label="上级单位" prop="parentCompanyId">
           <el-tree-select

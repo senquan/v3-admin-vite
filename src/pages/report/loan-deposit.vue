@@ -32,13 +32,13 @@ const drillData = reactive<any>({})
 
 const systemParamsStore = useSystemParamsStore()
 const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((acc, cur) => {
-  acc[cur.value] = cur.name;
-  return acc;
-}, {} as Record<string, number>);
+  acc[cur.value] = cur.name
+  return acc
+}, {} as Record<string, number>)
 const depositTypeMap = systemParamsStore.getArrayDict(1).reduce((acc, cur) => {
-  acc[cur.value] = cur.name;
-  return acc;
-}, {} as Record<string, number>);
+  acc[cur.value] = cur.name
+  return acc
+}, {} as Record<string, number>)
 
 const searchForm = reactive({
   keyword: ""
@@ -63,7 +63,7 @@ const dialogTitle = {
   4: "活期存款定期转入",
   5: "活期存款下拨",
   6: "活期存款转入定期",
-  7: "定期存款",
+  7: "定期存款"
 }
 
 const tableData = ref<LoanDeposit[]>([])
@@ -96,8 +96,8 @@ async function fetchData() {
         })
         item.seq = count++
         item.loanTotal = item.loanBalance + item.loanInterest
-        console.log(item)
-        item.depositCurrentTotal = item.depositIncoming + item.depositTransferUp + item.depositFromFixed - item.depositTransferDown - item.depositToFixed
+        const initCurrentBalance = Number(item.company?.initCurrentBalance || 0)
+        item.depositCurrentTotal = initCurrentBalance + item.depositIncoming + item.depositTransferUp + item.depositFromFixed - item.depositTransferDown - item.depositToFixed
         for (const key in item.depositFixed) {
           if (Object.prototype.hasOwnProperty.call(item.depositFixed, key)) {
             if (!fixedDepositTypes.value.includes(key)) {
@@ -287,6 +287,11 @@ onMounted(() => {
         <el-table-column label="内部存款" class-name="header-internal-deposit">
           <el-table-column label="余额" class-name="header-balance">
             <el-table-column label="活期存款" class-name="header-current-deposit">
+              <el-table-column prop="depositIncoming" label="期初额" width="140" align="right">
+                <template #default="{ row }">
+                  {{ formattedMoney(row.company?.initCurrentBalance || 0) }}
+                </template>
+              </el-table-column>
               <el-table-column prop="depositIncoming" label="到款" width="140" align="right">
                 <template #default="{ row }">
                   <span class="drillable" @click="handleDrill(row, 2)">{{ formattedMoney(row.depositIncoming) }}</span>
