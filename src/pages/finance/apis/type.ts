@@ -23,6 +23,10 @@ export interface FixedDepositsParams extends BaseQueryParams {
 export interface PaymentClearingParams extends BaseQueryParams {
   receiveType?: number
   status?: number
+  startDate?: string
+  endDate?: string
+  amountFrom?: number
+  amountTo?: number
 }
 
 export interface FundTransferParams extends BaseQueryParams {

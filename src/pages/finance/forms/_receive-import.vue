@@ -36,7 +36,7 @@ const fieldMapping = {
   贴现日期: "discountDate",
   贴现到款金额: "discountAmount",
   贴现手续费: "discountFee",
-  到账金额: "accountAmount",
+  到款金额: "accountAmount",
   到款银行: "receiveBank"
 }
 

@@ -1,4 +1,4 @@
- import type * as Finance from "./type"
+import type * as Finance from "./type"
 import { request } from "@/http/axios"
 
 export function getLoanDepositSummary(params: Finance.LoanDepositSummaryParams) {

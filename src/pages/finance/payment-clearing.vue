@@ -83,7 +83,9 @@ const discountDisabled = computed(() => {
 const searchForm = reactive({
   keyword: "",
   status: 0,
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  amountFrom: undefined,
+  amountTo: undefined
 })
 
 const pagination = reactive({
@@ -152,7 +154,15 @@ async function fetchData() {
       keyword: searchForm.keyword || undefined,
       status: searchForm.status,
       page: pagination.page,
-      size: pagination.size
+      size: pagination.size,
+      startDate: "",
+      endDate: "",
+      amountFrom: searchForm.amountFrom || 0,
+      amountTo: searchForm.amountTo || 0
+    }
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
     }
     const response = await getPaymentClearings(params)
 
@@ -368,30 +378,57 @@ onMounted(() => {
   <div class="payment-clearing">
     <el-card>
       <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、客户名称、项目名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" style="width: 90px;" @change="handleSearch">
-            <el-option label="全部" :value="0" />
-            <el-option label="待确认" :value="1" />
-            <el-option label="已生效" :value="2" />
-            <el-option label="已清算" :value="3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="handleCreate">
-            <el-icon><Plus /></el-icon>
-            新增到款
-          </el-button>
-          <el-button type="primary" @click="handleImport">
-            <SvgIcon name="import" />
-            导入到款
-          </el-button>
-          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
-        </el-form-item>
+        <el-row>
+          <el-col>
+            <el-form-item label="关键词">
+              <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、客户名称、项目名称模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="searchForm.status" placeholder="请选择状态" style="width: 90px;" @change="handleSearch">
+                <el-option label="全部" :value="0" />
+                <el-option label="待确认" :value="1" />
+                <el-option label="已生效" :value="2" />
+                <el-option label="已清算" :value="3" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="金额范围">
+              <el-input v-model="searchForm.amountFrom" clearable style="width: 70px;" />
+              &nbsp;&nbsp;到&nbsp;&nbsp;
+              <el-input v-model="searchForm.amountTo" clearable style="width: 70px;" />
+            </el-form-item>
+            <el-form-item label="到款日期">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                @change="handleSearch"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch">查询</el-button>
+              <el-button @click="resetSearch">重置</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col>
+            <el-form-item>
+              <el-button type="primary" @click="handleCreate">
+                <el-icon><Plus /></el-icon>
+                新增到款
+              </el-button>
+              <el-button type="primary" @click="handleImport">
+                <SvgIcon name="import" />
+                导入到款
+              </el-button>
+              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
 
       <el-table
