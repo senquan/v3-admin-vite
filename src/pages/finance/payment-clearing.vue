@@ -3,9 +3,9 @@ import type { FormInstance, FormRules } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
-import { getCompaniesTree } from "../basic/apis"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { getPaymentClearings, receiveConfirm, receiveDelete, updateReceive, createReceive } from "./apis"
+import { getCompaniesTree } from "../basic/apis"
+import { createReceive, getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
 import ReceiveImport from "./forms/_receive-import.vue"
 
 interface PaymentReceive {
@@ -16,7 +16,6 @@ interface PaymentReceive {
   companyName: string
   customerName: string | null
   projectName: string | null
-  receiveAmount: number
   receiveBank: string | null
   billNo: string | null
   billType: string | null
@@ -104,7 +103,6 @@ const editForm = reactive({
   receiveType: undefined as number | undefined,
   receiveDate: "" as string,
   accountAmount: 0 as number | undefined,
-  receiveAmount: 0 as number | undefined,
   customerName: "",
   collectionDate: "",
   discountDate: "",
@@ -114,7 +112,7 @@ const editForm = reactive({
   billNo: "",
   dueDate: "",
   receiveBank: undefined as string | undefined,
-  received: 0 as number,
+  received: 0 as number
 })
 
 // function getReceiveTypeLabel(type: number) {
@@ -201,7 +199,6 @@ function handleEdit(row: any) {
     receiveType: row.receiveType,
     receiveDate: row.receiveDate,
     accountAmount: Number(row.accountAmount),
-    receiveAmount: row.receiveAmount,
     customerName: row.customerName,
     collectionDate: row.collectionDate || "",
     discountDate: row.discountDate || "",
@@ -211,20 +208,20 @@ function handleEdit(row: any) {
     billNo: row.billNo || "",
     dueDate: row.dueDate || "",
     receiveBank: row.receiveBank ? String(row.receiveBank) : undefined,
-    received: row.received,
+    received: row.received
   })
   showEditDialog.value = true
 }
 
 async function handleSubmit() {
   if (!formRef.value) return
-  
+
   try {
     const valid = await formRef.value.validate()
     if (!valid) return
 
     const submitData = { ...editForm }
-    
+
     let response
     if (isCreate.value) {
       response = await createReceive(submitData)
@@ -321,7 +318,6 @@ function resetForm() {
     receiveType: undefined,
     receiveDate: "",
     accountAmount: 0,
-    receiveAmount: 0,
     customerName: "",
     collectionDate: "",
     discountDate: "",
@@ -331,7 +327,7 @@ function resetForm() {
     billNo: "",
     dueDate: "",
     receiveBank: undefined,
-    received: 0,
+    received: 0
   })
 }
 
@@ -346,7 +342,9 @@ function handleCurrentChange(val: number) {
 }
 
 function discountChange() {
-  editForm.accountAmount = (editForm.discountAmount || 0) + (editForm.discountFee || 0)
+  if (editForm.discountDate !== "") {
+    editForm.accountAmount = (editForm.discountAmount || 0) + (editForm.discountFee || 0)
+  }
 }
 
 async function getCompanies() {
@@ -468,7 +466,7 @@ onMounted(() => {
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">删除</el-button>
-            <el-button v-if="row.status === 2  && row.receiveType === 2 && row.received === 0" type="success" @click="handleReceive(row)">
+            <el-button v-if="row.status === 2 && row.receiveType === 2 && row.received === 0" type="success" @click="handleReceive(row)">
               到账填报
             </el-button>
           </template>
@@ -546,7 +544,7 @@ onMounted(() => {
             </el-col>
             <el-col :span="12">
               <el-form-item label="到账金额" prop="accountAmount">
-                <el-input-number v-model="editForm.accountAmount" :precision="2" :step="1000" style="width: 100%" />
+                <el-input-number v-model="editForm.accountAmount" :precision="2" :step="1" style="width: 100%" />
               </el-form-item>
             </el-col>
           </el-row>

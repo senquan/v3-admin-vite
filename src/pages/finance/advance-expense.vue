@@ -340,7 +340,7 @@ onMounted(() => {
             v-model="searchForm.expenseType"
             clearable
             placeholder="请选择类型"
-             style="width: 160px;"
+            style="width: 160px;"
           >
             <el-option
               v-for="item in expenseTypeOptions"

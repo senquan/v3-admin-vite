@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
-import { getCompaniesTree } from "../basic/apis"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { getCompaniesTree } from "../basic/apis"
 import { createTransfer, getFundTransfers, transferConfirm, transferDelete } from "./apis"
 import TransferImport from "./forms/_transfer-import.vue"
 
@@ -303,7 +303,7 @@ function getSummaries(param: any) {
           }
         }, 0)}`
       } else {
-        sums[index] = 'N/A'
+        sums[index] = "N/A"
       }
       sums[index] = formattedMoney(sums[index])
     }
@@ -574,15 +574,15 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="单位名称" prop="companyId">
               <el-tree-select
-                  v-model="form.companyId"
-                  :data="companyOptions"
-                  placeholder="请选择单位"
-                  :render-after-expand="false"
-                  :check-strictly="true"
-                  clearable
-                  :disabled="!isCreate"
-                  style="width: 100%"
-                />
+                v-model="form.companyId"
+                :data="companyOptions"
+                placeholder="请选择单位"
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+                :disabled="!isCreate"
+                style="width: 100%"
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -615,7 +615,7 @@ onMounted(() => {
           </el-col>
         </el-row>
 
-        <div v-if="activeTab ==='down'">
+        <div v-if="activeTab === 'down'">
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="是否贷款" prop="isLoan">
