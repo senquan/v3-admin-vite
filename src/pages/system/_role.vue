@@ -42,7 +42,7 @@ function open(options = {
       }
     })
   }
-  
+
   // 强制初始化 roles 为数组，防止 null 导致的 includes 错误
   if (!formData.value.roles || !Array.isArray(formData.value.roles)) {
     formData.value.roles = []
@@ -59,7 +59,7 @@ function open(options = {
     if (response.code === 0) {
       const currentRoles = response.data?.map((item: any) => item.id) || []
       formData.value.roles = currentRoles
-      
+
       if (options.roles && Array.isArray(options.roles)) {
         allRoles.value = options.roles.filter(item => item !== null).map((item: any) => ({
           key: item.id,

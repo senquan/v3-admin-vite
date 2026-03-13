@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
-import { deleteDict, getDictList } from "./apis"
 import ModalForm from "./_modal.vue"
+import { deleteDict } from "./apis"
 
 const loading = ref(false)
 const searchForm = reactive({
-  keyword: "",
+  keyword: ""
 })
 
 const pagination = reactive({
@@ -70,11 +70,11 @@ function openFrom(id: number, data: any) {
 }
 
 function handleDelete(id: number, group: boolean) {
-  ElMessageBox.prompt("请输入\"确认删除字典\"以继续操作", "删除确认", {
+  ElMessageBox.prompt(`请输入\"确认删除字典${group ? "组" : ""}\"以继续操作`, "删除确认", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
-    inputPattern: /^确认删除字典$/,
-    inputErrorMessage: "请输入\"确认删除字典\"",
+    inputPattern: new RegExp(`^确认删除字典${group ? "组" : ""}$`),
+    inputErrorMessage: `请输入\"确认删除字典${group ? "组" : ""}\"`,
     type: "warning"
   }).then(async () => {
     const response = await deleteDict(id || 0)

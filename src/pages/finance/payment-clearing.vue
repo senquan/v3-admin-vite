@@ -6,6 +6,7 @@ import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
 import { createReceive, getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
+import ModalForm from "./forms/_batch_detail.vue"
 import ReceiveImport from "./forms/_receive-import.vue"
 
 interface PaymentReceive {
@@ -49,6 +50,8 @@ const showEditDialog = ref(false)
 const dialogTitle = ref("贴现填报")
 const formRef = ref<FormInstance>()
 const receiveImportRef = ref<any>(null)
+const batchFormRef = ref<InstanceType<typeof ModalForm>>()
+const batchFormVisibility = ref(false)
 const isCreate = ref(false)
 const companyOptions = ref<CompanyTree[]>([])
 
@@ -319,6 +322,13 @@ function resetSearch() {
   handleSearch()
 }
 
+function handleBatchDetail(batchNo: string) {
+  batchFormVisibility.value = true
+  nextTick(() => {
+    batchFormRef.value?.open({ batchNo: batchNo as string })
+  })
+}
+
 function resetForm() {
   Object.assign(editForm, {
     id: 0,
@@ -499,7 +509,11 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="批次号" width="130" show-overflow-tooltip />
+        <el-table-column prop="batchNo" label="批次号" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">删除</el-button>
@@ -727,6 +741,8 @@ onMounted(() => {
       ref="receiveImportRef"
       @success="importSuccess"
     />
+
+    <ModalForm ref="batchFormRef" @close="batchFormVisibility = false" v-if="batchFormVisibility" />
   </div>
 </template>
 
@@ -764,5 +780,10 @@ onMounted(() => {
 
 .text-danger {
   color: #f56c6c;
+}
+
+.clickable {
+  cursor: pointer;
+  color: var(--el-color-primary);
 }
 </style>

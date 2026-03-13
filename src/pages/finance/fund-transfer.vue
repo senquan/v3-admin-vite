@@ -5,6 +5,7 @@ import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { getCompaniesTree } from "../basic/apis"
 import { createTransfer, getFundTransfers, transferConfirm, transferDelete } from "./apis"
+import ModalForm from "./forms/_batch_detail.vue"
 import TransferImport from "./forms/_transfer-import.vue"
 
 interface FundTransfer {
@@ -32,6 +33,8 @@ const companyOptions = ref<CompanyTree[]>([])
 const formRef = ref<FormInstance>()
 const activeTab = ref("up")
 const transferImportRef = ref<any>(null)
+const batchFormRef = ref<InstanceType<typeof ModalForm>>()
+const batchFormVisibility = ref(false)
 const upTableRef = ref<any>(null)
 const downTableRef = ref<any>(null)
 
@@ -224,6 +227,13 @@ async function handleSubmit() {
   }
 }
 
+function handleBatchDetail(batchNo: string) {
+  batchFormVisibility.value = true
+  nextTick(() => {
+    batchFormRef.value?.open({ batchNo: batchNo as string })
+  })
+}
+
 // 重置表单
 function resetForm() {
   if (formRef.value) {
@@ -401,7 +411,11 @@ onMounted(() => {
                 {{ formatDateTime(row.createdAt) }}
               </template>
             </el-table-column>
-            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="160" fixed="right" align="center">
               <template #default="{ row }">
                 <!-- <el-button type="primary" @click="handleEdit(row)">
@@ -657,6 +671,8 @@ onMounted(() => {
         </el-button>
       </template>
     </el-dialog>
+
+    <ModalForm ref="batchFormRef" @close="batchFormVisibility = false" v-if="batchFormVisibility" />
   </div>
 </template>
 
@@ -688,5 +704,10 @@ onMounted(() => {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);
+}
+
+.clickable {
+  cursor: pointer;
+  color: var(--el-color-primary);
 }
 </style>

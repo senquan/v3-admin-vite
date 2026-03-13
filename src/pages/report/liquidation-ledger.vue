@@ -139,32 +139,32 @@ function handleCurrentChange(val: number) {
 
 async function handleSave() {
   try {
-    await ElMessageBox.confirm('确定要保存当前台账的快照吗？', '保存快照', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'info',
-    });
-  } catch (e) {
-    return ElMessage.info('已取消保存');
+    await ElMessageBox.confirm("确定要保存当前台账的快照吗？", "保存快照", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "info"
+    })
+  } catch (error) {
+    return ElMessage.info(`已取消保存${error}`)
   }
 
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: '正在生成快照，请稍候...',
-    background: 'rgba(0, 0, 0, 0.7)',
-  });
+    text: "正在生成快照，请稍候...",
+    background: "rgba(0, 0, 0, 0.7)"
+  })
 
   try {
-    const response = await snapshotClearingSummary({});
+    const response = await snapshotClearingSummary({})
     if (response.code === 0) {
-      ElMessage.success("保存快照成功");
+      ElMessage.success("保存快照成功")
     } else {
-      ElMessage.error(response.message || "保存快照失败");
+      ElMessage.error(response.message || "保存快照失败")
     }
   } catch (error: any) {
-    ElMessage.error(error.message || "保存快照失败");
+    ElMessage.error(error.message || "保存快照失败")
   } finally {
-    loadingInstance.close();
+    loadingInstance.close()
   }
 }
 
@@ -476,7 +476,7 @@ onMounted(() => {
         <el-table-column prop="company.companyName" label="单位名称" width="220" />
         <el-table-column prop="expenseType" label="类型" width="180" align="center">
           <template #default="{ row }">
-            {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
+            {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || "-" }}
           </template>
         </el-table-column>
         <el-table-column prop="amount" label="金额" width="150" align="right">
@@ -543,7 +543,6 @@ onMounted(() => {
     >
       <el-form
         :model="editForm"
-        ref="editFormRef"
         label-width="120px"
         class="search-form"
       >

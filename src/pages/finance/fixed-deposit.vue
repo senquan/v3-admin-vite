@@ -6,6 +6,7 @@ import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
 import { createFixedDeposit, depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
+import ModalForm from "./forms/_batch_detail.vue"
 import DepositImport from "./forms/_deposit-import.vue"
 
 interface FixedDeposit {
@@ -41,6 +42,8 @@ const showCreateDialog = ref(false)
 const dialogTitle = ref("新增存款")
 const formRef = ref<FormInstance>()
 const depositImportRef = ref<any>([])
+const batchFormRef = ref<InstanceType<typeof ModalForm>>()
+const batchFormVisibility = ref(false)
 const isCreate = ref(false)
 const companyOptions = ref<CompanyTree[]>([])
 const statusOptions = { 1: "待确认", 2: "已生效", 3: "已删除" }
@@ -290,6 +293,13 @@ function importSuccess() {
   handleSearch()
 }
 
+function handleBatchDetail(batchNo: string) {
+  batchFormVisibility.value = true
+  nextTick(() => {
+    batchFormRef.value?.open({ batchNo: batchNo as string })
+  })
+}
+
 function resetForm() {
   if (formRef.value) {
     formRef.value.resetFields()
@@ -456,7 +466,11 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="导入批次" width="130" align="right" show-overflow-tooltip />
+        <el-table-column prop="batchNo" label="导入批次" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="lastInterestDate" label="最近计息日" width="150" align="center" />
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
@@ -656,6 +670,8 @@ onMounted(() => {
       ref="depositImportRef"
       @success="importSuccess"
     />
+
+    <ModalForm ref="batchFormRef" @close="batchFormVisibility = false" v-if="batchFormVisibility" />
   </div>
 </template>
 
@@ -687,5 +703,10 @@ onMounted(() => {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);
+}
+
+.clickable {
+  cursor: pointer;
+  color: var(--el-color-primary);
 }
 </style>

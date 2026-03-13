@@ -13,6 +13,7 @@ import {
   profitConfirm,
   updateProfitPayment
 } from "./apis"
+import ModalForm from "./forms/_batch_detail.vue"
 import ProfitImport from "./forms/_profit-import.vue"
 
 interface ProfitPayment {
@@ -45,6 +46,8 @@ const dialogStatus = ref("create")
 const isTurnOver = ref(false)
 const formRef = ref<FormInstance>()
 const profitImportRef = ref<any>(null)
+const batchFormRef = ref<InstanceType<typeof ModalForm>>()
+const batchFormVisibility = ref(false)
 const currentRow = ref<ProfitPayment | null>(null)
 
 const searchForm = reactive({
@@ -316,6 +319,13 @@ async function handleSubmit() {
   }
 }
 
+function handleBatchDetail(batchNo: string) {
+  batchFormVisibility.value = true
+  nextTick(() => {
+    batchFormRef.value?.open({ batchNo: batchNo as string })
+  })
+}
+
 // 重置表单
 function resetForm() {
   if (formRef.value) {
@@ -411,7 +421,11 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip />
+        <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="310" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" @click="handleDetail(row)">
@@ -462,7 +476,8 @@ onMounted(() => {
               <el-select
                 v-model="form.businessYear"
                 placeholder="请选择年度"
-                :disabled="isTurnOver || currentRow?.status === 2">
+                :disabled="isTurnOver || currentRow?.status === 2"
+              >
                 <el-option v-for="value in range(new Date().getFullYear(), 10)" :key="value" :value="value" />
               </el-select>
             </el-form-item>
@@ -618,6 +633,8 @@ onMounted(() => {
       ref="profitImportRef"
       @success="importSuccess"
     />
+
+    <ModalForm ref="batchFormRef" @close="batchFormVisibility = false" v-if="batchFormVisibility" />
   </div>
 </template>
 
@@ -649,5 +666,10 @@ onMounted(() => {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);
+}
+
+.clickable {
+  cursor: pointer;
+  color: var(--el-color-primary);
 }
 </style>

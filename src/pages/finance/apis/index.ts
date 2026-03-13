@@ -287,3 +287,10 @@ export function updateBatchFile(data: any) {
     data
   })
 }
+
+export function getBatchDetail(no: string) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/batch-file/${no}`,
+    method: "get"
+  })
+}

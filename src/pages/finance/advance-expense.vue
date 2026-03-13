@@ -13,6 +13,7 @@ import {
   getExpenseDetailTypes
 } from "./apis"
 import AdvanceImport from "./forms/_advance-import.vue"
+import ModalForm from "./forms/_batch_detail.vue"
 
 interface AdvanceExpense {
   id: number
@@ -39,6 +40,8 @@ const dialogTitle = ref("新增垫资")
 const formRef = ref<FormInstance>()
 const tableRef = ref<any>(null)
 const advanceImportRef = ref<any>(null)
+const batchFormRef = ref<InstanceType<typeof ModalForm>>()
+const batchFormVisibility = ref(false)
 const currentRow = ref<AdvanceExpense | null>(null)
 const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
 const expenseDetailTypeOptions = ref<{ id: number, label: string }[]>([])
@@ -239,6 +242,13 @@ async function handleSubmit() {
   }
 }
 
+function handleBatchDetail(batchNo: string) {
+  batchFormVisibility.value = true
+  nextTick(() => {
+    batchFormRef.value?.open({ batchNo: batchNo as string })
+  })
+}
+
 // 重置表单
 function resetForm() {
   if (formRef.value) {
@@ -395,6 +405,11 @@ onMounted(() => {
             <el-tag :type="getStatusType(row.status) as any">
               {{ getStatusLabel(row.status) }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="batchNo" label="导入批次" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
@@ -675,6 +690,8 @@ onMounted(() => {
       ref="advanceImportRef"
       @success="importSuccess"
     />
+
+    <ModalForm ref="batchFormRef" @close="batchFormVisibility = false" v-if="batchFormVisibility" />
   </div>
 </template>
 
@@ -711,5 +728,10 @@ onMounted(() => {
 .cell-item {
   display: flex;
   align-items: center;
+}
+
+.clickable {
+  cursor: pointer;
+  color: var(--el-color-primary);
 }
 </style>
