@@ -3,9 +3,6 @@ import { getOperationLogs } from "./apis"
 
 interface OperationLog {
   id: number
-  logCode: string // 日志编号
-  userName: string // 用户名
-  realName: string // 真实姓名
   operationModule: string // 操作模块
   operationType: number // 操作类型：1-新增，2-修改，3-删除，4-查询，5-导出，6-登录，7-登出
   operationDesc: string // 操作描述
@@ -18,7 +15,6 @@ interface OperationLog {
   operationTime: string // 操作时间
   executionTime: number // 执行时间(ms)
   status: number // 状态：1-成功，2-失败
-  remark: string
 }
 
 const loading = ref(false)
@@ -185,7 +181,7 @@ onMounted(() => {
             <el-option label="修改" :value="2" />
             <el-option label="删除" :value="3" />
             <el-option label="查询" :value="4" />
-            <el-option label="导出" :value="5" />
+            <el-option label="导入确认" :value="5" />
             <el-option label="登录" :value="6" />
             <el-option label="登出" :value="7" />
           </el-select>
@@ -221,9 +217,7 @@ onMounted(() => {
         v-loading="loading"
         header-cell-class-name="header-cell-fix"
       >
-        <el-table-column prop="logCode" label="日志编号" width="140" align="center" show-overflow-tooltip />
-        <el-table-column prop="userName" label="用户名" width="100" align="center" />
-        <el-table-column prop="realName" label="真实姓名" width="100" align="center" />
+        <el-table-column prop="id" label="日志编号" width="100" align="center" />
         <el-table-column prop="operationModule" label="操作模块" width="120" align="center" />
         <el-table-column prop="operationType" label="操作类型" width="100" align="center">
           <template #default="{ row }">
@@ -232,20 +226,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="operationDesc" label="操作描述" min-width="150" />
-        <el-table-column prop="requestMethod" label="请求方法" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.requestMethod === 'GET' ? 'primary' : row.requestMethod === 'POST' ? 'success' : row.requestMethod === 'PUT' ? 'warning' : 'danger'">
-              {{ row.requestMethod }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="clientIp" label="客户端IP" width="130" align="center" />
-        <el-table-column prop="executionTime" label="执行时间" width="100" align="center">
-          <template #default="{ row }">
-            {{ formatExecutionTime(row.executionTime) }}
-          </template>
-        </el-table-column>
+        <el-table-column prop="operationDesc" label="操作描述" min-width="220" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
@@ -253,15 +234,15 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="user.name" label="操作者" min-width="120" align="center" />
         <el-table-column prop="operationTime" label="操作时间" width="160" align="center">
           <template #default="{ row }">
             {{ formatTime(row.operationTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="120" />
         <el-table-column label="操作" width="100" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" @click="handleViewDetail(row)" size="small">
+            <el-button type="primary" @click="handleViewDetail(row)">
               详情
             </el-button>
           </template>
@@ -289,9 +270,7 @@ onMounted(() => {
       @close="closeDetailDialog"
     >
       <el-descriptions :column="2" border v-if="detailData">
-        <el-descriptions-item label="日志编号">{{ detailData.logCode }}</el-descriptions-item>
-        <el-descriptions-item label="用户名">{{ detailData.userName }}</el-descriptions-item>
-        <el-descriptions-item label="真实姓名">{{ detailData.realName }}</el-descriptions-item>
+        <el-descriptions-item label="日志编号">{{ detailData.id }}</el-descriptions-item>
         <el-descriptions-item label="操作模块">{{ detailData.operationModule }}</el-descriptions-item>
         <el-descriptions-item label="操作类型">
           <el-tag :type="getOperationTypeType(detailData.operationType) as any">
@@ -320,7 +299,6 @@ onMounted(() => {
         <el-descriptions-item label="响应结果" :span="2">
           <pre class="json-content">{{ formatJson(detailData.responseResult) }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detailData.remark }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
