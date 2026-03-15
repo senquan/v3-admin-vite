@@ -30,6 +30,11 @@ const searchForm = reactive({
   dateRange: [] as string[]
 })
 
+const moduleMap = reactive({
+  finance: "财务管理",
+  system: "系统设置"
+})
+
 const pagination = reactive({
   page: 1,
   size: 10,
@@ -40,13 +45,13 @@ const tableData = ref<OperationLog[]>([])
 
 // 获取操作类型标签
 function getOperationTypeLabel(type: number) {
-  const labels = { 1: "新增", 2: "修改", 3: "删除", 4: "查询", 5: "导出", 6: "登录", 7: "登出" }
+  const labels = { 1: "新增", 2: "修改", 3: "删除", 4: "查询", 5: "导入确认", 6: "登录", 7: "登出" }
   return labels[type as keyof typeof labels] || "未知"
 }
 
 // 获取操作类型标签类型
 function getOperationTypeType(type: number) {
-  const types = { 1: "success", 2: "warning", 3: "danger", 4: "primary", 5: "info", 6: "success", 7: "info" }
+  const types = { 1: "success", 2: "warning", 3: "danger", 4: "primary", 5: "success", 6: "success", 7: "info" }
   return types[type as keyof typeof types] || "info"
 }
 
@@ -90,6 +95,7 @@ async function fetchData() {
       page: pagination.page,
       size: pagination.size,
       keyword: searchForm.keyword,
+      operationModule: searchForm.operationModule,
       status: searchForm.status || undefined,
       startDate: "",
       endDate: ""
@@ -173,9 +179,11 @@ onMounted(() => {
           <el-input v-model="searchForm.keyword" placeholder="可输入用户名、操作描述模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="操作模块">
-          <el-input v-model="searchForm.operationModule" placeholder="请输入操作模块" />
+          <el-select v-model="searchForm.operationModule" placeholder="请选择操作模块" clearable style="width: 120px;">
+            <el-option v-for="(value, key) in moduleMap" :key="key" :label="value" :value="key" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="操作类型">
+        <el-form-item label="操作类型" style="width: 160px;">
           <el-select v-model="searchForm.operationType" placeholder="请选择类型" clearable>
             <el-option label="新增" :value="1" />
             <el-option label="修改" :value="2" />
@@ -186,7 +194,7 @@ onMounted(() => {
             <el-option label="登出" :value="7" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="状态" style="width: 130px;">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
             <el-option label="成功" :value="1" />
             <el-option label="失败" :value="2" />
@@ -218,7 +226,11 @@ onMounted(() => {
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column prop="id" label="日志编号" width="100" align="center" />
-        <el-table-column prop="operationModule" label="操作模块" width="120" align="center" />
+        <el-table-column prop="operationModule" label="操作模块" width="120" align="center">
+          <template #default="{ row }">
+            {{ moduleMap[row.operationModule as keyof typeof moduleMap] }}
+          </template>
+        </el-table-column>
         <el-table-column prop="operationType" label="操作类型" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getOperationTypeType(row.operationType) as any">
@@ -234,7 +246,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="user.name" label="操作者" min-width="120" align="center" />
+        <el-table-column prop="user.name" label="操作者" width="120" align="center" />
         <el-table-column prop="operationTime" label="操作时间" width="160" align="center">
           <template #default="{ row }">
             {{ formatTime(row.operationTime) }}
