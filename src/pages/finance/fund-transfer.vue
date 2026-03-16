@@ -41,7 +41,9 @@ const downTableRef = ref<any>(null)
 const searchForm = reactive({
   keyword: "",
   status: 0,
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  amountFrom: undefined,
+  amountTo: undefined
 })
 
 const pagination = reactive({
@@ -94,7 +96,9 @@ async function fetchData() {
     const params: any = {
       type: activeTab.value === "up" ? 1 : 2,
       page: pagination.page,
-      size: pagination.size
+      size: pagination.size,
+      amountFrom: searchForm.amountFrom || 0,
+      amountTo: searchForm.amountTo || 0
     }
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.status) params.status = searchForm.status
@@ -145,7 +149,9 @@ function resetSearch() {
   Object.assign(searchForm, {
     keyword: "",
     status: 0,
-    dateRange: []
+    dateRange: [],
+    amountFrom: undefined,
+    amountTo: undefined
   })
   handleSearch()
 }
@@ -346,6 +352,11 @@ onMounted(() => {
                 <el-option label="已删除" :value="3" />
               </el-select>
             </el-form-item>
+            <el-form-item label="金额范围">
+              <el-input v-model="searchForm.amountFrom" clearable style="width: 70px;" />
+              &nbsp;&nbsp;到&nbsp;&nbsp;
+              <el-input v-model="searchForm.amountTo" clearable style="width: 70px;" />
+            </el-form-item>
             <el-form-item label="转账日期">
               <el-date-picker
                 v-model="searchForm.dateRange"
@@ -454,6 +465,11 @@ onMounted(() => {
                 <el-option label="已生效" :value="2" />
                 <el-option label="已删除" :value="3" />
               </el-select>
+            </el-form-item>
+            <el-form-item label="金额范围">
+              <el-input v-model="searchForm.amountFrom" clearable style="width: 70px;" />
+              &nbsp;&nbsp;到&nbsp;&nbsp;
+              <el-input v-model="searchForm.amountTo" clearable style="width: 70px;" />
             </el-form-item>
             <el-form-item label="转账日期">
               <el-date-picker

@@ -317,7 +317,9 @@ function resetSearch() {
   Object.assign(searchForm, {
     keyword: "",
     status: 0,
-    dateRange: []
+    dateRange: [],
+    amountFrom: undefined,
+    amountTo: undefined
   })
   handleSearch()
 }

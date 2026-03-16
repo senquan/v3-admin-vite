@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { FormInstance } from "element-plus"
+import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { getCompaniesTree } from "../basic/apis"
 import { getInterestDetail } from "./apis"
 
 interface InterestDetail {
@@ -15,20 +17,19 @@ interface InterestDetail {
 }
 
 const loading = ref(false)
-const submitLoading = ref(false)
-const showCreateDialog = ref(false)
-const dialogTitle = ref("新增明细记录")
 const formRef = ref<FormInstance>()
 const activeTab = ref("current")
+const companyOptions = ref<CompanyTree[]>([])
 
 const searchForm = reactive({
   keyword: "",
+  companyId: undefined,
   dateRange: [] as string[]
 })
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
@@ -37,7 +38,6 @@ const tableData = reactive({
   f2c: [] as InterestDetail[],
   fixed: [] as InterestDetail[]
 })
-const companyOptions = ref<{ id: number, companyName: string, companyCode: string }[]>([])
 
 const form = reactive({
   id: undefined as number | undefined,
@@ -73,9 +73,18 @@ async function fetchData() {
   try {
     const params: any = {
       page: pagination.page,
-      size: pagination.size
+      size: pagination.size,
+      keyword: searchForm.keyword,
+      companyId: undefined,
+      startDate: "",
+      endDate: ""
     }
-
+    if (searchForm.companyId)
+      params.companyId = Number(searchForm.companyId)
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
     if (activeTab.value === "current") {
       params.type = 1
     } else if (activeTab.value === "f2c") {
@@ -132,26 +141,6 @@ function formatDate(date: string) {
   return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
 }
 
-// 提交表单
-async function handleSubmit() {
-  if (!formRef.value) return
-
-  try {
-    submitLoading.value = true
-
-    // 模拟提交API调用
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    ElMessage.success(form.id ? "更新成功" : "创建成功")
-    showCreateDialog.value = false
-    fetchData()
-  } catch (error) {
-    console.error("提交失败:", error)
-  } finally {
-    submitLoading.value = false
-  }
-}
-
 // 重置表单
 function resetForm() {
   if (formRef.value) {
@@ -176,15 +165,6 @@ function resetForm() {
   })
 }
 
-// 选择单位
-function onCompanyChange(companyId: number) {
-  const company = companyOptions.value.find(item => item.id === companyId)
-  if (company) {
-    form.companyCode = company.companyCode
-    form.companyName = company.companyName
-  }
-}
-
 function handleTabChange() {
   if (activeTab.value === "current") {
     if (tableData.current.length === 0) fetchData()
@@ -195,9 +175,22 @@ function handleTabChange() {
   }
 }
 
+// 获取单位列表
+async function getCompanies() {
+  try {
+    if (companyOptions.value.length === 0) {
+      const response = await getCompaniesTree()
+      companyOptions.value = response.data.records
+    }
+  } catch (error) {
+    console.error("获取上级单位失败:", error)
+  }
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
+  getCompanies()
 })
 </script>
 
@@ -208,8 +201,17 @@ onMounted(() => {
         <el-tab-pane label="活期存（贷）款利息" name="current">
           <!-- 搜索条件 -->
           <el-form :model="searchForm" inline class="search-form">
-            <el-form-item label="单位名称">
-              <el-input v-model="searchForm.keyword" placeholder="请输入单位名称" />
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                v-model="searchForm.companyId"
+                :data="companyOptions"
+                placeholder="请选择单位"
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+                style="width: 180px;"
+                @change="fetchData"
+              />
             </el-form-item>
             <el-form-item label="计息日期">
               <el-date-picker
@@ -267,8 +269,17 @@ onMounted(() => {
         <el-tab-pane label="定期转活期存款利息" name="f2c">
           <!-- 搜索条件 -->
           <el-form :model="searchForm" inline class="search-form">
-            <el-form-item label="单位名称">
-              <el-input v-model="searchForm.keyword" placeholder="请输入单位名称" />
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                v-model="searchForm.companyId"
+                :data="companyOptions"
+                placeholder="请选择单位"
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+                style="width: 180px;"
+                @change="fetchData"
+              />
             </el-form-item>
             <el-form-item label="计息日期">
               <el-date-picker
@@ -335,8 +346,17 @@ onMounted(() => {
         <el-tab-pane label="定期存（贷）款利息" name="fixed">
           <!-- 搜索条件 -->
           <el-form :model="searchForm" inline class="search-form">
-            <el-form-item label="单位名称">
-              <el-input v-model="searchForm.keyword" placeholder="请输入单位名称" />
+            <el-form-item label="单位名称" prop="companyId">
+              <el-tree-select
+                v-model="searchForm.companyId"
+                :data="companyOptions"
+                placeholder="请选择单位"
+                :render-after-expand="false"
+                :check-strictly="true"
+                clearable
+                style="width: 180px;"
+                @change="fetchData"
+              />
             </el-form-item>
             <el-form-item label="计息日期">
               <el-date-picker
@@ -412,170 +432,6 @@ onMounted(() => {
         class="pagination"
       />
     </el-card>
-
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
-      v-model="showCreateDialog"
-      :title="dialogTitle"
-      width="800px"
-      @close="resetForm"
-    >
-      <el-form
-        :model="form"
-        ref="formRef"
-        label-width="100px"
-      >
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="报表编号" prop="reportCode">
-              <el-input v-model="form.reportCode" placeholder="请输入报表编号">
-                <template #append>
-                  <el-button @click="generateReportCode">生成</el-button>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="单位名称" prop="companyName">
-              <el-select
-                v-model="form.companyName"
-                placeholder="请选择单位"
-                filterable
-                @change="onCompanyChange"
-              >
-                <el-option
-                  v-for="item in companyOptions"
-                  :key="item.id"
-                  :label="item.companyName"
-                  :value="item.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="科目编码" prop="accountCode">
-              <el-input v-model="form.accountCode" placeholder="请输入科目编码" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="科目名称" prop="accountName">
-              <el-input v-model="form.accountName" placeholder="请输入科目名称" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="科目类型" prop="accountType">
-              <el-select v-model="form.accountType" placeholder="请选择科目类型">
-                <el-option label="资产" :value="1" />
-                <el-option label="负债" :value="2" />
-                <el-option label="权益" :value="3" />
-                <el-option label="收入" :value="4" />
-                <el-option label="费用" :value="5" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="层级" prop="level">
-              <el-input-number
-                v-model="form.level"
-                placeholder="请输入层级"
-                :min="1"
-                :max="10"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="借方金额" prop="debitAmount">
-              <el-input-number
-                v-model="form.debitAmount"
-                placeholder="请输入借方金额"
-                :min="0"
-                :step="10000"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="贷方金额" prop="creditAmount">
-              <el-input-number
-                v-model="form.creditAmount"
-                placeholder="请输入贷方金额"
-                :min="0"
-                :step="10000"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="余额" prop="balance">
-              <el-input-number
-                v-model="form.balance"
-                placeholder="请输入余额"
-                :step="10000"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="上级科目" prop="parentCode">
-              <el-input v-model="form.parentCode" placeholder="请输入上级科目编码" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="报告期间" prop="reportPeriod">
-              <el-input v-model="form.reportPeriod" placeholder="请输入报告期间" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="报告日期" prop="reportDate">
-              <el-date-picker
-                v-model="form.reportDate"
-                type="date"
-                placeholder="请选择报告日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            placeholder="请输入备注信息"
-            :rows="3"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 

@@ -61,7 +61,10 @@ const depositTypeMap = systemParamsStore.getArrayDict(1).reduce((prev, cur) => {
 const searchForm = reactive({
   keyword: "",
   status: 0,
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  amountFrom: undefined,
+  amountTo: undefined,
+  sort: ""
 })
 
 const pagination = reactive({
@@ -156,7 +159,10 @@ async function fetchData() {
       keyword: searchForm.keyword,
       status: Number(searchForm.status),
       startDate: "",
-      endDate: ""
+      endDate: "",
+      amountFrom: searchForm.amountFrom || 0,
+      amountTo: searchForm.amountTo || 0,
+      sort: searchForm.sort
     }
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       params.startDate = searchForm.dateRange[0]
@@ -188,9 +194,11 @@ function handleSearch() {
 function resetSearch() {
   Object.assign(searchForm, {
     companyName: "",
-    batchNo: "",
     status: 0,
-    dateRange: []
+    dateRange: [],
+    amountFrom: undefined,
+    amountTo: undefined,
+    sort: ""
   })
   handleSearch()
 }
@@ -202,6 +210,12 @@ function handleSizeChange(val: number) {
 
 function handleCurrentChange(val: number) {
   pagination.page = val
+  fetchData()
+}
+
+function handleSortChange(column: any) {
+  const { prop, order } = column
+  searchForm.sort = (order === "descending" ? "-" : "+") + prop
   fetchData()
 }
 
@@ -379,6 +393,11 @@ onMounted(() => {
             <el-option v-for="(value, key) in statusOptions" :key="key" :label="`${value}`" :value="key" />
           </el-select>
         </el-form-item>
+        <el-form-item label="金额范围">
+          <el-input v-model="searchForm.amountFrom" clearable style="width: 70px;" />
+          &nbsp;&nbsp;到&nbsp;&nbsp;
+          <el-input v-model="searchForm.amountTo" clearable style="width: 70px;" />
+        </el-form-item>
         <el-form-item label="到期日期">
           <el-date-picker
             v-model="searchForm.dateRange"
@@ -412,6 +431,8 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
+        :sort-config="{ remote: true }"
+        @sort-change="handleSortChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />
@@ -428,7 +449,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
@@ -438,7 +459,7 @@ onMounted(() => {
             {{ depositPeriodMap[row.depositPeriod] || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="endDate" label="到期日期" width="100" align="center">
+        <el-table-column prop="endDate" label="到期日期" width="110" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDate(row.endDate) }}
           </template>
@@ -449,10 +470,18 @@ onMounted(() => {
             {{ row.earlyRelease === 1 ? '是' : '否' }}
           </template>
         </el-table-column>
-        <el-table-column prop="releaseDate" label="释放日期" width="100" align="center" />
-        <el-table-column prop="daysCount" label="已计息天数" width="100" align="center" />
-        <el-table-column prop="releaseAmount" label="释放金额" width="120" align="center" />
-        <el-table-column prop="remainingAmount" label="剩余金额" width="120" align="center" />
+        <el-table-column prop="releaseDate" label="释放日期" width="110" align="center" sortable="custom" />
+        <el-table-column prop="daysCount" label="已计息天数" width="120" sortable="custom" align="center" />
+        <el-table-column prop="releaseAmount" label="释放金额" width="120" align="right" sortable="custom">
+          <template #default="{ row }">
+            {{ formattedMoney(row.releaseAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remainingAmount" label="剩余金额" width="120" align="right" sortable="custom">
+          <template #default="{ row }">
+            {{ formattedMoney(row.remainingAmount) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
@@ -461,7 +490,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
-        <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+        <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>

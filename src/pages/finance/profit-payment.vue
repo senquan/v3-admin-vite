@@ -49,11 +49,15 @@ const profitImportRef = ref<any>(null)
 const batchFormRef = ref<InstanceType<typeof ModalForm>>()
 const batchFormVisibility = ref(false)
 const currentRow = ref<ProfitPayment | null>(null)
+const yearOptions = range(new Date().getFullYear(), 10)
 
 const searchForm = reactive({
   keyword: "",
   status: 0,
-  dateRange: [] as string[]
+  dateRange: [] as string[],
+  amountFrom: undefined,
+  amountTo: undefined,
+  year: undefined
 })
 
 const pagination = reactive({
@@ -107,10 +111,13 @@ async function fetchData() {
   try {
     const params: any = {
       page: pagination.page,
-      size: pagination.size
+      size: pagination.size,
+      amountFrom: searchForm.amountFrom || 0,
+      amountTo: searchForm.amountTo || 0
     }
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.status) params.status = searchForm.status
+    if (searchForm.year) params.year = searchForm.year
 
     const response = await getProfitPayments(params)
 
@@ -178,7 +185,10 @@ function resetSearch() {
   Object.assign(searchForm, {
     keyword: "",
     status: 0,
-    dateRange: []
+    dateRange: [],
+    amountFrom: undefined,
+    amountTo: undefined,
+    year: undefined
   })
   handleSearch()
 }
@@ -371,6 +381,22 @@ onMounted(() => {
             <el-option label="已删除" :value="3" />
           </el-select>
         </el-form-item>
+        <el-form-item label="金额范围">
+          <el-input v-model="searchForm.amountFrom" clearable style="width: 70px;" />
+          &nbsp;&nbsp;到&nbsp;&nbsp;
+          <el-input v-model="searchForm.amountTo" clearable style="width: 70px;" />
+        </el-form-item>
+        <el-form-item label="年度">
+          <el-select
+            v-model="searchForm.year"
+            placeholder="请选择年度"
+            clearable
+            @change="fetchData"
+            style="width: 100px;"
+          >
+            <el-option v-for="value in yearOptions" :key="value" :value="value" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
@@ -478,7 +504,7 @@ onMounted(() => {
                 placeholder="请选择年度"
                 :disabled="isTurnOver || currentRow?.status === 2"
               >
-                <el-option v-for="value in range(new Date().getFullYear(), 10)" :key="value" :value="value" />
+                <el-option v-for="value in yearOptions" :key="value" :value="value" />
               </el-select>
             </el-form-item>
           </el-col>
