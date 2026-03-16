@@ -43,7 +43,8 @@ const searchForm = reactive({
   status: 0,
   dateRange: [] as string[],
   amountFrom: undefined,
-  amountTo: undefined
+  amountTo: undefined,
+  sort: ""
 })
 
 const pagination = reactive({
@@ -98,7 +99,8 @@ async function fetchData() {
       page: pagination.page,
       size: pagination.size,
       amountFrom: searchForm.amountFrom || 0,
-      amountTo: searchForm.amountTo || 0
+      amountTo: searchForm.amountTo || 0,
+      sort: searchForm.sort
     }
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.status) params.status = searchForm.status
@@ -144,6 +146,12 @@ function handleSearch() {
   fetchData()
 }
 
+function handleSortChange(column: any) {
+  const { prop, order } = column
+  searchForm.sort = (order === "descending" ? "-" : "+") + prop
+  fetchData()
+}
+
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
@@ -151,7 +159,8 @@ function resetSearch() {
     status: 0,
     dateRange: [],
     amountFrom: undefined,
-    amountTo: undefined
+    amountTo: undefined,
+    sort: ""
   })
   handleSearch()
 }
@@ -392,18 +401,20 @@ onMounted(() => {
             :summary-method="getSummaries"
             show-summary
             v-loading="loading"
+            :sort-config="{ remote: true }"
+            @sort-change="handleSortChange"
             header-cell-class-name="header-cell-fix"
           >
             <el-table-column width="50" type="selection" align="center" />
             <el-table-column prop="seq" label="序号" width="60" align="center" />
             <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
-            <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
+            <el-table-column prop="transferDate" label="转账日期" width="120" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.transferDate) }}
               </template>
             </el-table-column>
             <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
-            <el-table-column prop="transferAmount" label="金额(元)" width="150" align="right">
+            <el-table-column prop="transferAmount" label="金额(元)" width="150" align="right" sortable="custom">
               <template #default="{ row }">
                 {{ formattedMoney(row.transferAmount) }}
               </template>
@@ -417,7 +428,7 @@ onMounted(() => {
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="150" />
             <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
-            <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+            <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDateTime(row.createdAt) }}
               </template>
@@ -506,18 +517,20 @@ onMounted(() => {
             :summary-method="getSummaries"
             show-summary
             v-loading="loading"
+            :sort-config="{ remote: true }"
+            @sort-change="handleSortChange"
             header-cell-class-name="header-cell-fix"
           >
             <el-table-column width="50" type="selection" align="center" />
             <el-table-column prop="seq" label="序号" width="60" align="center" />
             <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
-            <el-table-column prop="transferDate" label="转账日期" width="120" align="center">
+            <el-table-column prop="transferDate" label="转账日期" width="120" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.transferDate) }}
               </template>
             </el-table-column>
             <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
-            <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="150" align="right">
+            <el-table-column prop="transferAmount" label="（下拨/代付）金额" width="170" align="right" sortable="custom">
               <template #default="{ row }">
                 {{ formattedMoney(row.transferAmount) }}
               </template>
@@ -527,7 +540,7 @@ onMounted(() => {
                 {{ row.isLoan === 1 ? '是' : '否' }}
               </template>
             </el-table-column>
-            <el-table-column prop="dueDate" label="贷款期限" width="120" align="center">
+            <el-table-column prop="dueDate" label="贷款期限" width="120" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.dueDate) }}
               </template>
@@ -540,8 +553,8 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="150" />
-            <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
-            <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+            <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
+            <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.createdAt) }}
               </template>

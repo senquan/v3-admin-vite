@@ -61,7 +61,8 @@ const searchForm = reactive({
   dateRange: [] as string[],
   amountFrom: undefined,
   amountTo: undefined,
-  year: undefined
+  year: undefined,
+  sort: ""
 })
 
 const pagination = reactive({
@@ -117,7 +118,8 @@ async function fetchData() {
       page: pagination.page,
       size: pagination.size,
       amountFrom: searchForm.amountFrom || 0,
-      amountTo: searchForm.amountTo || 0
+      amountTo: searchForm.amountTo || 0,
+      sort: searchForm.sort
     }
     if (searchForm.expenseType) params.type = searchForm.expenseType
     if (searchForm.keyword) params.keyword = searchForm.keyword
@@ -174,6 +176,12 @@ function handleSearch() {
   fetchData()
 }
 
+function handleSortChange(column: any) {
+  const { prop, order } = column
+  searchForm.sort = (order === "descending" ? "-" : "+") + prop
+  fetchData()
+}
+
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
@@ -182,7 +190,8 @@ function resetSearch() {
     dateRange: [],
     amountFrom: undefined,
     amountTo: undefined,
-    year: undefined
+    year: undefined,
+    sort: ""
   })
   handleSearch()
 }
@@ -408,6 +417,8 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
+        :sort-config="{ remote: true }"
+        @sort-change="handleSortChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />
@@ -419,13 +430,13 @@ onMounted(() => {
             {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+        <el-table-column prop="amount" label="金额(元)" width="120" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150" />
-        <el-table-column prop="businessYear" label="年度" width="100" align="center" />
+        <el-table-column prop="businessYear" label="年度" width="100" align="center" sortable="custom" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
@@ -436,6 +447,11 @@ onMounted(() => {
         <el-table-column prop="batchNo" label="导入批次" width="130" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">

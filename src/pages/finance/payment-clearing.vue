@@ -88,7 +88,8 @@ const searchForm = reactive({
   status: 0,
   dateRange: [] as string[],
   amountFrom: undefined,
-  amountTo: undefined
+  amountTo: undefined,
+  sort: ""
 })
 
 const pagination = reactive({
@@ -161,7 +162,8 @@ async function fetchData() {
       startDate: "",
       endDate: "",
       amountFrom: searchForm.amountFrom || 0,
-      amountTo: searchForm.amountTo || 0
+      amountTo: searchForm.amountTo || 0,
+      sort: searchForm.sort
     }
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       params.startDate = searchForm.dateRange[0]
@@ -313,13 +315,25 @@ function handleSearch() {
   fetchData()
 }
 
+function handleFilter(value: any, row: any, column: any) {
+  const property = column['property']
+  return row[property] === Number(value)
+}
+
+function handleSortChange(column: any) {
+  const { prop, order } = column
+  searchForm.sort = (order === "descending" ? "-" : "+") + prop
+  fetchData()
+}
+
 function resetSearch() {
   Object.assign(searchForm, {
     keyword: "",
     status: 0,
     dateRange: [],
     amountFrom: undefined,
-    amountTo: undefined
+    amountTo: undefined,
+    sort: ""
   })
   handleSearch()
 }
@@ -449,15 +463,24 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
+        :sort-config="{ remote: true }"
+        @sort-change="handleSortChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />
-        <el-table-column prop="receiveType" label="到款类型" width="100" align="center">
+        <el-table-column
+          prop="receiveType"
+          label="到款类型"
+          width="100"
+          align="center"
+          :filters="[ { text: '银行到款', value: '1' }, { text: '票据到款', value: '2' } ]"
+          :filter-method="handleFilter"
+        >
           <template #default="{ row }">
             {{ row.receiveType === 1 ? "银行到款" : "票据到款" }}
           </template>
         </el-table-column>
-        <el-table-column prop="receiveDate" label="到款日期" width="110" align="center">
+        <el-table-column prop="receiveDate" label="到款日期" width="110" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDate(row.receiveDate) }}
           </template>
@@ -466,7 +489,7 @@ onMounted(() => {
         <el-table-column prop="company.companyName" label="单位名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="customerName" label="客户名称" width="220" show-overflow-tooltip />
         <el-table-column prop="projectName" label="项目名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right">
+        <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formatAmount(row.accountAmount) }}
           </template>
@@ -477,8 +500,8 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
-        <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
-        <el-table-column prop="collectionDate" label="托收日期" width="120" align="center">
+        <el-table-column prop="dueDate" label="到期日" width="120" align="center" sortable="custom" />
+        <el-table-column prop="collectionDate" label="托收日期" width="120" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDate(row.collectionDate) }}
           </template>
@@ -490,14 +513,14 @@ onMounted(() => {
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="discountDate" label="贴现日期" width="120" align="center">
+        <el-table-column prop="discountDate" label="贴现日期" width="120" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDate(row.discountDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="discountAmount" label="贴现到款金额" width="120" align="center" />
-        <el-table-column prop="discountFee" label="贴现手续费" width="120" align="center" />
-        <el-table-column prop="accountSet" label="账套" width="100" />
+        <el-table-column prop="discountAmount" label="贴现到款金额" width="120" align="center" sortable="custom" />
+        <el-table-column prop="discountFee" label="贴现手续费" width="120" align="center" sortable="custom" />
+        <el-table-column prop="company.accountName" label="账套" width="110" align="center" />
         <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
@@ -506,7 +529,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="creator.name" label="创建人" width="120" align="center" />
-        <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
+        <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>

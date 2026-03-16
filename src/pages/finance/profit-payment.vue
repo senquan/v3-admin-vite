@@ -57,7 +57,8 @@ const searchForm = reactive({
   dateRange: [] as string[],
   amountFrom: undefined,
   amountTo: undefined,
-  year: undefined
+  year: undefined,
+  sort: ""
 })
 
 const pagination = reactive({
@@ -113,7 +114,8 @@ async function fetchData() {
       page: pagination.page,
       size: pagination.size,
       amountFrom: searchForm.amountFrom || 0,
-      amountTo: searchForm.amountTo || 0
+      amountTo: searchForm.amountTo || 0,
+      sort: searchForm.sort
     }
     if (searchForm.keyword) params.keyword = searchForm.keyword
     if (searchForm.status) params.status = searchForm.status
@@ -180,6 +182,12 @@ function handleSearch() {
   fetchData()
 }
 
+function handleSortChange(column: any) {
+  const { prop, order } = column
+  searchForm.sort = (order === "descending" ? "-" : "+") + prop
+  fetchData()
+}
+
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
@@ -188,7 +196,8 @@ function resetSearch() {
     dateRange: [],
     amountFrom: undefined,
     amountTo: undefined,
-    year: undefined
+    year: undefined,
+    sort: ""
   })
   handleSearch()
 }
@@ -419,27 +428,29 @@ onMounted(() => {
         border
         stripe
         v-loading="loading"
+        :sort-config="{ remote: true }"
+        @sort-change="handleSortChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />
         <el-table-column prop="seq" label="序号" width="60" align="center" />
         <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
-        <el-table-column prop="dueProfit1" label="第一次应缴利润" width="160" align="right">
+        <el-table-column prop="dueProfit1" label="第一次应缴利润" width="160" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.dueProfit1) }}
           </template>
         </el-table-column>
-        <el-table-column prop="dueProfit2" label="第二次应缴" width="160" align="right">
+        <el-table-column prop="dueProfit2" label="第二次应缴" width="160" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.dueProfit2) }}
           </template>
         </el-table-column>
-        <el-table-column prop="remainingProfit" label="合计（剩余应缴）" width="160" align="center">
+        <el-table-column prop="remainingProfit" label="合计（剩余应缴）" width="170" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.remainingProfit) }}
           </template>
         </el-table-column>
-        <el-table-column prop="businessYear" label="年度" width="100" align="center" />
+        <el-table-column prop="businessYear" label="年度" width="100" align="center" sortable="custom" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
@@ -450,6 +461,11 @@ onMounted(() => {
         <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="310" fixed="right" align="center">
