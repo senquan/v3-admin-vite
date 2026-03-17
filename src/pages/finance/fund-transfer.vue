@@ -402,7 +402,7 @@ onMounted(() => {
               <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="转账状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
                 <el-option label="全部" :value="0" />
                 <el-option label="待确认" :value="1" />
                 <el-option label="已生效" :value="2" />
@@ -520,7 +520,7 @@ onMounted(() => {
               <el-input v-model="searchForm.keyword" placeholder="可输入单位名称、转账编号模糊搜索" clearable style="width: 300px;" @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="转账状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
+              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
                 <el-option label="全部" :value="0" />
                 <el-option label="待确认" :value="1" />
                 <el-option label="已生效" :value="2" />
@@ -554,7 +554,8 @@ onMounted(() => {
                 <SvgIcon name="import" />
                 导入
               </el-button>
-              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+              <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+              <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
             </el-form-item>
           </el-form>
 

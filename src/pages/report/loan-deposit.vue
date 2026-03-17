@@ -3,7 +3,7 @@ import { calculateSum, formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getFixedDeposits, getFundTransfers, getPaymentClearings } from "../finance/apis"
-import { getDepositLoanSummary } from "./apis"
+import { getDepositLoanSummary, getInterestDetail } from "./apis"
 
 const router = useRouter()
 
@@ -63,7 +63,9 @@ const dialogTitle = {
   4: "活期存款定期转入",
   5: "活期存款下拨",
   6: "活期存款转入定期",
-  7: "定期存款"
+  7: "定期存款",
+  8: "活期利息",
+  9: "定期利息"
 }
 
 const tableData = ref<LoanDeposit[]>([])
@@ -110,6 +112,9 @@ async function fetchData() {
         item.depositInterest = item.depositCurrentInterest + item.depositFixedInterest
         item.depositTotal = item.depositBalanceTotal + item.depositInterest
         tableData.value.push(item)
+        fixedDepositTypes.value.sort((a: any, b: any) => {
+          return a.localeCompare(b)
+        })
       })
       pagination.total = response.data.total || 0
     }
@@ -186,6 +191,7 @@ async function loadDrillData(type: number, fixedType?: string) {
     if (type === 1) {
       params.type = 2
       params.isLoan = 1
+      params.status = 2
       response = await getFundTransfers(params)
     } else if (type === 2) {
       params.status = 2
@@ -210,6 +216,12 @@ async function loadDrillData(type: number, fixedType?: string) {
       params.status = 2
       params.depositPeriod = fixedType
       response = await getFixedDeposits(params)
+    } else if (type === 8) {
+      params.type = 1
+      response = await getInterestDetail(params)
+    } else if (type === 9) {
+      params.type = 3
+      response = await getInterestDetail(params)
     }
     if (response && response.code === 0) {
       let count = 1
@@ -344,12 +356,12 @@ onMounted(() => {
           <el-table-column label="利息">
             <el-table-column prop="depositCurrentInterest" label="活期利息" width="140" align="right">
               <template #default="{ row }">
-                {{ formattedMoney(row.depositCurrentInterest) }}
+                <span class="drillable" @click="handleDrill(row, 8)">{{ formattedMoney(row.depositCurrentInterest) }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="depositFixedInterest" label="定期利息" width="140" align="right">
               <template #default="{ row }">
-                {{ formattedMoney(row.depositFixedInterest) }}
+                <span class="drillable" @click="handleDrill(row, 9)">{{ formattedMoney(row.depositFixedInterest) }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="depositInterest" label="小计" width="140" align="right">
@@ -637,6 +649,36 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+      </el-table>
+
+      <el-table
+        v-if="currentDrillType === 8 || currentDrillType === 9"
+        border
+        stripe
+        v-loading="drillLoading"
+        :data="drillData[currentDrillType as keyof typeof drillData]"
+        header-cell-class-name="header-cell-fix"
+      >
+        <el-table-column prop="interestDate" label="计息日期" width="120" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.interestDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="currentBalance" label="每日活期存款余额" min-width="150" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.currentBalance) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dailyRate" label="日利率(%)" width="100" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.dailyRate, 6) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="dailyInterest" label="当日利息" width="120" align="right">
+          <template #default="{ row }">
+            {{ formattedMoney(row.dailyInterest) }}
+          </template>
+        </el-table-column>
       </el-table>
 
       <!-- 分页 -->
