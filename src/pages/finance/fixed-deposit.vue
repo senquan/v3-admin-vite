@@ -5,7 +5,7 @@ import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
-import { createFixedDeposit, depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
+import { createFixedDeposit, deleteFixedDepositBatch, depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
 import ModalForm from "./forms/_batch_detail.vue"
 import DepositImport from "./forms/_deposit-import.vue"
 
@@ -37,6 +37,7 @@ interface FixedDeposit {
 
 const loading = ref(false)
 const selectedRow = ref<FixedDeposit | null>(null)
+const multipleSelection = ref<FixedDeposit[]>([])
 const submitLoading = ref(false)
 const showCreateDialog = ref(false)
 const dialogTitle = ref("新增存款")
@@ -219,6 +220,10 @@ function handleSortChange(column: any) {
   fetchData()
 }
 
+function handleSelectionChange(selection: FixedDeposit[]) {
+  multipleSelection.value = selection
+}
+
 function handleCreate() {
   dialogTitle.value = "新增存款"
   resetForm()
@@ -247,14 +252,59 @@ function handleRelease(row: FixedDeposit) {
   showCreateDialog.value = true
 }
 
+function handleBatchDelete() {
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning("请选择要删除的项目")
+    return
+  }
+
+  const fileredSelection = multipleSelection.value.filter(item => item.status === 1)
+  if (fileredSelection.length === 0) {
+    ElMessage.warning("可删除的项目不存在")
+    return
+  }
+  return ElMessageBox.confirm(
+    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    "提示",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    }
+  ).then(() => {
+    return deleteFixedDepositBatch({
+      ids: fileredSelection.map(item => Number(item.id))
+    }).then((response) => {
+      if (response.code === 0) {
+        ElMessage.success("删除成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "删除失败")
+      }
+    }).catch((error) => {
+      ElMessage.error("删除失败")
+      console.error(error)
+    })
+  }).catch((error) => {
+    if (error !== "cancel") {
+      console.error(error)
+    }
+  })
+}
+
 async function handleDelete(row: FixedDeposit) {
   try {
     await ElMessageBox.confirm(`确定要删除存款记录 ${row.depositCode} 吗？`, "提示", {
       type: "warning"
     })
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success("删除成功")
-    fetchData()
+    const response = await deleteFixedDepositBatch({ ids: [row.id] })
+
+    if (response.code === 0) {
+      ElMessage.success("删除成功")
+      fetchData()
+    } else {
+      ElMessage.error(response.message || "删除失败")
+    }
   } catch (error) {
     if (error !== "cancel") {
       ElMessage.error("删除失败")
@@ -421,7 +471,8 @@ onMounted(() => {
             <SvgIcon name="import" />
             导入定期存款
           </el-button>
-          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+          <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+          <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
         </el-form-item>
       </el-form>
 
@@ -433,6 +484,7 @@ onMounted(() => {
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
+        @selection-change="handleSelectionChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />

@@ -5,7 +5,7 @@ import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
-import { createReceive, getPaymentClearings, receiveConfirm, receiveDelete, updateReceive } from "./apis"
+import { createReceive, deleteReceiveBatch, getPaymentClearings, receiveConfirm, updateReceive } from "./apis"
 import ModalForm from "./forms/_batch_detail.vue"
 import ReceiveImport from "./forms/_receive-import.vue"
 
@@ -46,6 +46,7 @@ const receiveBankMap = systemParamsStore.getArrayDict(4).reduce((prev, cur) => {
 
 const loading = ref(false)
 const selectedRow = ref<PaymentReceive | null>(null)
+const multipleSelection = ref<PaymentReceive[]>([])
 const showEditDialog = ref(false)
 const dialogTitle = ref("贴现填报")
 const formRef = ref<FormInstance>()
@@ -279,6 +280,46 @@ async function handleConfirm() {
   }
 }
 
+function handleBatchDelete() {
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning("请选择要删除的项目")
+    return
+  }
+
+  const fileredSelection = multipleSelection.value.filter(item => item.status === 1)
+  if (fileredSelection.length === 0) {
+    ElMessage.warning("可删除的项目不存在")
+    return
+  }
+  return ElMessageBox.confirm(
+    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    "提示",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    }
+  ).then(() => {
+    return deleteReceiveBatch({
+      ids: fileredSelection.map(item => Number(item.id))
+    }).then((response) => {
+      if (response.code === 0) {
+        ElMessage.success("删除成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "删除失败")
+      }
+    }).catch((error) => {
+      ElMessage.error("删除失败")
+      console.error(error)
+    })
+  }).catch((error) => {
+    if (error !== "cancel") {
+      console.error(error)
+    }
+  })
+}
+
 async function handleDelete(row: PaymentReceive) {
   try {
     if (row.status !== 1) {
@@ -287,7 +328,9 @@ async function handleDelete(row: PaymentReceive) {
     }
     await ElMessageBox.confirm(`确定要删除该记录吗？`, "提示", { type: "warning" })
 
-    const response = await receiveDelete(row.id)
+    const response = await deleteReceiveBatch({
+      ids: [row.id]
+    })
 
     if (response.code === 0) {
       ElMessage.success("删除成功")
@@ -324,6 +367,10 @@ function handleSortChange(column: any) {
   const { prop, order } = column
   searchForm.sort = (order === "descending" ? "-" : "+") + prop
   fetchData()
+}
+
+function handleSelectionChange(selection: PaymentReceive[]) {
+  multipleSelection.value = selection
 }
 
 function resetSearch() {
@@ -414,7 +461,7 @@ onMounted(() => {
                 <el-option label="全部" :value="0" />
                 <el-option label="待确认" :value="1" />
                 <el-option label="已生效" :value="2" />
-                <el-option label="已清算" :value="3" />
+                <el-option label="已删除" :value="3" />
               </el-select>
             </el-form-item>
             <el-form-item label="金额范围">
@@ -451,7 +498,8 @@ onMounted(() => {
                 <SvgIcon name="import" />
                 导入到款
               </el-button>
-              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+              <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+              <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
             </el-form-item>
           </el-col>
         </el-row>
@@ -465,6 +513,7 @@ onMounted(() => {
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
+        @selection-change="handleSelectionChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />

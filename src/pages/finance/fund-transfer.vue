@@ -4,7 +4,7 @@ import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { getCompaniesTree } from "../basic/apis"
-import { createTransfer, getFundTransfers, transferConfirm, transferDelete } from "./apis"
+import { createTransfer, deleteTransferBatch, getFundTransfers, transferConfirm } from "./apis"
 import ModalForm from "./forms/_batch_detail.vue"
 import TransferImport from "./forms/_transfer-import.vue"
 
@@ -37,6 +37,7 @@ const batchFormRef = ref<InstanceType<typeof ModalForm>>()
 const batchFormVisibility = ref(false)
 const upTableRef = ref<any>(null)
 const downTableRef = ref<any>(null)
+const multipleSelection = ref<FundTransfer[]>([])
 
 const searchForm = reactive({
   keyword: "",
@@ -152,6 +153,10 @@ function handleSortChange(column: any) {
   fetchData()
 }
 
+function handleSelectionChange(selection: FundTransfer[]) {
+  multipleSelection.value = selection
+}
+
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
@@ -200,6 +205,46 @@ function handleCreate() {
 //   showCreateDialog.value = true
 // }
 
+function handleBatchDelete() {
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning("请选择要删除的项目")
+    return
+  }
+
+  const fileredSelection = multipleSelection.value.filter(item => item.transferStatus === 1)
+  if (fileredSelection.length === 0) {
+    ElMessage.warning("可删除的项目不存在")
+    return
+  }
+  return ElMessageBox.confirm(
+    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    "提示",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    }
+  ).then(() => {
+    return deleteTransferBatch({
+      ids: fileredSelection.map(item => Number(item.id))
+    }).then((response) => {
+      if (response.code === 0) {
+        ElMessage.success("删除成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "删除失败")
+      }
+    }).catch((error) => {
+      ElMessage.error("删除失败")
+      console.error(error)
+    })
+  }).catch((error) => {
+    if (error !== "cancel") {
+      console.error(error)
+    }
+  })
+}
+
 // 删除
 async function handleDelete(row: FundTransfer) {
   try {
@@ -207,7 +252,7 @@ async function handleDelete(row: FundTransfer) {
       type: "warning"
     })
 
-    const response = await transferDelete(row.id)
+    const response = await deleteTransferBatch({ ids: [row.id] })
 
     if (response.code === 0) {
       ElMessage.success("删除成功")
@@ -293,9 +338,12 @@ async function handleConfirm() {
 }
 
 function handleTabChange() {
+  multipleSelection.value = []
   if (activeTab.value === "up") {
+    upTableRef.value?.clearSelection()
     if (upTableData.value.length === 0) fetchData()
   } else if (activeTab.value === "down") {
+    downTableRef.value?.clearSelection()
     if (downTableData.value.length === 0) fetchData()
   }
 }
@@ -388,7 +436,8 @@ onMounted(() => {
                 <SvgIcon name="import" />
                 导入
               </el-button>
-              <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+              <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+              <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
             </el-form-item>
           </el-form>
 
@@ -403,6 +452,7 @@ onMounted(() => {
             v-loading="loading"
             :sort-config="{ remote: true }"
             @sort-change="handleSortChange"
+            @selection-change="handleSelectionChange"
             header-cell-class-name="header-cell-fix"
           >
             <el-table-column width="50" type="selection" align="center" />
@@ -519,6 +569,7 @@ onMounted(() => {
             v-loading="loading"
             :sort-config="{ remote: true }"
             @sort-change="handleSortChange"
+            @selection-change="handleSelectionChange"
             header-cell-class-name="header-cell-fix"
           >
             <el-table-column width="50" type="selection" align="center" />

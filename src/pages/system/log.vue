@@ -37,7 +37,7 @@ const moduleMap = reactive({
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 
@@ -238,7 +238,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="operationDesc" label="操作描述" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="operationDesc" label="事件" min-width="220" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">

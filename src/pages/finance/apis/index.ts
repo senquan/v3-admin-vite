@@ -40,6 +40,14 @@ export function releaseFixedDeposit(data: any) {
   })
 }
 
+export function deleteFixedDepositBatch(data: any) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/fixed-deposits`,
+    method: "delete",
+    data
+  })
+}
+
 export function getPaymentClearings(params: Finance.PaymentClearingParams) {
   return request<Finance.PaymentClearingResponseData>({
     url: "/finance/payment-receives",
@@ -95,11 +103,11 @@ export function createAdvanceExpense(data: any) {
   })
 }
 
-export function deleteAdvanceExpense(id: number) {
+export function deleteAdvanceExpenseBatch(data: any) {
   return request<Finance.CommonActionResult>({
-    url: `/finance/advance-expense`,
+    url: `/finance/advance-expenses`,
     method: "delete",
-    data: { id }
+    data
   })
 }
 
@@ -151,11 +159,11 @@ export function updateProfitPayment(data: any) {
   })
 }
 
-export function deleteProfitPayment(id: number) {
+export function deleteProfitPaymentBatch(data: any) {
   return request<Finance.CommonActionResult>({
-    url: `/finance/profit-payment`,
+    url: `/finance/profit-payments`,
     method: "delete",
-    data: { id }
+    data
   })
 }
 
@@ -167,11 +175,11 @@ export function transferConfirm(data: any) {
   })
 }
 
-export function transferDelete(id: number) {
+export function deleteTransferBatch(data: any) {
   return request<Finance.CommonActionResult>({
-    url: `/finance/fund-transfer`,
+    url: `/finance/fund-transfers`,
     method: "delete",
-    data: { id }
+    data
   })
 }
 
@@ -207,11 +215,11 @@ export function advanceExpenseConfirm(data: any) {
   })
 }
 
-export function receiveDelete(id: number) {
+export function deleteReceiveBatch(data: any) {
   return request<Finance.CommonActionResult>({
     url: "/finance/receive",
     method: "delete",
-    data: { id }
+    data
   })
 }
 

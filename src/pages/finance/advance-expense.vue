@@ -8,7 +8,7 @@ import { getCompaniesTree } from "../basic/apis"
 import {
   advanceExpenseConfirm,
   createAdvanceExpense,
-  deleteAdvanceExpense,
+  deleteAdvanceExpenseBatch,
   getAdvanceExpenses,
   getExpenseDetailTypes
 } from "./apis"
@@ -43,6 +43,7 @@ const advanceImportRef = ref<any>(null)
 const batchFormRef = ref<InstanceType<typeof ModalForm>>()
 const batchFormVisibility = ref(false)
 const currentRow = ref<AdvanceExpense | null>(null)
+const multipleSelection = ref<AdvanceExpense[]>([])
 const expenseTypeOptions = ref<{ id: number, label: string }[]>([])
 const expenseDetailTypeOptions = ref<{ id: number, label: string }[]>([])
 const yearOptions = range(new Date().getFullYear(), 10)
@@ -182,6 +183,10 @@ function handleSortChange(column: any) {
   fetchData()
 }
 
+function handleSelectionChange(selection: AdvanceExpense[]) {
+  multipleSelection.value = selection
+}
+
 // 重置搜索
 function resetSearch() {
   Object.assign(searchForm, {
@@ -213,13 +218,50 @@ function handleDetail(row: AdvanceExpense) {
   showDetailDrawer.value = true
 }
 
+function handleBatchDelete() {
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning("请选择要删除的项目")
+    return
+  }
+
+  return ElMessageBox.confirm(
+    `确定要删除已选中的 ${multipleSelection.value.length} 个项目名吗？`,
+    "提示",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    }
+  ).then(() => {
+    return deleteAdvanceExpenseBatch({
+      ids: multipleSelection.value.map(item => Number(item.id))
+    }).then((response) => {
+      if (response.code === 0) {
+        ElMessage.success("删除成功")
+        fetchData()
+      } else {
+        ElMessage.error(response.message || "删除失败")
+      }
+    }).catch((error) => {
+      ElMessage.error("删除失败")
+      console.error(error)
+    })
+  }).catch((error) => {
+    if (error !== "cancel") {
+      console.error(error)
+    }
+  })
+}
+
 // 删除
 async function handleDelete(row: AdvanceExpense) {
   try {
     await ElMessageBox.confirm(`确定要删除垫资记录 ${row.advanceCode} 吗？`, "提示", {
       type: "warning"
     }).then(async () => {
-      const response = await deleteAdvanceExpense(row.id)
+      const response = await deleteAdvanceExpenseBatch({
+        ids: [row.id]
+      })
       if (response.code === 0) {
         ElMessage.success("删除成功")
         fetchData()
@@ -357,7 +399,7 @@ onMounted(() => {
           <el-input v-model="searchForm.keyword" placeholder="可输入单位名称模糊搜索" clearable style="width: 200px;" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 90px;" @change="handleSearch">
             <el-option label="全部" :value="0" />
             <el-option label="待确认" :value="1" />
             <el-option label="已生效" :value="2" />
@@ -406,7 +448,8 @@ onMounted(() => {
             <SvgIcon name="import" />
             导入代垫
           </el-button>
-          <el-button type="warning" @click="handleConfirm">批量确认</el-button>
+          <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+          <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
         </el-form-item>
       </el-form>
 
@@ -419,6 +462,7 @@ onMounted(() => {
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
+        @selection-change="handleSelectionChange"
         header-cell-class-name="header-cell-fix"
       >
         <el-table-column width="50" type="selection" align="center" />
