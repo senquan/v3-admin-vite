@@ -10,15 +10,15 @@
  * formattedMoney(0) // "0.00"
  * formattedMoney("1234.56") // "1,234.56"
  */
-export function formattedMoney(money: number | string) {
+export function formattedMoney(money: number | string, decimal = 2) {
   if (money === 0)
-    return "0.00"
+    return "0.00".padEnd(decimal - 2, "0")
   if (!money)
     return ""
   const numValue = typeof money === "string" ? Number.parseFloat(money) : money
   return numValue.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: decimal,
+    maximumFractionDigits: decimal
   })
 }
 

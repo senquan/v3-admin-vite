@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { FormInstance } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
 import { getInterestDetail } from "./apis"
 
@@ -17,9 +17,14 @@ interface InterestDetail {
 }
 
 const loading = ref(false)
-const formRef = ref<FormInstance>()
 const activeTab = ref("current")
 const companyOptions = ref<CompanyTree[]>([])
+
+const systemParamsStore = useSystemParamsStore()
+const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((prev, cur) => {
+  prev[cur.value] = cur.name
+  return prev
+}, {} as Record<number, string>)
 
 const searchForm = reactive({
   keyword: "",
@@ -38,34 +43,6 @@ const tableData = reactive({
   f2c: [] as InterestDetail[],
   fixed: [] as InterestDetail[]
 })
-
-const form = reactive({
-  id: undefined as number | undefined,
-  reportCode: "",
-  companyCode: "",
-  companyName: "",
-  accountCode: "",
-  accountName: "",
-  debitAmount: undefined as number | undefined,
-  creditAmount: undefined as number | undefined,
-  balance: undefined as number | undefined,
-  reportPeriod: "",
-  reportDate: "",
-  accountType: 1,
-  level: 1,
-  parentCode: "",
-  remark: ""
-})
-
-// 生成报表编号
-function generateReportCode() {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
-  form.reportCode = `FD${year}${month}${day}${random}`
-}
 
 // 查询数据
 async function fetchData() {
@@ -139,30 +116,6 @@ function handleCurrentChange(val: number) {
 // 格式化日期
 function formatDate(date: string) {
   return date ? formatDateTime(date, "YYYY-MM-DD") : "-"
-}
-
-// 重置表单
-function resetForm() {
-  if (formRef.value) {
-    formRef.value.resetFields()
-  }
-  Object.assign(form, {
-    id: undefined,
-    reportCode: "",
-    companyCode: "",
-    companyName: "",
-    accountCode: "",
-    accountName: "",
-    debitAmount: undefined,
-    creditAmount: undefined,
-    balance: undefined,
-    reportPeriod: "",
-    reportDate: "",
-    accountType: 1,
-    level: 1,
-    parentCode: "",
-    remark: ""
-  })
 }
 
 function handleTabChange() {
@@ -249,9 +202,9 @@ onMounted(() => {
                 {{ formattedMoney(row.currentBalance) }}
               </template>
             </el-table-column>
-            <el-table-column prop="dailyRate" label="日利率" width="100" align="right">
+            <el-table-column prop="dailyRate" label="日利率(%)" width="100" align="right">
               <template #default="{ row }">
-                {{ formattedMoney(row.dailyRate) }}
+                {{ formattedMoney(row.dailyRate, 6) }}
               </template>
             </el-table-column>
             <el-table-column prop="dailyInterest" label="当日利息" width="120" align="right">
@@ -330,7 +283,11 @@ onMounted(() => {
                 {{ formattedMoney(row.dailyRate) }}
               </template>
             </el-table-column>
-            <el-table-column prop="depositPeriod" label="存期" width="120" align="center" />
+            <el-table-column prop="depositPeriod" label="存期" width="100" align="center">
+              <template #default="{ row }">
+                {{ depositPeriodMap[row.depositPeriod] || '-' }}
+              </template>
+            </el-table-column>
             <el-table-column prop="interestAmount" label="利息" width="120" align="right">
               <template #default="{ row }">
                 {{ formattedMoney(row.interestAmount) }}
@@ -400,7 +357,11 @@ onMounted(() => {
                 {{ formattedMoney(row.currentRate) }}
               </template>
             </el-table-column>
-            <el-table-column prop="depositPeriod" label="存期" width="120" align="center" />
+            <el-table-column prop="depositPeriod" label="存期" width="100" align="center">
+              <template #default="{ row }">
+                {{ depositPeriodMap[row.depositPeriod] || '-' }}
+              </template>
+            </el-table-column>
             <el-table-column prop="interestAmount" label="利息" width="120" align="right">
               <template #default="{ row }">
                 {{ formattedMoney(row.interestAmount) }}
