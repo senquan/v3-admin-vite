@@ -559,7 +559,11 @@ onMounted(() => {
                 {{ formatDate(row.createdAt) }}
               </template>
             </el-table-column>
-            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip />
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="150" fixed="right" align="center">
               <template #default="{ row }">
                 <!-- <el-button type="primary" @click="handleEdit(row)">

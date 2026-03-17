@@ -316,7 +316,7 @@ function handleSearch() {
 }
 
 function handleFilter(value: any, row: any, column: any) {
-  const property = column['property']
+  const property = column.property
   return row[property] === Number(value)
 }
 
@@ -473,7 +473,7 @@ onMounted(() => {
           label="到款类型"
           width="100"
           align="center"
-          :filters="[ { text: '银行到款', value: '1' }, { text: '票据到款', value: '2' } ]"
+          :filters="[{ text: '银行到款', value: '1' }, { text: '票据到款', value: '2' }]"
           :filter-method="handleFilter"
         >
           <template #default="{ row }">
