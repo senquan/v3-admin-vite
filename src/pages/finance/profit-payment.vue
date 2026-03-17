@@ -215,6 +215,7 @@ function handleCurrentChange(val: number) {
 
 function handleCreate() {
   dialogStatus.value = "create"
+  currentRow.value = null
   getCompanies().then(() => {
     showCreateDialog.value = true
   })
