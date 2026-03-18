@@ -199,6 +199,7 @@ async function loadDrillData(type: number, fixedType?: string) {
       response = await getPaymentClearings(params)
     } else if (type === 3) {
       params.type = 1
+      params.status = 2
       response = await getFundTransfers(params)
     } else if (type === 4) {
       params.type = 1

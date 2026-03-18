@@ -24,7 +24,7 @@ const searchForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  size: 10,
+  size: 20,
   total: 0
 })
 

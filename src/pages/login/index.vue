@@ -2,7 +2,7 @@
 import type { FormInstance, FormRules } from "element-plus"
 import type { LoginRequestData } from "./apis/type"
 import ThemeSwitch from "@@/components/ThemeSwitch/index.vue"
-import { Key, Loading, Lock, Picture, User } from "@element-plus/icons-vue"
+import { Check, Close, Key, Loading, Lock, Picture, User } from "@element-plus/icons-vue"
 import { useSettingsStore } from "@/pinia/stores/settings"
 import { useUserStore } from "@/pinia/stores/user"
 import { getCaptchaApi, loginApi, registerApi } from "./apis"
@@ -63,7 +63,22 @@ const registerFormRules: FormRules = {
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" }
+    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" },
+    {
+      validator: (_rule, value, callback) => {
+        if (!value) {
+          callback()
+          return
+        }
+        const strength = checkPasswordStrength(value)
+        if (strength.level === 1) {
+          callback(new Error("密码强度太弱，请包含大小写字母和数字"))
+        } else {
+          callback()
+        }
+      },
+      trigger: "blur"
+    }
   ],
   confirmPassword: [
     { required: true, message: "请确认密码", trigger: "blur" },
@@ -84,6 +99,99 @@ const registerFormRules: FormRules = {
   code: [
     { required: true, message: "请输入验证码", trigger: "blur" }
   ]
+}
+
+/** 密码强度检测结果 */
+interface PasswordStrength {
+  level: number // 1:弱, 2:中, 3:强
+  score: number // 0-100分
+  requirements: {
+    length: boolean
+    uppercase: boolean
+    lowercase: boolean
+    number: boolean
+  }
+}
+
+/** 密码强度检测 */
+function checkPasswordStrength(password: string): PasswordStrength {
+  let score = 0
+  const requirements = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*()_+\-=[\]{};:\\|,.<>/?]/.test(password)
+  }
+
+  // 长度评分
+  if (password.length >= 8) score += 20
+  if (password.length >= 12) score += 10
+
+  // 包含大小写字母
+  if (requirements.uppercase) score += 25
+  if (requirements.lowercase) score += 25
+
+  // 包含数字
+  if (requirements.number) score += 20
+
+  // 包含特殊字符
+  if (requirements.special) score += 20
+
+  // 计算等级
+  let level = 1 // 弱
+  if (score >= 60) level = 2 // 中
+  if (score >= 100) level = 3 // 强
+
+  return {
+    level,
+    score,
+    requirements
+  }
+}
+
+/** 监听注册密码变化，实时计算密码强度 */
+const passwordStrength = ref<PasswordStrength>({
+  level: 1,
+  score: 0,
+  requirements: {
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false
+  }
+})
+
+watch(
+  () => registerFormData.password,
+  (newVal) => {
+    if (newVal) {
+      passwordStrength.value = checkPasswordStrength(newVal)
+    } else {
+      passwordStrength.value = {
+        level: 1,
+        score: 0,
+        requirements: {
+          length: false,
+          uppercase: false,
+          lowercase: false,
+          number: false
+        }
+      }
+    }
+  }
+)
+
+/** 获取密码要求文本 */
+function getRequirementText(key: string): string {
+  const texts: Record<string, string> = {
+    length: "至少8位",
+    uppercase: "包含大写字母",
+    lowercase: "包含小写字母",
+    number: "包含数字",
+    special: "包含特殊字符"
+  }
+  return texts[key] || ""
 }
 
 /** 登录 */
@@ -281,6 +389,44 @@ onMounted(() => {
               size="large"
               show-password
             />
+            <!-- 密码强度指示器 -->
+            <div v-if="registerFormData.password" class="password-strength">
+              <div class="strength-bar">
+                <div
+                  class="strength-bar-fill"
+                  :class="{
+                    'strength-weak': passwordStrength.level === 1,
+                    'strength-medium': passwordStrength.level === 2,
+                    'strength-strong': passwordStrength.level === 3,
+                  }"
+                  :style="{ width: `${passwordStrength.score}%` }"
+                />
+              </div>
+              <div class="strength-text">
+                <span class="strength-label">密码强度:</span>
+                <span
+                  :class="{
+                    'text-weak': passwordStrength.level === 1,
+                    'text-medium': passwordStrength.level === 2,
+                    'text-strong': passwordStrength.level === 3,
+                  }"
+                >
+                  {{ passwordStrength.level === 1 ? "弱" : passwordStrength.level === 2 ? "中" : "强" }}
+                </span>
+              </div>
+              <!-- 密码要求提示 -->
+              <div class="password-requirements">
+                <div
+                  v-for="(item, key) in passwordStrength.requirements"
+                  :key="key"
+                  class="requirement-item"
+                  :class="{ 'requirement-met': item }"
+                >
+                  <el-icon><Check v-if="item" /><Close v-else /></el-icon>
+                  <span>{{ getRequirementText(key) }}</span>
+                </div>
+              </div>
+            </div>
           </el-form-item>
           <el-form-item prop="confirmPassword">
             <el-input
@@ -511,6 +657,91 @@ p {
       }
       .el-button {
         width: 100%;
+      }
+      .password-strength {
+        padding: 5px;
+
+        .strength-bar {
+          height: 6px;
+          background-color: var(--el-border-color-darker);
+          border-radius: 3px;
+          overflow: hidden;
+          margin-bottom: 8px;
+
+          .strength-bar-fill {
+            height: 100%;
+            transition: all 0.3s ease;
+            border-radius: 3px;
+
+            &.strength-weak {
+              background: linear-gradient(90deg, #f56c6c, #e83939);
+            }
+
+            &.strength-medium {
+              background: linear-gradient(90deg, #e6a23c, #d47d06);
+            }
+
+            &.strength-strong {
+              background: linear-gradient(90deg, #67c23a, #529b2e);
+            }
+          }
+        }
+
+        .strength-text {
+          display: flex;
+          align-items: center;
+          font-size: 13px;
+
+          .strength-label {
+            color: var(--el-text-color-secondary);
+            margin-right: 8px;
+          }
+
+          .text-weak {
+            color: #f56c6c;
+            font-weight: 600;
+          }
+
+          .text-medium {
+            color: #e6a23c;
+            font-weight: 600;
+          }
+
+          .text-strong {
+            color: #67c23a;
+            font-weight: 600;
+          }
+        }
+
+        .password-requirements {
+          display: grid;
+
+          .requirement-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: var(--el-text-color-placeholder);
+            line-height: 18px;
+
+            .el-icon {
+              margin-right: 4px;
+              font-size: 14px;
+              transition: all 0.3s ease;
+            }
+
+            &.requirement-met {
+              color: #67c23a;
+
+              .el-icon {
+                color: #67c23a;
+              }
+            }
+
+            &:not(.requirement-met) .el-icon {
+              color: var(--el-border-color);
+            }
+          }
+        }
       }
     }
   }

@@ -50,7 +50,7 @@ const companyOptions = ref<CompanyTree[]>([])
 const statusOptions = { 1: "待确认", 2: "已生效", 3: "已删除" }
 
 const systemParamsStore = useSystemParamsStore()
-const depositPeriodMap = systemParamsStore.getArrayDict(3).reduce((prev, cur) => {
+const depositPeriodMap = systemParamsStore.getArrayDict(3).filter((item: any) => item.name !== "活期").reduce((prev, cur) => {
   prev[cur.value] = cur.name
   return prev
 }, {} as Record<number, string>)
@@ -318,6 +318,15 @@ async function handleSubmit() {
     const valid = await formRef.value.validate()
     if (!valid) return
 
+    if (form.earlyRelease === 1 && form.releaseDate === "") {
+      ElMessage.error("请选择释放日期")
+      return
+    }
+    if (form.earlyRelease === 1 && remainingAmount.value < 0) {
+      ElMessage.error("释放金额不能大于剩余金额")
+      return
+    }
+
     submitLoading.value = true
     if (isCreate.value) {
       // 新增模式
@@ -523,7 +532,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="releaseDate" label="释放日期" width="110" align="center" sortable="custom" />
-        <el-table-column prop="daysCount" label="已计息天数" width="120" sortable="custom" align="center" />
+        <el-table-column prop="interestDays" label="已计息天数" width="120" sortable="custom" align="center" />
         <el-table-column prop="releaseAmount" label="释放金额" width="120" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.releaseAmount) }}
@@ -555,7 +564,7 @@ onMounted(() => {
         <el-table-column prop="lastInterestDate" label="最近计息日" width="150" align="center" />
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="success" v-if="row.status === 2 && new Date(row.endDate) > new Date()" @click="handleRelease(row)">提前释放</el-button>
+            <el-button type="success" v-if="row.status === 2 && new Date(row.endDate) > new Date() && row.remainingAmount > 0" @click="handleRelease(row)">提前释放</el-button>
             <el-button type="danger" v-if="row.status === 1" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
