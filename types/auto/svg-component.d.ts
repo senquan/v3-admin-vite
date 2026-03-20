@@ -7,20 +7,20 @@
 declare module '~virtual/svg-component' {
   const SvgIcon: import("vue").DefineComponent<{
       name: {
-          type: import("vue").PropType<"accounts" | "advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
+          type: import("vue").PropType<"accounts" | "advance-expense" | "backup-restore-2" | "cash" | "chart-line" | "chart" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
           default: string;
           required: true;
       };
   }, {}, unknown, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").VNodeProps & import("vue").AllowedComponentProps & import("vue").ComponentCustomProps, Readonly<import("vue").ExtractPropTypes<{
       name: {
-          type: import("vue").PropType<"accounts" | "advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
+          type: import("vue").PropType<"accounts" | "advance-expense" | "backup-restore-2" | "cash" | "chart-line" | "chart" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer">;
           default: string;
           required: true;
       };
   }>>, {
-      name: "accounts" | "advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer";
+      name: "accounts" | "advance-expense" | "backup-restore-2" | "cash" | "chart-line" | "chart" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer";
   }>;
-  export const svgNames: ["accounts", "advance-expense", "backup-restore-2", "chart-line", "clearing", "company", "dashboard", "dict", "fixed-deposit", "fullscreen-exit", "fullscreen", "import", "interest-rate", "keyboard-down", "keyboard-enter", "keyboard-esc", "keyboard-up", "permission", "profit-payment", "save", "search-detail", "search", "summary", "transfer"];
-  export type SvgName = "accounts" | "advance-expense" | "backup-restore-2" | "chart-line" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer";
+  export const svgNames: ["accounts", "advance-expense", "backup-restore-2", "cash", "chart-line", "chart", "clearing", "company", "dashboard", "dict", "fixed-deposit", "fullscreen-exit", "fullscreen", "import", "interest-rate", "keyboard-down", "keyboard-enter", "keyboard-esc", "keyboard-up", "permission", "profit-payment", "save", "search-detail", "search", "summary", "transfer"];
+  export type SvgName = "accounts" | "advance-expense" | "backup-restore-2" | "cash" | "chart-line" | "chart" | "clearing" | "company" | "dashboard" | "dict" | "fixed-deposit" | "fullscreen-exit" | "fullscreen" | "import" | "interest-rate" | "keyboard-down" | "keyboard-enter" | "keyboard-esc" | "keyboard-up" | "permission" | "profit-payment" | "save" | "search-detail" | "search" | "summary" | "transfer";
   export default SvgIcon;
 }

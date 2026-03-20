@@ -302,3 +302,27 @@ export function getBatchDetail(no: string) {
     method: "get"
   })
 }
+
+export function getExpiring(params: BaseQueryParams) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/expiring",
+    method: "get",
+    params
+  })
+}
+
+export function getBalanceStats(params: BaseQueryParams) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/balance-chart",
+    method: "get",
+    params
+  })
+}
+
+export function getLoanDepositStats(params: BaseQueryParams) {
+  return request<Finance.CommonActionResult>({
+    url: "/finance/loan-deposit-chart",
+    method: "get",
+    params
+  })
+}
