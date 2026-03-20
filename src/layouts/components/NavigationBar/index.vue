@@ -5,6 +5,7 @@ import SearchMenu from "@@/components/SearchMenu/index.vue"
 import ThemeSwitch from "@@/components/ThemeSwitch/index.vue"
 import { useDevice } from "@@/composables/useDevice"
 import { useLayoutMode } from "@@/composables/useLayoutMode"
+import { formatDateTime } from "@@/utils/datetime"
 import { UserFilled } from "@element-plus/icons-vue"
 import { useAppStore } from "@/pinia/stores/app"
 import { useSettingsStore } from "@/pinia/stores/settings"
@@ -42,6 +43,9 @@ function logout() {
     <Breadcrumb v-if="!isTop || isMobile" class="breadcrumb" />
     <Sidebar v-if="isTop && !isMobile" class="sidebar" />
     <div class="right-menu">
+      <div class="time-now">
+        当前时间：{{ formatDateTime(new Date()) }}
+      </div>
       <SearchMenu v-if="showSearchMenu" class="right-menu-item" />
       <Screenfull v-if="showScreenfull" class="right-menu-item" />
       <ThemeSwitch v-if="showThemeSwitch" class="right-menu-item" />
@@ -66,6 +70,11 @@ function logout() {
 </template>
 
 <style lang="scss" scoped>
+.time-now {
+  font-size: 14px;
+  color: #909399;
+  margin-right: 10px;
+}
 .navigation-bar {
   height: var(--v3-navigationbar-height);
   overflow: hidden;
