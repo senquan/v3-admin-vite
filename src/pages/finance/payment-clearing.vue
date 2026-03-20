@@ -43,6 +43,10 @@ const receiveBankMap = systemParamsStore.getArrayDict(4).reduce((prev, cur) => {
   prev[cur.value] = cur.name
   return prev
 }, {} as Record<number, string>)
+const billTypeMap = systemParamsStore.getArrayDict(5).reduce((prev, cur) => {
+  prev[cur.value] = cur.name
+  return prev
+}, {} as Record<number, string>)
 
 const loading = ref(false)
 const selectedRow = ref<PaymentReceive | null>(null)
@@ -115,17 +119,13 @@ const editForm = reactive({
   discountDate: "",
   discountAmount: 0 as number | undefined,
   discountFee: 0 as number | undefined,
+  billType: 1 as number | undefined,
   billAmount: 0 as number | undefined,
   billNo: "",
   dueDate: "",
   receiveBank: undefined as string | undefined,
   received: 0 as number
 })
-
-// function getReceiveTypeLabel(type: number) {
-//   const labels = { 1: "银行到款", 2: "票据到款" }
-//   return labels[type as keyof typeof labels] || "未知"
-// }
 
 function getStatusLabel(status: number) {
   const labels = { 1: "待确认", 2: "已生效", 3: "已清算", 4: "已删除" }
@@ -136,12 +136,6 @@ function getStatusType(status: number) {
   const types = { 1: "warning", 2: "success", 3: "primary", 4: "info" }
   return types[status as keyof typeof types] || "info"
 }
-
-// function getBillTypeLabel(type: string | null) {
-//   if (!type) return "-"
-//   const labels = { 1: "银行承兑汇票", 2: "商业承兑汇票" }
-//   return labels[type as unknown as keyof typeof labels] || type
-// }
 
 function formatAmount(amount: number | undefined | null) {
   if (amount === undefined || amount === null) return "-"
@@ -548,6 +542,11 @@ onMounted(() => {
             {{ receiveBankMap[row.receiveBank] || "-" }}
           </template>
         </el-table-column>
+        <el-table-column prop="billType" label="票据类型" width="120" align="center">
+          <template #default="{ row }">
+            {{ billTypeMap[row.billType] || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
         <el-table-column prop="dueDate" label="到期日" width="120" align="center" sortable="custom" />
         <el-table-column prop="collectionDate" label="托收日期" width="120" align="center" sortable="custom">
@@ -682,6 +681,15 @@ onMounted(() => {
                 </el-form-item>
               </el-col>
               <el-col :span="12">
+                <el-form-item label="票据类型" prop="billType">
+                  <el-select v-model="editForm.billType" placeholder="请选择票据类型" :disabled="!isCreate" style="width: 100%">
+                    <el-option v-for="(item, key) in billTypeMap" :key="key" :label="item" :value="Number(key)" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="18">
                 <el-form-item label="票据金额" prop="billAmount">
                   <el-input-number v-model="editForm.billAmount" :precision="2" :step="1000" style="width: 100%" :disabled="!isCreate" />
                 </el-form-item>

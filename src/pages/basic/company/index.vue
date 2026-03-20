@@ -340,6 +340,7 @@ onMounted(() => {
             <el-radio :label="0">停用</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-alert title="注：新增单位后需要重新登陆以更新访问列表配置。" type="warning" />
       </el-form>
       <template #footer>
         <el-button @click="showCreateDialog = false">取消</el-button>

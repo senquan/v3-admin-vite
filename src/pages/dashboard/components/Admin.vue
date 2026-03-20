@@ -187,7 +187,7 @@ onMounted(() => {
             <div class="card">
               <div class="card-header">
                 <h2 class="card-title">
-                  <el-icon size="30"><Clock /></el-icon>
+                  <el-icon size="30" color="rgb(225, 133, 37)"><Clock /></el-icon>
                   最近到期
                 </h2>
               </div>
@@ -229,7 +229,7 @@ onMounted(() => {
                   <div class="card chart-card">
                     <div class="card-header">
                       <h2 class="card-title">
-                        <el-icon size="30"><DataLine /></el-icon>
+                        <el-icon size="30" color="rgb(0, 216, 255)"><Histogram /></el-icon>
                         资金分布
                       </h2>
                     </div>
