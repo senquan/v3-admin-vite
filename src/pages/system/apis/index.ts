@@ -118,6 +118,20 @@ export function restoreBackup(id: number) {
     method: "post"
   })
 }
+export function getBackupConfig() {
+  return request<System.BackupConfigResponseData>({
+    url: "system/backups/config",
+    method: "get"
+  })
+}
+
+export function saveBackupConfig(data: System.BackupConfigCreateData) {
+  return request<System.CommonActionResponseData>({
+    url: `system/backups/config`,
+    method: "post",
+    data
+  })
+}
 
 export function getUsers(params: System.CommonListRequestParams) {
   return request<System.UserListResponseData>({

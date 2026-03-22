@@ -109,6 +109,14 @@ export interface BackupCreateData {
   [key: string]: any
 }
 
+export interface BackupConfigCreateData {
+  [key: string]: any
+}
+
+export interface BackupConfigResponseData {
+  [key: string]: any
+}
+
 export interface BackupRecord {
   [key: string]: any
 }

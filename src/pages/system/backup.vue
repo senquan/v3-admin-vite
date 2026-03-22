@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createBackup, deleteBackup, getBackupList, restoreBackup } from "./apis"
+import { createBackup, deleteBackup, getBackupConfig, getBackupList, restoreBackup, saveBackupConfig } from "./apis"
 
 interface BackupRecord {
   id: number
@@ -39,8 +39,8 @@ const pagination = reactive({
   total: 0
 })
 
-const autoBackupEnabled = ref(true)
 const backupConfig = reactive({
+  enable: true,
   frequency: 1,
   time: new Date(),
   weekday: 1,
@@ -58,7 +58,8 @@ const backupForm = reactive({
 })
 
 function getBackupTypeLabel(type: number) {
-  const labels = { 1: "完整备份", 2: "增量备份", 3: "差异备份" }
+  // 1: "完整备份", 2: "增量备份", 3: "差异备份"
+  const labels = { 1: "完整备份" }
   return labels[type as keyof typeof labels] || "未知"
 }
 
@@ -68,7 +69,8 @@ function getBackupTypeType(type: number) {
 }
 
 function getBackupModeLabel(mode: number) {
-  const labels = { 1: "手动", 2: "自动" }
+  // 1: "手动", 2: "自动"
+  const labels = { 2: "自动" }
   return labels[mode as keyof typeof labels] || "未知"
 }
 
@@ -187,14 +189,14 @@ function handleDownload(row: BackupRecord) {
   window.open(row.fileUrl || `/api/v1/system/backups/${row.id}/download`, "_blank")
 }
 
-function handleRestore(row: BackupRecord) {
-  if (row.status !== 2) {
-    ElMessage.warning("备份未完成，无法恢复")
-    return
-  }
-  selectedBackup.value = row
-  showRestoreDialog.value = true
-}
+// function handleRestore(row: BackupRecord) {
+//   if (row.status !== 2) {
+//     ElMessage.warning("备份未完成，无法恢复")
+//     return
+//   }
+//   selectedBackup.value = row
+//   showRestoreDialog.value = true
+// }
 
 async function confirmRestore() {
   if (!selectedBackup.value) return
@@ -247,8 +249,42 @@ function closeCreateDialog() {
   })
 }
 
-function handleSaveConfig() {
-  ElMessage.success("配置保存成功")
+async function handleSaveConfig() {
+  try {
+    const response = await saveBackupConfig(backupConfig)
+
+    if (response.code === 0) {
+      ElMessage.success("备份配置保存成功")
+    } else {
+      ElMessage.error(response.message || "保存失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "保存失败")
+  }
+}
+
+async function loadConfig() {
+  try {
+    const response = await getBackupConfig()
+
+    if (response.code === 0) {
+      backupConfig.enable = response.data.enable
+      backupConfig.frequency = response.data.frequency
+      backupConfig.weekday = response.data.weekday
+      backupConfig.day = response.data.day
+      backupConfig.keepCount = response.data.keepCount
+    } else {
+      ElMessage.error(response.message || "获取配置失败")
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "获取配置失败")
+  }
+}
+
+function handleTabChange(tab: any) {
+  if (tab === "backup") {
+    loadConfig()
+  }
 }
 
 onMounted(() => {
@@ -259,7 +295,7 @@ onMounted(() => {
 <template>
   <div class="backup-management">
     <el-card>
-      <el-tabs v-model="activeTab">
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="备份记录" name="backup">
           <el-form :model="searchForm" inline class="search-form">
             <el-form-item label="备份名称">
@@ -354,7 +390,7 @@ onMounted(() => {
             <el-table-column label="操作" width="260" fixed="right" align="center">
               <template #default="{ row }">
                 <el-button type="primary" @click="handleDownload(row)">下载</el-button>
-                <el-button type="warning" @click="handleRestore(row)">恢复</el-button>
+                <!-- <el-button type="warning" @click="handleRestore(row)">恢复</el-button> -->
                 <el-button type="danger" @click="handleDelete(row)">删除</el-button>
               </template>
             </el-table-column>
@@ -379,29 +415,29 @@ onMounted(() => {
         <el-tab-pane label="自动备份配置" name="config">
           <el-form label-width="150px" class="config-form">
             <el-form-item label="自动备份开关">
-              <el-switch v-model="autoBackupEnabled" />
+              <el-switch v-model="backupConfig.enable" />
             </el-form-item>
             <el-form-item label="备份频率">
-              <el-select v-model="backupConfig.frequency" placeholder="请选择频率" :disabled="!autoBackupEnabled">
+              <el-select v-model="backupConfig.frequency" placeholder="请选择频率" :disabled="!backupConfig.enable">
                 <el-option label="每天" :value="1" />
                 <el-option label="每周" :value="2" />
                 <el-option label="每月" :value="3" />
               </el-select>
             </el-form-item>
-            <el-form-item label="备份时间" v-if="backupConfig.frequency === 1">
+            <!-- <el-form-item label="备份时间" v-if="backupConfig.frequency === 1">
               <el-time-picker
                 v-model="backupConfig.time"
                 placeholder="选择时间"
                 :disabled="!autoBackupEnabled"
               />
-            </el-form-item>
+            </el-form-item> -->
             <el-form-item label="备份日期" v-if="backupConfig.frequency === 2">
-              <el-select v-model="backupConfig.weekday" placeholder="选择星期" :disabled="!autoBackupEnabled">
+              <el-select v-model="backupConfig.weekday" placeholder="选择星期" :disabled="!backupConfig.enable">
                 <el-option v-for="i in 7" :key="i" :label="['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i - 1]" :value="i" />
               </el-select>
             </el-form-item>
             <el-form-item label="备份日期" v-if="backupConfig.frequency === 3">
-              <el-input-number v-model="backupConfig.day" :min="1" :max="28" :disabled="!autoBackupEnabled" />
+              <el-input-number v-model="backupConfig.day" :min="1" :max="28" :disabled="!backupConfig.enable" />
               <span style="margin-left: 8px">日</span>
             </el-form-item>
             <el-form-item label="保留备份数量">
@@ -411,7 +447,7 @@ onMounted(() => {
             <el-form-item label="备份类型">
               <el-radio-group v-model="backupConfig.backupType">
                 <el-radio :label="1">完整备份</el-radio>
-                <el-radio :label="2">增量备份</el-radio>
+                <!-- <el-radio :label="2">增量备份</el-radio> -->
               </el-radio-group>
             </el-form-item>
             <el-form-item>
