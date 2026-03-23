@@ -118,6 +118,49 @@ export function restoreBackup(id: number) {
     method: "post"
   })
 }
+
+export async function downloadBackup(file: string) {
+  try {
+    // 使用 axios 下载文件，设置 responseType 为 "blob"
+    const blob = await request<Blob>({
+      url: `system/backups/download?file=${encodeURIComponent(file)}`,
+      method: "get",
+      responseType: "blob"
+    })
+
+    // 检查响应是否为有效的 blob
+    if (!(blob instanceof Blob)) {
+      throw new TypeError("下载的文件格式不正确")
+    }
+
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = file
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    // 返回一个统一的响应格式
+    return { code: 0, message: "下载成功", data: null }
+  } catch (error: any) {
+    console.error("下载失败:", error)
+    // 如果错误响应是 blob，尝试读取错误信息
+    if (error.response && error.response.data instanceof Blob) {
+      const text = await error.response.data.text()
+      try {
+        const errorData = JSON.parse(text)
+        throw new Error(errorData.message || "下载失败")
+      } catch {
+        throw new Error("下载失败")
+      }
+    }
+    throw error
+  }
+}
+
 export function getBackupConfig() {
   return request<System.BackupConfigResponseData>({
     url: "system/backups/config",

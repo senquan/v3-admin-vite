@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createBackup, deleteBackup, getBackupConfig, getBackupList, restoreBackup, saveBackupConfig } from "./apis"
+import { createBackup, deleteBackup, downloadBackup, getBackupConfig, getBackupList, restoreBackup, saveBackupConfig } from "./apis"
 
 interface BackupRecord {
   id: number
@@ -7,6 +7,7 @@ interface BackupRecord {
   backupName: string
   backupType: number
   backupMode: number
+  fileName?: string // 可选字段，后端可能返回
   filePath: string
   fileSize: number
   fileUrl: string
@@ -181,12 +182,39 @@ async function handleCreateBackup() {
   }
 }
 
-function handleDownload(row: BackupRecord) {
+async function handleDownload(row: BackupRecord) {
   if (row.status !== 2) {
     ElMessage.warning("备份未完成，无法下载")
     return
   }
-  window.open(row.fileUrl || `/api/v1/system/backups/${row.id}/download`, "_blank")
+
+  try {
+    // 从 fileUrl 中提取文件名
+    const url = new URL(row.fileUrl, window.location.origin)
+    const fileParam = url.searchParams.get("file")
+    if (fileParam) {
+      await downloadBackup(fileParam)
+    } else {
+      // 如果 fileUrl 中没有 file 参数，尝试从 filePath 提取
+      const fileName = getBackupFilename(row.filePath)
+      if (fileName) {
+        await downloadBackup(fileName)
+      } else {
+        ElMessage.error("无法获取文件名")
+      }
+    }
+  } catch (error: any) {
+    console.error("下载失败:", error)
+    ElMessage.error(error.message || "下载失败")
+  }
+}
+
+function getBackupFilename(filePath: string) {
+  if (!filePath) return ""
+  // 处理 Windows 和 Unix 路径分隔符
+  const normalizedPath = filePath.replace(/\\/g, "/")
+  const parts = normalizedPath.split("/")
+  return parts[parts.length - 1] || ""
 }
 
 // function handleRestore(row: BackupRecord) {
@@ -224,7 +252,8 @@ async function handleDelete(row: BackupRecord) {
       type: "warning"
     })
 
-    const response = await deleteBackup(`${row.backupName}.sql`)
+    const fileName = row.fileName || getBackupFilename(row.filePath) || `${row.backupName}.sql`
+    const response = await deleteBackup(fileName)
 
     if (response.code === 0) {
       ElMessage.success("删除成功")
@@ -282,7 +311,7 @@ async function loadConfig() {
 }
 
 function handleTabChange(tab: any) {
-  if (tab === "backup") {
+  if (tab === "config") {
     loadConfig()
   }
 }
