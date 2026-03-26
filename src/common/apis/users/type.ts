@@ -29,4 +29,5 @@ export interface UserData {
   last_login_time: string
   last_login_ip: string
   roles: string[]
+  permissions: string[]
 }

@@ -26,4 +26,4 @@ export interface CaptchaResponseDataItem {
 
 export type LoginResponseData = ApiResponseData<{ token: string }>
 
-export type RegisterResponseData = ApiResponseData<null>
+export type RegisterResponseData = ApiResponseSingleData<{ username: string }>

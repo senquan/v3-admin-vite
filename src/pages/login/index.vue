@@ -235,6 +235,7 @@ function handleRegister() {
         ElMessage.success("注册成功，请登录")
         showRegister.value = false
         resetForm("register")
+        loginFormData.username = res.data.username
         createCode()
       } else {
         ElMessage.error(res.message)

@@ -428,16 +428,16 @@ onMounted(() => {
             <el-form-item>
               <el-button type="primary" @click="handleSearch">查询</el-button>
               <el-button @click="resetSearch">重置</el-button>
-              <el-button type="primary" @click="handleCreate">
+              <el-button v-permission="['TRANSFER_ADD']" type="primary" @click="handleCreate">
                 <el-icon><Plus /></el-icon>
                 新增上划
               </el-button>
-              <el-button type="primary" @click="handleImport">
+              <el-button v-permission="['TRANSFER_ADD']" type="primary" @click="handleImport">
                 <SvgIcon name="import" />
                 导入
               </el-button>
-              <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
-              <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
+              <el-button v-permission="['TRANSFER_ADD']" type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+              <el-button v-permission="['TRANSFER_ADD']" type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
             </el-form-item>
           </el-form>
 
@@ -488,7 +488,7 @@ onMounted(() => {
                 <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="160" fixed="right" align="center">
+            <el-table-column v-permission="['TRANSFER_ADD']" label="操作" width="160" fixed="right" align="center">
               <template #default="{ row }">
                 <!-- <el-button type="primary" @click="handleEdit(row)">
                   编辑

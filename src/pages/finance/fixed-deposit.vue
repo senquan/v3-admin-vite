@@ -472,16 +472,16 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="handleCreate">
+          <el-button v-permission="['DEPOSIT_ADD']" type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增存款
           </el-button>
-          <el-button type="primary" @click="handleImport">
+          <el-button v-permission="['DEPOSIT_ADD']" type="primary" @click="handleImport">
             <SvgIcon name="import" />
             导入定期存款
           </el-button>
-          <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
-          <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
+          <el-button type="warning" v-permission="['DEPOSIT_ADD']" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+          <el-button type="danger" v-permission="['DEPOSIT_ADD']" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
         </el-form-item>
       </el-form>
 
@@ -562,7 +562,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="lastInterestDate" label="最近计息日" width="150" align="center" />
-        <el-table-column label="操作" width="150" fixed="right" align="center">
+        <el-table-column label="操作" v-permission="['DEPOSIT_ADD']" width="150" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="success" v-if="row.status === 2 && new Date(row.endDate) > new Date() && row.remainingAmount > 0" @click="handleRelease(row)">提前释放</el-button>
             <el-button type="danger" v-if="row.status === 1" @click="handleDelete(row)">删除</el-button>

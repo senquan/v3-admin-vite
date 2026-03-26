@@ -12,6 +12,7 @@ export const useUserStore = defineStore("user", () => {
   const roles = ref<string[]>([])
   const username = ref<string>("")
   const avatar = ref<string>("")
+  const permissions = ref<string[]>([])
 
   const tagsViewStore = useTagsViewStore()
   const settingsStore = useSettingsStore()
@@ -30,6 +31,7 @@ export const useUserStore = defineStore("user", () => {
       id.value = data.id
       username.value = data.username
       avatar.value = data.avatar
+      permissions.value = data.permissions
       // 验证返回的 roles 是否为一个非空数组，否则塞入一个没有任何作用的默认角色，防止路由守卫逻辑进入无限循环
       roles.value = data.roles?.length > 0 ? data.roles : routerConfig.defaultRoles
     } catch (error) {
@@ -73,7 +75,7 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  return { token, id, roles, username, avatar, setToken, getInfo, changeRoles, logout, resetToken }
+  return { token, id, roles, permissions, username, avatar, setToken, getInfo, changeRoles, logout, resetToken }
 })
 
 /**

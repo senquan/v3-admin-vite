@@ -173,7 +173,7 @@ onMounted(() => {
             {{ formatDateTime(row.updatedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right" align="center">
+        <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="success" @click="handleRolePermissions(row.id)">授权</el-button>
             <el-button type="primary" @click="handleEdit(row)">编辑</el-button>

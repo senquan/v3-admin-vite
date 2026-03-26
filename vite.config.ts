@@ -14,7 +14,7 @@ import svgLoader from "vite-svg-loader"
 // Configuring Vite: https://cn.vite.dev/config
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
-  const { VITE_PORT, VITE_PUBLIC_PATH } = env
+  const { VITE_PORT, VITE_PUBLIC_PATH, VITE_BACK_PORT } = env
 
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, "0")
@@ -52,12 +52,12 @@ export default defineConfig(({ mode }) => {
       // 反向代理
       proxy: {
         "/api": {
-          target: "http://localhost:5006/",
+          target: `http://localhost:${VITE_BACK_PORT}/`,
           changeOrigin: true,
           rewrite: path => path
         },
         "/uploads": {
-          target: "http://localhost:5006/",
+          target: `http://localhost:${VITE_BACK_PORT}/`,
           changeOrigin: true,
           rewrite: path => path
         }

@@ -29,7 +29,7 @@ watchEffect(() => {
 
 // 开启或关闭系统水印
 watchEffect(() => {
-  showWatermark.value ? setWatermark(import.meta.env.VITE_APP_TITLE) : clearWatermark()
+  showWatermark.value || import.meta.env.MODE === "development" ? setWatermark(`${import.meta.env.VITE_APP_TITLE} 测试服务器`, { size: 22 }) : clearWatermark()
 })
 </script>
 

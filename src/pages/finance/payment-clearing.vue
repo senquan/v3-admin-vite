@@ -484,16 +484,16 @@ onMounted(() => {
         <el-row>
           <el-col>
             <el-form-item>
-              <el-button type="primary" @click="handleCreate">
+              <el-button v-permission="['RECEIVE_ADD']" type="primary" @click="handleCreate">
                 <el-icon><Plus /></el-icon>
                 新增到款
               </el-button>
-              <el-button type="primary" @click="handleImport">
+              <el-button v-permission="['RECEIVE_ADD']" type="primary" @click="handleImport">
                 <SvgIcon name="import" />
                 导入到款
               </el-button>
-              <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
-              <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
+              <el-button type="warning" v-permission="['RECEIVE_ADD']" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+              <el-button type="danger" v-permission="['RECEIVE_ADD']" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
             </el-form-item>
           </el-col>
         </el-row>
@@ -587,7 +587,7 @@ onMounted(() => {
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right" align="center">
+        <el-table-column v-permission="['RECEIVE_ADD']" label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">删除</el-button>
             <el-button v-if="row.status === 2 && row.receiveType === 2 && row.received === 0" type="success" @click="handleReceive(row)">

@@ -137,6 +137,16 @@ function handleSortChange(column: any) {
   handleSearch()
 }
 
+function getRoleColor(role: any) {
+  if (role.code === "ADMIN") {
+    return "danger"
+  } else if (role.code === "ADVANCED") {
+    return "success"
+  } else {
+    return "primary"
+  }
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
@@ -175,7 +185,11 @@ onMounted(() => {
           </template>
         </vxe-column>
         <vxe-column field="phone" width="120" title="联系电话" />
-        <vxe-column field="role" width="280" title="角色" />
+        <vxe-column field="role" width="280" title="角色" align="left">
+          <template #default="{ row }">
+            <el-tag v-for="role in row.roles" :key="role.id" :type="getRoleColor(role)" effect="dark" style="margin-right: 5px;">{{ role.name }}</el-tag>
+          </template>
+        </vxe-column>
         <vxe-column field="status" width="80" title="状态">
           <template #default="{ row }">
             <el-tag v-if="row.status === 1" type="success">在职</el-tag>

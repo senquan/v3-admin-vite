@@ -3,6 +3,7 @@ import type { FormInstance, FormRules } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney, range } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import { checkPermission } from "@@/utils/permission"
 import { getCompaniesTree } from "../basic/apis"
 import {
   createProfitPayment,
@@ -450,16 +451,16 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="handleCreate">
+          <el-button v-permission="['PROFIT_ADD']" type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增上缴
           </el-button>
-          <el-button type="primary" @click="handleImport">
+          <el-button v-permission="['PROFIT_ADD']" type="primary" @click="handleImport">
             <SvgIcon name="import" />
             导入上缴
           </el-button>
-          <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
-          <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
+          <el-button v-permission="['PROFIT_ADD']" type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+          <el-button v-permission="['PROFIT_ADD']" type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
         </el-form-item>
       </el-form>
 
@@ -511,18 +512,18 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="310" fixed="right" align="center">
+        <el-table-column label="操作" :width="checkPermission(['PROFIT_ADD']) ? 310 : 120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" @click="handleDetail(row)">
               详情
             </el-button>
-            <el-button v-if="row.status === 2 && row.remainingProfit > 0" type="success" @click="handleTurnOver(row)">
+            <el-button v-permission="['PROFIT_ADD']" v-if="row.status === 2 && row.remainingProfit > 0" type="success" @click="handleTurnOver(row)">
               上缴
             </el-button>
-            <el-button v-if="row.status === 1" type="primary" @click="handleEdit(row)">
+            <el-button v-permission="['PROFIT_ADD']" v-if="row.status === 1" type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button v-if="row.status === 1" type="danger" @click="handleDelete(row)">
+            <el-button v-permission="['PROFIT_ADD']" v-if="row.status === 1" type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>

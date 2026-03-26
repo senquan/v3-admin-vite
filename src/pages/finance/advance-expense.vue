@@ -440,16 +440,16 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="handleCreate">
+          <el-button v-permission="['ADVANCE_ADD']" type="primary" @click="handleCreate">
             <el-icon><Plus /></el-icon>
             新增垫资
           </el-button>
-          <el-button type="primary" @click="handleImport">
+          <el-button v-permission="['ADVANCE_ADD']" type="primary" @click="handleImport">
             <SvgIcon name="import" />
             导入代垫
           </el-button>
-          <el-button type="warning" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
-          <el-button type="danger" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
+          <el-button type="warning" v-permission="['ADVANCE_ADD']" v-if="multipleSelection.length > 0" @click="handleConfirm">批量确认</el-button>
+          <el-button type="danger" v-permission="['ADVANCE_ADD']" v-if="multipleSelection.length > 0" @click="handleBatchDelete">批量删除</el-button>
         </el-form-item>
       </el-form>
 
@@ -503,7 +503,7 @@ onMounted(() => {
             <el-button type="primary" @click="handleDetail(row)">
               详情
             </el-button>
-            <el-button type="danger" @click="handleDelete(row)">
+            <el-button v-permission="['ADVANCE_ADD']" type="danger" @click="handleDelete(row)">
               删除
             </el-button>
           </template>
