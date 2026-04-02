@@ -395,7 +395,7 @@ onMounted(() => {
   <div class="fund-transfer-management">
     <el-card>
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="分公司每日资金上划" name="up">
+        <el-tab-pane label="分子公司每日资金上划" name="up">
           <!-- 搜索条件 -->
           <el-form :model="searchForm" inline class="search-form">
             <el-form-item label="关键词">
