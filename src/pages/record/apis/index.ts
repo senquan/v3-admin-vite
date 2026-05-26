@@ -17,7 +17,7 @@ export function fetchDetail(id: number) {
 }
 
 export function fetchRecentTop(params: Records.RecordRecentTopRequestParams) {
-  return fetchList({format: params?.format || 'recent-top-expense', page: 1, pageSize: params?.limit || 8 })
+  return fetchList({ format: params?.format || "recent-top-expense", page: 1, pageSize: params?.limit || 8 })
 }
 
 export function createRecord(data: Records.RecordCreateRequestBody) {

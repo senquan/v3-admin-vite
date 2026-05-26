@@ -52,6 +52,7 @@ export interface RecordListResponseData {
     total: number
     page: number
     pageSize: number
+    balance?: number
   }
 }
 

@@ -42,6 +42,7 @@ const templates = ref<any>([])
 const categories = ref<any>([])
 const accounts = ref<any>([])
 const tagAccounts = ref<number[]>([])
+const accountBalance = ref(0)
 
 async function fetchRecords() {
   listQuery.id = Number(router.currentRoute.value.query.id || 0)
@@ -79,6 +80,7 @@ async function fetchRecords() {
           })
         })
         tableData.value = tempData
+        accountBalance.value = res.data.balance || 0
       } else {
         tableData.value = []
       }
@@ -284,6 +286,9 @@ function spanMethod({ row, column }: { row: Record, column: { property: string }
         @size-change="handleFilter"
         @current-change="handleFilter"
       />
+      <span class="account_info" v-if="listQuery.id > 0">
+        账户期末余额：{{ accountBalance }}
+      </span>
     </div>
 
     <RecordForm
@@ -320,5 +325,13 @@ span.el-tag__content {
 .pagination-container {
   padding: 10px;
   background: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.account_info {
+  margin-left: 20px;
+  font-size: 14px;
+  color: #606266;
 }
 </style>

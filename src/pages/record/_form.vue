@@ -155,6 +155,8 @@ function open(options = {
             name: tag
           }))
           selectedTags.value = data.tags
+        } else {
+          selectedTags.value = []
         }
         if (!data.categoryId) formVisible.value.category_id = false
       }
