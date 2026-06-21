@@ -58,6 +58,7 @@ export function importQuestions(data: any[]) {
   return request<any>({
     url: "question/import",
     method: "post",
-    data: { questions: data }
+    data: { questions: data },
+    timeout: 60000
   })
 }
