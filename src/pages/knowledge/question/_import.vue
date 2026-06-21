@@ -4,6 +4,14 @@ import * as XLSX from "xlsx"
 import { importQuestions } from "./apis"
 
 const emit = defineEmits(["success", "close"])
+
+const props = defineProps({
+  categoryMapping: {
+    type: Object,
+    default: () => ({})
+  }
+})
+
 const visible = ref(false)
 const fileList = ref<any[]>([])
 const uploadRef = ref()
@@ -39,15 +47,6 @@ const fieldMapping = {
   选项E: "option_e"
 }
 
-const categoryMapping = {
-  上海C证: 101,
-  北京A证: 102,
-  通用: 103,
-  临时用电: 104,
-  营业线施工: 105,
-  其他: 106
-}
-
 const trainingCategoryMapping = {
   安全意识: 1,
   安全知识: 2,
@@ -55,15 +54,15 @@ const trainingCategoryMapping = {
 }
 
 const fitsPositionMapping = {
-  安全专职管理人员: 1,
-  项目管理人员: 2,
+  专职安全员通用: 1,
+  项目负责人通用: 2,
   公司管理人员: 3,
   带班人员: 4,
   普通员工: 5,
-  管理人员通用: 6
+  企业负责人通用: 6
 }
 
-function open() {
+function open(props: { categoryMapping: Record<string, number> }) {
   visible.value = true
   resetData()
 }
@@ -213,7 +212,7 @@ async function processFile() {
                 } else if (fieldName === "has_image") {
                   question[fieldName] = row[j] === "否" ? 0 : 1
                 } else if (fieldName === "category_id") {
-                  question[fieldName] = categoryMapping[row[j] as keyof typeof categoryMapping] || 0
+                  question[fieldName] = props.categoryMapping[row[j] as keyof typeof props.categoryMapping] || 0
                 } else if (fieldName === "fits_position") {
                   question[fieldName] = fitsPositionMapping[row[j] as keyof typeof fitsPositionMapping] || 0
                 } else if (fieldName === "training_category") {

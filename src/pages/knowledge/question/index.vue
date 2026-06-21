@@ -27,6 +27,7 @@ const dialogTitle = ref("")
 const isEdit = ref(false)
 const currentId = ref<number | null>(null)
 const multipleSelection = ref<Question[]>([])
+const categoryMapping = ref<Record<string, number>>({})
 
 // 搜索表单
 const searchForm = reactive<QuestionListParams>({
@@ -393,6 +394,7 @@ function fetchCategories() {
       const categoriesOptData: Array<any> = []
       if (res.data && res.data.categories) {
         for (const item of res.data.categories) {
+          categoryMapping.value[item.name] = item.id
           if (categoriesOptData[item.parentId || 0] === undefined) {
             categoriesOptData[item.parentId || 0] = []
           }
@@ -499,7 +501,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="difficulty" label="难度" width="80" align="center" />
         <el-table-column prop="score" label="分值" width="80" align="center" />
-        <el-table-column prop="categoryEntity.name" label="分类" width="120" />
+        <el-table-column prop="categoryEntity.name" label="分类" width="150" />
         <el-table-column prop="creatorEntity.username" label="创建人" width="100" />
         <el-table-column prop="create_time" label="创建时间" width="180">
           <template #default="{ row }">
@@ -736,6 +738,7 @@ onMounted(() => {
 
     <QuestionImport
       ref="questionImportRef"
+      :categoryMapping="categoryMapping"
       @success="importSuccess"
     />
   </div>
