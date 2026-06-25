@@ -185,7 +185,7 @@ defineExpose({
 <template>
   <el-dialog
     v-model="visible"
-    :title="isCreate ? '新增用户' : '编辑用户'"
+    :title="isCreate ? '新增用户' : `编辑用户 - ${formData.username}`"
     width="550px"
     :before-close="close"
   >
