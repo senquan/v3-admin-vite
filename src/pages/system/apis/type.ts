@@ -139,6 +139,9 @@ export interface UserUpdateData {
   id?: number
   name: string
   companyId: number
+  email?: string
+  phone?: string
+  innerCode?: string
   status: number
   notes: string
 }

@@ -143,7 +143,10 @@ function handleSubmit() {
         id: formData.value.id,
         name: formData.value.name,
         companyId: formData.value.companyId || 0,
+        email: formData.value.email,
+        phone: formData.value.phone,
         status: formData.value.status,
+        innerCode: formData.value.innerCode || undefined,
         notes: formData.value.notes
       }).then((response: any) => {
         btnSubmit.loading = false
@@ -214,19 +217,6 @@ defineExpose({
             </el-form-item>
           </el-col>
         </el-row>
-
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model="formData.email" placeholder="请输入邮箱" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="电话" prop="phone">
-              <el-input v-model="formData.phone" placeholder="请输入电话" />
-            </el-form-item>
-          </el-col>
-        </el-row>
       </template>
 
       <el-row>
@@ -237,7 +227,20 @@ defineExpose({
         </el-col>
         <el-col :span="12">
           <el-form-item label="内部编号" prop="innerCode">
-            <el-input v-model="formData.innerCode" placeholder="内部编号" :disabled="!isCreate" />
+            <el-input v-model="formData.innerCode" placeholder="内部编号" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="12">
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model="formData.email" placeholder="请输入邮箱" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="电话" prop="phone">
+            <el-input v-model="formData.phone" placeholder="请输入电话" />
           </el-form-item>
         </el-col>
       </el-row>
