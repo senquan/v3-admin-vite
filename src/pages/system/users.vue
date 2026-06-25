@@ -98,6 +98,16 @@ function handleRole(data: any) {
   roleFormVisibility.value = true
 }
 
+function addUser() {
+  getParentCompanies().then(() => {
+    userFormRef.value?.open({
+      companies: companyOptions.value,
+      editData: null
+    })
+    userFormVisibility.value = true
+  })
+}
+
 // 编辑
 function handleEdit(data: any) {
   getParentCompanies().then(() => {
@@ -164,6 +174,7 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
+          <el-button type="primary" icon="plus" @click="addUser">新增用户</el-button>
         </el-form-item>
       </el-form>
 

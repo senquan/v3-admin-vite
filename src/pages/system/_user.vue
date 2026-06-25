@@ -1,14 +1,19 @@
 <script lang="ts" setup>
 import type { CompanyTree } from "../basic/apis/type"
 import { ElMessage } from "element-plus"
-import { updateUser } from "./apis"
+import { createUser, updateUser } from "./apis"
 
 const emit = defineEmits(["success", "close"])
 
 const formData = ref({
   id: 0,
+  username: "",
+  password: "",
+  confirmPassword: "",
   name: "",
-  companyId: 0,
+  email: "",
+  phone: "",
+  companyId: undefined,
   innerCode: "",
   notes: "",
   status: 0
@@ -16,24 +21,41 @@ const formData = ref({
 
 const formRef = ref()
 const visible = ref(false)
+const isCreate = ref(false) // 是否为新增模式
 const companyOptions = ref<CompanyTree[]>([])
 
-const rules = {
-  name: [{ required: true, message: "请输入名称", trigger: "blur" }],
-  companyId: [{ required: true, message: "请选择公司", trigger: "change" }]
-}
+const rules = reactive({
+  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
+  password: [{ required: true, message: "请输入密码", trigger: "blur" }],
+  confirmPassword: [
+    { required: true, message: "请再次输入密码", trigger: "blur" },
+    {
+      validator: (_rule: any, value: string, callback: any) => {
+        if (value !== formData.value.password) {
+          callback(new Error("两次输入的密码不一致"))
+        } else {
+          callback()
+        }
+      },
+      trigger: "blur"
+    }
+  ],
+  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
+  companyId: [{ required: true, message: "请选择单位", trigger: "change" }]
+})
 
 const btnSubmit = reactive({
   loading: false
 })
 
-function open(options = {
+function open(options: any = {
   id: 0,
   companies: [],
   editData: null
 }) {
   visible.value = true
   resetForm()
+  isCreate.value = !options.editData // 没有 editData 则为新增模式
   if (options.editData) {
     Object.keys(options.editData).forEach((key) => {
       if (key in formData.value) {
@@ -49,8 +71,13 @@ function open(options = {
 function resetForm() {
   formData.value = {
     id: 0,
+    username: "",
+    password: "",
+    confirmPassword: "",
     name: "",
-    companyId: 0,
+    email: "",
+    phone: "",
+    companyId: undefined,
     innerCode: "",
     notes: "",
     status: 0
@@ -72,31 +99,78 @@ function handleSubmit() {
     if (!valid) return
 
     btnSubmit.loading = true
-    updateUser(formData.value.id, formData.value).then((response: any) => {
-      btnSubmit.loading = false
-      if (response.code === 0) {
-        visible.value = false
+
+    if (isCreate.value) {
+      // 新增用户
+      createUser({
+        username: formData.value.username,
+        password: formData.value.password,
+        name: formData.value.name,
+        email: formData.value.email,
+        phone: formData.value.phone,
+        companyId: formData.value.companyId || undefined,
+        innerCode: formData.value.innerCode || undefined,
+        notes: formData.value.notes || undefined,
+        status: formData.value.status
+      }).then((response: any) => {
+        btnSubmit.loading = false
+        if (response.code === 0) {
+          visible.value = false
+          ElMessage({
+            message: "用户创建成功！",
+            type: "success",
+            offset: 0
+          })
+          emit("success")
+        } else {
+          ElMessage({
+            message: response.message || "创建用户失败",
+            type: "error",
+            offset: 0
+          })
+        }
+      }).catch(() => {
+        btnSubmit.loading = false
         ElMessage({
-          message: "用户已成功更新！",
-          type: "success",
-          offset: 0
-        })
-        emit("success")
-      } else {
-        ElMessage({
-          message: response.message || "更新用户失败",
+          message: "系统错误，请稍后重试",
           type: "error",
           offset: 0
         })
-      }
-    }).catch(() => {
-      btnSubmit.loading = false
-      ElMessage({
-        message: "系统错误，请稍后重试",
-        type: "error",
-        offset: 0
       })
-    })
+    } else {
+      // 编辑用户
+      updateUser(formData.value.id, {
+        id: formData.value.id,
+        name: formData.value.name,
+        companyId: formData.value.companyId || 0,
+        status: formData.value.status,
+        notes: formData.value.notes
+      }).then((response: any) => {
+        btnSubmit.loading = false
+        if (response.code === 0) {
+          visible.value = false
+          ElMessage({
+            message: "用户已成功更新！",
+            type: "success",
+            offset: 0
+          })
+          emit("success")
+        } else {
+          ElMessage({
+            message: response.message || "更新用户失败",
+            type: "error",
+            offset: 0
+          })
+        }
+      }).catch(() => {
+        btnSubmit.loading = false
+        ElMessage({
+          message: "系统错误，请稍后重试",
+          type: "error",
+          offset: 0
+        })
+      })
+    }
   })
 }
 
@@ -108,8 +182,8 @@ defineExpose({
 <template>
   <el-dialog
     v-model="visible"
-    title="编辑用户"
-    width="500px"
+    :title="isCreate ? '新增用户' : '编辑用户'"
+    width="550px"
     :before-close="close"
   >
     <el-form
@@ -118,18 +192,52 @@ defineExpose({
       :rules="rules"
       label-width="100px"
     >
+      <!-- 新增模式才显示用户名和密码 -->
+      <template v-if="isCreate">
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="formData.username" placeholder="请输入用户名" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="密码" prop="password">
+              <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="重复密码" prop="confirmPassword">
+              <el-input v-model="formData.confirmPassword" type="password" placeholder="请再次输入密码" show-password />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="邮箱" prop="email">
+              <el-input v-model="formData.email" placeholder="请输入邮箱" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="电话" prop="phone">
+              <el-input v-model="formData.phone" placeholder="请输入电话" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </template>
+
       <el-row>
-        <el-col :span="24">
+        <el-col :span="12">
           <el-form-item label="姓名" prop="name">
             <el-input v-model="formData.name" placeholder="请输入姓名" />
           </el-form-item>
         </el-col>
-      </el-row>
-
-      <el-row>
-        <el-col :span="24">
+        <el-col :span="12">
           <el-form-item label="内部编号" prop="innerCode">
-            <el-input v-model="formData.innerCode" placeholder="请输入内部编号" />
+            <el-input v-model="formData.innerCode" placeholder="内部编号" :disabled="!isCreate" />
           </el-form-item>
         </el-col>
       </el-row>

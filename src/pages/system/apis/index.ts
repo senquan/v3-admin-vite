@@ -199,6 +199,14 @@ export function fetchUserRole(id: number) {
   })
 }
 
+export function createUser(data: System.UserCreateData) {
+  return request<System.CommonActionResponseData>({
+    url: "users",
+    method: "post",
+    data
+  })
+}
+
 export function updateUser(id: number, data: System.UserUpdateData) {
   return request<System.CommonActionResponseData>({
     url: `users/${id}`,

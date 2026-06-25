@@ -142,3 +142,15 @@ export interface UserUpdateData {
   status: number
   notes: string
 }
+
+export interface UserCreateData {
+  username: string
+  password: string
+  name?: string
+  email?: string
+  phone?: string
+  companyId?: number
+  innerCode?: string
+  notes?: string
+  status?: number
+}
