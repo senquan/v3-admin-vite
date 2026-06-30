@@ -339,7 +339,7 @@ onMounted(() => {
             <el-table-column label="定期存款" class-name="header-fixed-deposit">
               <el-table-column v-for="(type, index) in fixedDepositTypes" :key="index" :label="depositPeriodMap[type] || type" width="140" align="right">
                 <template #default="{ row }">
-                  <span class="drillable" @click="handleDrill(row, 7, type)">{{ formattedMoney(row.depositFixed[type]) || "-" }}</span>
+                  <span class="drillable" @click="handleDrill(row, 7, type)">{{ formattedMoney(row.depositFixed ? row.depositFixed[type] : 0) || '-' }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="depositFixedTotal" label="小计" width="140" align="right">
