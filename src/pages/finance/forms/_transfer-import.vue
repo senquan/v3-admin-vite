@@ -96,6 +96,7 @@ const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
   // 增加防抖/去重判断，防止 handleFileSuccess 被重复触发执行业务逻辑
   if (response.code !== 0 || lastProcessedBatchNo.value === batchNo.value) {
     if (response.code !== 0) ElMessage.error(response.message || "文件上传失败")
+    importing.value = false
     return
   }
 
@@ -121,6 +122,12 @@ const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
     fileList.value = []
     importing.value = false
   }
+}
+
+const handleFileError: UploadProps["onError"] = () => {
+  ElMessage.error("文件上传失败")
+  fileList.value = []
+  importing.value = false
 }
 
 function convertExcelDate(excelDate: number) {
@@ -245,10 +252,8 @@ async function processFile() {
             try {
               const result = await importTransfer(batch, batchNo.value, transferType.value)
               if (result.code === 0) {
-                successCount.value += result.data.successCount || 0
-                errorCount.value += result.data.errorCount || 0
-
-                if (result.data.errors) {
+                successCount.value += result.data?.total || batch.length
+                if (result.data?.errors) {
                   errorMessages.value.push(...result.data.errors)
                 }
               } else {
@@ -258,8 +263,6 @@ async function processFile() {
             } catch (error: any) {
               errorCount.value += batch.length
               errorMessages.value.push(error.message || "批量导入失败")
-            } finally {
-              fileList.value = []
             }
 
             // 更新进度
@@ -312,6 +315,7 @@ defineExpose({
           :before-upload="beforeUpload"
           :on-change="handleFileChange"
           :on-success="handleFileSuccess"
+          :on-error="handleFileError"
           :file-list="fileList"
           :http-request="customUploadRequest"
           accept=".xlsx,.xls"

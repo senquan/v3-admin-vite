@@ -145,6 +145,52 @@ function getStatusType(status: number) {
   return types[status as keyof typeof types] || "info"
 }
 
+// 表尾合计
+function getSummaries(param: { columns: any[], data: any[] }) {
+  const { columns, data } = param
+  const sums: string[] = []
+  const n = fixedDepositTypes.value.length
+
+  const accessors: Record<number, (row: any) => number> = {
+    2: r => Number(r.loanBalance) || 0,
+    3: r => Number(r.loanInterest) || 0,
+    4: r => Number(r.loanTotal) || 0,
+    5: r => Number(r.company?.initCurrentBalance) || 0,
+    6: r => Number(r.depositIncoming) || 0,
+    7: r => Number(r.depositTransferUp) || 0,
+    8: r => Number(r.depositFromFixed) || 0,
+    9: r => Number(r.depositTransferDown) || 0,
+    10: r => Number(r.depositToFixed) || 0,
+    11: r => Number(r.depositCurrentTotal) || 0
+  }
+  // 动态定期存款类型列
+  for (let i = 0; i < n; i++) {
+    const type = fixedDepositTypes.value[i]
+    accessors[12 + i] = (r: any) => Number(r.depositFixed?.[type]) || 0
+  }
+  // 定期存款小计及之后的列
+  const base = 12 + n
+  accessors[base] = r => Number(r.depositFixedTotal) || 0
+  accessors[base + 1] = r => Number(r.depositBalanceTotal) || 0
+  accessors[base + 2] = r => Number(r.depositCurrentInterest) || 0
+  accessors[base + 3] = r => Number(r.depositFixedInterest) || 0
+  accessors[base + 4] = r => Number(r.depositInterest) || 0
+  accessors[base + 5] = r => Number(r.depositTotal) || 0
+
+  columns.forEach((_col, index) => {
+    if (index === 0) {
+      sums[index] = "合计"
+    } else if (index === 1) {
+      sums[index] = ""
+    } else {
+      const fn = accessors[index]
+      sums[index] = fn ? formattedMoney(data.reduce((acc, row) => acc + fn(row), 0)) : ""
+    }
+  })
+
+  return sums
+}
+
 // 搜索
 function handleSearch() {
   pagination.page = 1
@@ -277,6 +323,8 @@ onMounted(() => {
         stripe
         v-loading="loading"
         header-cell-class-name="text-center"
+        show-summary
+        :summary-method="getSummaries"
       >
         <el-table-column prop="seq" label="序号" width="80" align="center" />
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
@@ -709,7 +757,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-:deep(.el-table .header-cell-fix) {
+::deep(.el-table .header-cell-fix) {
   text-align: center;
   background-color: #f5f7fa;
   height: 50px;
@@ -741,7 +789,7 @@ onMounted(() => {
   color: #909399;
 }
 
-:deep(.el-form-item) {
+::deep(.el-form-item) {
   margin-bottom: 0;
 }
 
@@ -749,23 +797,23 @@ onMounted(() => {
   text-align: center;
 }
 
-:deep(.el-table .header-internal-loan) {
+::deep(.el-table .header-internal-loan) {
   background-color: #cfd5dd !important;
 }
 
-:deep(.el-table .header-internal-deposit) {
+::deep(.el-table .header-internal-deposit) {
   background-color: #cfd5dd !important;
 }
 
-:deep(.el-table .header-balance) {
+::deep(.el-table .header-balance) {
   background-color: #dce0e6 !important;
 }
 
-:deep(.el-table .header-current-deposit) {
+::deep(.el-table .header-current-deposit) {
   background-color: #e8ebf0 !important;
 }
 
-:deep(.el-table .header-fixed-deposit) {
+::deep(.el-table .header-fixed-deposit) {
   background-color: #e8ebf0 !important;
 }
 
@@ -779,7 +827,12 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-:deep(.el-input-group__append) {
+::deep(.el-table__footer-wrapper) {
+  font-weight: bold;
+  background-color: #f5f7fa;
+}
+
+::deep(.el-input-group__append) {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);

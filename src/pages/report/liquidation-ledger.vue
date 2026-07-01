@@ -104,6 +104,46 @@ async function fetchData() {
   }
 }
 
+// 表尾合计
+function getSummaries(param: { columns: any[], data: any[] }) {
+  const { columns, data } = param
+  const sums: string[] = []
+
+  const accessors: Record<number, (row: any) => number> = {
+    2: r => Number(r.internalDepositBalance) || 0,
+    3: r => Number(r.incomeTaxSettlement) || 0,
+    4: r => Number(r.dueBillAdvance) || 0,
+    5: r => Number(r.expenseAdvance) || 0,
+    6: r => Number(r.salaryAdvance) || 0,
+    7: r => Number(r.dueProfit1) || 0,
+    8: r => Number(r.dueProfit2) || 0,
+    9: r => Number(r.profitPaid) || 0,
+    10: r => (Number(r.dueProfit1) || 0) + (Number(r.dueProfit2) || 0) - (Number(r.profitPaid) || 0),
+    11: r => Number(r.remainingSettlementAmount) || 0,
+    12: r => Number(r.billAmount) || 0,
+    13: r => Number(r.other) || 0,
+    14: (r) => {
+      const rsa = Number(r.remainingSettlementAmount) || 0
+      const ba = Number(r.billAmount) || 0
+      const o = Number(r.other) || 0
+      return rsa - ba - o
+    }
+  }
+
+  columns.forEach((_col, index) => {
+    if (index === 0) {
+      sums[index] = "合计"
+    } else if (index === 1) {
+      sums[index] = ""
+    } else {
+      const fn = accessors[index]
+      sums[index] = fn ? formattedMoney(data.reduce((acc, row) => acc + fn(row), 0)) : ""
+    }
+  })
+
+  return sums
+}
+
 // 搜索
 function handleSearch() {
   pagination.page = 1
@@ -373,6 +413,8 @@ onMounted(() => {
         stripe
         v-loading="loading"
         header-cell-class-name="header-cell-fix"
+        show-summary
+        :summary-method="getSummaries"
       >
         <el-table-column prop="seq" label="序号" width="80" align="center" />
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
@@ -573,7 +615,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-:deep(.el-table .header-cell-fix) {
+::deep(.el-table .header-cell-fix) {
   text-align: center;
   background-color: #f5f7fa;
   height: 50px;
@@ -605,11 +647,11 @@ onMounted(() => {
   color: #909399;
 }
 
-:deep(.el-form-item) {
+::deep(.el-form-item) {
   margin-bottom: 0;
 }
 
-:deep(.el-table .header-cell-fix) {
+::deep(.el-table .header-cell-fix) {
   text-align: center;
   background-color: #f5f7fa;
   height: 50px;
@@ -625,7 +667,12 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-:deep(.el-input-group__append) {
+::deep(.el-table__footer-wrapper) {
+  font-weight: bold;
+  background-color: #f5f7fa;
+}
+
+::deep(.el-input-group__append) {
   background-color: var(--el-color-primary);
   color: white;
   border-color: var(--el-color-primary);

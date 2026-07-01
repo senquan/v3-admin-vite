@@ -474,7 +474,7 @@ onMounted(() => {
             {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right" sortable="custom">
+        <el-table-column prop="amount" label="金额(元)" width="130" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
