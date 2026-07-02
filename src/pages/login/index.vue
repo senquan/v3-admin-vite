@@ -49,7 +49,7 @@ const loginFormRules: FormRules = {
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" }
+    { min: 6, max: 50, message: "密码长度必须在6-50位之间", trigger: "blur" }
   ],
   code: [
     { required: true, message: "请输入验证码", trigger: "blur" }
@@ -63,7 +63,7 @@ const registerFormRules: FormRules = {
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" },
+    { min: 6, max: 50, message: "密码长度必须在6-50位之间", trigger: "blur" },
     {
       validator: (_rule, value, callback) => {
         if (!value) {
@@ -73,6 +73,12 @@ const registerFormRules: FormRules = {
         const strength = checkPasswordStrength(value)
         if (strength.level === 1) {
           callback(new Error("密码强度太弱，请包含大小写字母和数字"))
+        } else if (!/[A-Z]/.test(value)) {
+          callback(new Error("密码必须包含至少一个大写字母"))
+        } else if (!/[a-z]/.test(value)) {
+          callback(new Error("密码必须包含至少一个小写字母"))
+        } else if (!/\d/.test(value)) {
+          callback(new Error("密码必须包含至少一个数字"))
         } else {
           callback()
         }
@@ -125,7 +131,7 @@ function checkPasswordStrength(password: string): PasswordStrength {
   }
 
   // 长度评分
-  if (password.length >= 8) score += 20
+  if (password.length >= 6) score += 20
   if (password.length >= 12) score += 10
 
   // 包含大小写字母
@@ -138,10 +144,10 @@ function checkPasswordStrength(password: string): PasswordStrength {
   // 包含特殊字符
   if (requirements.special) score += 20
 
-  // 计算等级
+  // 计算等级（必须包含大小写字母和数字）
   let level = 1 // 弱
-  if (score >= 60) level = 2 // 中
-  if (score >= 100) level = 3 // 强
+  if (score >= 60 && requirements.number && requirements.uppercase && requirements.lowercase) level = 2 // 中
+  if (score >= 90) level = 3 // 强
 
   return {
     level,

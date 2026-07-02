@@ -64,7 +64,10 @@ const passwordRules = reactive<FormRules>({
   ],
   newPassword: [
     { required: true, message: "请输入新密码", trigger: "blur" },
-    { min: 6, message: "密码长度不能小于6位", trigger: "blur" }
+    { min: 6, max: 50, message: "密码长度必须在6-50位之间", trigger: "blur" },
+    { pattern: /[A-Z]/, message: "密码必须包含至少一个大写字母", trigger: "blur" },
+    { pattern: /[a-z]/, message: "密码必须包含至少一个小写字母", trigger: "blur" },
+    { pattern: /\d/, message: "密码必须包含至少一个数字", trigger: "blur" }
   ],
   confirmPassword: [
     { required: true, message: "请再次输入新密码", trigger: "blur" },
@@ -216,7 +219,8 @@ async function submitPasswordForm() {
         }
       } catch (error) {
         console.error("修改密码失败:", error)
-        ElMessage.error("修改密码失败")
+        const msg = (error as any)?.response?.data?.message || (error as any)?.message || "修改密码失败"
+        ElMessage.error(msg)
       }
     }
   })
