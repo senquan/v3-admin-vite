@@ -443,7 +443,7 @@ onMounted(() => {
             <span class="drillable" @click="handleDrill(row, 5)">{{ formattedMoney(row.salaryAdvance) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="annualProfitPayment" label="本年上缴利润" width="140" align="right">
+        <el-table-column prop="annualProfitPayment" label="本年上缴利润" width="140" align="center">
           <el-table-column prop="dueProfit1" label="第一次应缴" width="160" align="right">
             <template #default="{ row }">
               <span class="drillable" @click="handleDrill(row, 6)">{{ formattedMoney(row.dueProfit1) }}</span>

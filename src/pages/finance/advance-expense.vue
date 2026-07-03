@@ -324,6 +324,7 @@ function resetForm() {
     expenseDetail: [] as any[],
     remark: ""
   })
+  newItemTableData.value = []
 }
 
 function handleCreate() {
