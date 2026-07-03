@@ -528,6 +528,8 @@ onMounted(() => {
       color: #2d3748;
 
       .expiring-date {
+        width: 80px;
+        text-align: center;
         font-size: 12px;
         font-weight: normal;
         color: #718096;
