@@ -4,6 +4,7 @@ import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getFixedDeposits, getFundTransfers, getPaymentClearings } from "../finance/apis"
 import { getDepositLoanSummary, getInterestDetail } from "./apis"
+import * as XLSX from "xlsx"
 
 const router = useRouter()
 
@@ -296,6 +297,146 @@ function handleCurrentChangeDrill(val: number) {
   loadDrillData(currentDrillType.value)
 }
 
+async function handleExport() {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: "正在导出报表，请稍候...",
+    background: "rgba(0, 0, 0, 0.7)"
+  })
+
+  try {
+    const amountFields = ["loanBalance", "loanInterest", "depositIncoming", "depositTransferUp", "depositFromFixed", "depositTransferDown", "depositToFixed", "depositCurrentInterest", "depositFixedInterest"]
+    const params: any = {
+      page: 1,
+      size: 10000
+    }
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+
+    const response = await getDepositLoanSummary(params)
+    if (response.code === 0) {
+      // 收集所有固定存款类型
+      const allFixedTypes: string[] = []
+      const records = response.data.records.map((item: any) => {
+        const row: any = {}
+        amountFields.forEach((field: string) => {
+          row[field] = Number(item[field])
+        })
+        row.initCurrentBalance = Number(item.company?.initCurrentBalance || 0)
+        row.companyName = item.company?.companyName || ""
+        row.companyCode = item.company?.companyCode || ""
+        row.depositFixed = item.depositFixed || {}
+        row.loanTotal = row.loanBalance + row.loanInterest
+        row.depositCurrentTotal = row.initCurrentBalance + row.depositIncoming + row.depositTransferUp + row.depositFromFixed - row.depositTransferDown - row.depositToFixed
+        row.depositFixedTotal = calculateSum([row.depositFixed])
+        row.depositBalanceTotal = row.depositCurrentTotal + row.depositFixedTotal
+        row.depositInterest = row.depositCurrentInterest + row.depositFixedInterest
+        row.depositTotal = row.depositBalanceTotal + row.depositInterest
+
+        // 收集固定存款类型
+        for (const key in row.depositFixed) {
+          if (!allFixedTypes.includes(key)) {
+            allFixedTypes.push(key)
+          }
+        }
+        return row
+      })
+      allFixedTypes.sort()
+
+      // 构建列头
+      const headers = [
+        "序号", "单位名称", "单位编号",
+        "内部贷款-余额", "内部贷款-利息", "内部贷款-合计",
+        "活期-期初额", "活期-到款", "活期-上划", "活期-定期转入", "活期-下拨", "活期-转入定期", "活期-小计",
+        ...allFixedTypes.map(t => `定期-${depositPeriodMap[t] || t}`),
+        "定期-小计",
+        "内部存款余额小计",
+        "利息-活期利息", "利息-定期利息", "利息-小计",
+        "内部存款合计"
+      ]
+
+      // 构建数据行
+      const dataRows = records.map((row: any, index: number) => {
+        const data = [
+          index + 1,
+          row.companyName,
+          row.companyCode,
+          parseFloat(row.loanBalance.toFixed(2)),
+          parseFloat(row.loanInterest.toFixed(2)),
+          parseFloat(row.loanTotal.toFixed(2)),
+          parseFloat(row.initCurrentBalance.toFixed(2)),
+          parseFloat(row.depositIncoming.toFixed(2)),
+          parseFloat(row.depositTransferUp.toFixed(2)),
+          parseFloat(row.depositFromFixed.toFixed(2)),
+          parseFloat(row.depositTransferDown.toFixed(2)),
+          parseFloat(row.depositToFixed.toFixed(2)),
+          parseFloat(row.depositCurrentTotal.toFixed(2)),
+          ...allFixedTypes.map(t => parseFloat((row.depositFixed[t] || 0).toFixed(2))),
+          parseFloat(row.depositFixedTotal.toFixed(2)),
+          parseFloat(row.depositBalanceTotal.toFixed(2)),
+          parseFloat(row.depositCurrentInterest.toFixed(2)),
+          parseFloat(row.depositFixedInterest.toFixed(2)),
+          parseFloat(row.depositInterest.toFixed(2)),
+          parseFloat(row.depositTotal.toFixed(2))
+        ]
+        return data
+      })
+
+      // 构建合计行
+      const summaryRow: (string | number)[] = ["合计", "", ""]
+      const numericHeaders = headers.slice(3)
+      numericHeaders.forEach((_, colIndex) => {
+        const dataIndex = colIndex + 3
+        const sum = records.reduce((acc, row: any) => {
+          let value = 0
+          if (headers[dataIndex].includes("内部贷款-余额")) value = row.loanBalance
+          else if (headers[dataIndex].includes("内部贷款-利息")) value = row.loanInterest
+          else if (headers[dataIndex] === "内部贷款-合计") value = row.loanTotal
+          else if (headers[dataIndex].includes("活期-期初额")) value = row.initCurrentBalance
+          else if (headers[dataIndex].includes("活期-到款")) value = row.depositIncoming
+          else if (headers[dataIndex].includes("活期-上划")) value = row.depositTransferUp
+          else if (headers[dataIndex].includes("活期-定期转入")) value = row.depositFromFixed
+          else if (headers[dataIndex].includes("活期-下拨")) value = row.depositTransferDown
+          else if (headers[dataIndex].includes("活期-转入定期")) value = row.depositToFixed
+          else if (headers[dataIndex] === "活期-小计") value = row.depositCurrentTotal
+          else if (headers[dataIndex].includes("定期-")) {
+            const type = headers[dataIndex].replace("定期-", "")
+            const originalType = allFixedTypes.find(t => (depositPeriodMap[t] || t) === type)
+            value = originalType ? (row.depositFixed[originalType] || 0) : 0
+          }
+          else if (headers[dataIndex] === "定期-小计") value = row.depositFixedTotal
+          else if (headers[dataIndex] === "内部存款余额小计") value = row.depositBalanceTotal
+          else if (headers[dataIndex].includes("活期利息")) value = row.depositCurrentInterest
+          else if (headers[dataIndex].includes("定期利息")) value = row.depositFixedInterest
+          else if (headers[dataIndex] === "利息-小计") value = row.depositInterest
+          else if (headers[dataIndex] === "内部存款合计") value = row.depositTotal
+          return acc + value
+        }, 0)
+        summaryRow.push(parseFloat(sum.toFixed(2)))
+      })
+
+      const wsData = [headers, ...dataRows, [], summaryRow]
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+      // 设置列宽
+      headers.forEach((_, index) => {
+        ws[`!cols`] = ws[`!cols`] || []
+        ws[`!cols`][index] = { wpx: 150 }
+      })
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "存贷款汇总")
+
+      const fileName = `存贷款汇总_${formatDateTime(new Date(), "YYYYMMDDHHmmss")}.xlsx`
+      XLSX.writeFile(wb, fileName)
+      ElMessage.success(`导出成功，共 ${records.length} 条记录`)
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "导出失败")
+  } finally {
+    loadingInstance.close()
+  }
+}
+
 // 初始化
 onMounted(() => {
   fetchData()
@@ -313,6 +454,10 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
+          <el-button type="primary" @click="handleExport">
+            <SvgIcon name="save" style="margin-right: 5px;" />
+            报表导出
+          </el-button>
         </el-form-item>
       </el-form>
 

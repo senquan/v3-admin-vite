@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { formattedMoney } from "@@/utils"
+import { formatDateTime } from "@@/utils/datetime"
 import { useRouter } from "vue-router"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getAdvanceExpenses, getProfitPayments } from "../finance/apis"
 import { getClearingSummary, snapshotClearingSummary, updateClearingSummary } from "./apis"
+import * as XLSX from "xlsx"
 
 const router = useRouter()
 const systemParamsStore = useSystemParamsStore()
@@ -208,6 +210,93 @@ async function handleSave() {
   }
 }
 
+async function handleExport() {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: "正在导出报表，请稍候...",
+    background: "rgba(0, 0, 0, 0.7)"
+  })
+
+  try {
+    const amountFields = ["internalDepositBalance", "incomeTaxSettlement", "dueBillAdvance", "expenseAdvance", "salaryAdvance", "dueProfit1", "dueProfit2", "profitPaid"]
+    const params: any = {
+      page: 1,
+      size: 10000
+    }
+    if (searchForm.keyword) params.keyword = searchForm.keyword
+
+    const response = await getClearingSummary(params)
+    if (response.code === 0) {
+      const records = response.data.records.map((item: any) => {
+        const row: any = {}
+        amountFields.forEach((field: string) => {
+          row[field] = Number(item[field])
+        })
+        row.billAmount = Number(item.billAmount || 0)
+        row.other = Number(item.other || 0)
+        row.remainingProfit = (row.dueProfit1 + row.dueProfit2) - row.profitPaid
+        row.remainingSettlementAmount = row.internalDepositBalance - (row.incomeTaxSettlement + row.dueBillAdvance + row.expenseAdvance + row.salaryAdvance + row.remainingProfit)
+        row.contactBalance = row.remainingSettlementAmount - row.billAmount - row.other
+        row.companyName = item.company?.companyName || ""
+        row.companyCode = item.company?.companyCode || ""
+        return row
+      })
+
+      const headers = [
+        "序号", "单位名称", "单位编号",
+        "内部存款余额", "所得税清算", "代垫到期票据款", "代垫费用", "代垫职工薪酬",
+        "第一次应缴", "第二次应缴", "已缴", "剩余应缴利润",
+        "剩余代清算金额", "代开票据金额", "其他", "往来余额"
+      ]
+
+      const dataRows = records.map((row: any, index: number) => [
+        index + 1,
+        row.companyName,
+        row.companyCode,
+        parseFloat(row.internalDepositBalance.toFixed(2)),
+        parseFloat(row.incomeTaxSettlement.toFixed(2)),
+        parseFloat(row.dueBillAdvance.toFixed(2)),
+        parseFloat(row.expenseAdvance.toFixed(2)),
+        parseFloat(row.salaryAdvance.toFixed(2)),
+        parseFloat(row.dueProfit1.toFixed(2)),
+        parseFloat(row.dueProfit2.toFixed(2)),
+        parseFloat(row.profitPaid.toFixed(2)),
+        parseFloat(row.remainingProfit.toFixed(2)),
+        parseFloat(row.remainingSettlementAmount.toFixed(2)),
+        parseFloat(row.billAmount.toFixed(2)),
+        parseFloat(row.other.toFixed(2)),
+        parseFloat(row.contactBalance.toFixed(2))
+      ])
+
+      const summaryRow: (string | number)[] = ["合计", "", ""]
+      const fieldKeys = ["internalDepositBalance", "incomeTaxSettlement", "dueBillAdvance", "expenseAdvance", "salaryAdvance", "dueProfit1", "dueProfit2", "profitPaid", "remainingProfit", "remainingSettlementAmount", "billAmount", "other", "contactBalance"]
+      fieldKeys.forEach((key: string) => {
+        const sum = records.reduce((acc, row: any) => acc + (row[key] || 0), 0)
+        summaryRow.push(parseFloat(sum.toFixed(2)))
+      })
+
+      const wsData = [headers, ...dataRows, [], summaryRow]
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+      headers.forEach((_, index) => {
+        ws[`!cols`] = ws[`!cols`] || []
+        ws[`!cols`][index] = { wpx: 150 }
+      })
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "内部往来清算台账")
+
+      const fileName = `内部往来清算台账_${formatDateTime(new Date(), "YYYYMMDDHHmmss")}.xlsx`
+      XLSX.writeFile(wb, fileName)
+      ElMessage.success(`导出成功，共 ${records.length} 条记录`)
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || "导出失败")
+  } finally {
+    loadingInstance.close()
+  }
+}
+
 function handleDrill(row: any, type: number) {
   currentDrillType.value = type
   currentCompanyId.value = row.companyId
@@ -347,9 +436,13 @@ onMounted(() => {
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetSearch">重置</el-button>
-          <el-button type="primary" @click="handleSave">
+          <!-- <el-button type="primary" @click="handleSave">
             <SvgIcon name="save" style="margin-right: 5px;" />
             保存快照
+          </el-button> -->
+          <el-button type="primary" @click="handleExport">
+            <SvgIcon name="save" style="margin-right: 5px;" />
+            报表导出
           </el-button>
         </el-form-item>
       </el-form>
