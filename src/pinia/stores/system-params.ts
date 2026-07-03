@@ -1,4 +1,4 @@
-import type { SettingsListData } from "@/pages/system/apis/type"
+﻿import type { SettingsListData } from "@/pages/system/apis/type"
 import { defineStore } from "pinia"
 import { getDictList, fetchList as fetchParamList } from "@/pages/system/apis"
 import { pinia } from "@/pinia"
@@ -105,17 +105,12 @@ export const useSystemParamsStore = defineStore("systemParams", () => {
 
   // 获取字典列表
   const getArrayDict = (group: number): any[] => {
-    if (dicts.value[0].some((item: any) => item.value === String(group))) {
-      const idx = dicts.value[0].find((item: any) => item.value === String(group))?.value as number
-      return dicts.value[idx] || []
-    }
-    return []
+    return dicts.value[group] || [];
   }
 
   // 刷新所有数据
   const refreshParams = async () => {
     if (loading.value) return
-
     try {
       error.value = null
       loading.value = true
