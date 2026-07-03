@@ -95,6 +95,7 @@ const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
   // 增加防抖/去重判断，防止 handleFileSuccess 被重复触发执行业务逻辑
   if (response.code !== 0 || lastProcessedBatchNo.value === batchNo.value) {
     if (response.code !== 0) ElMessage.error(response.message || "文件上传失败")
+    importing.value = false
     return
   }
 
@@ -120,6 +121,12 @@ const handleFileSuccess: UploadProps["onSuccess"] = async (response) => {
     fileList.value = []
     importing.value = false
   }
+}
+
+const handleFileError: UploadProps["onError"] = () => {
+  ElMessage.error("文件上传失败")
+  fileList.value = []
+  importing.value = false
 }
 
 function convertExcelDate(excelDate: number) {
@@ -328,6 +335,7 @@ defineExpose({
           :before-upload="beforeUpload"
           :on-change="handleFileChange"
           :on-success="handleFileSuccess"
+          :on-error="handleFileError"
           :file-list="fileList"
           :http-request="customUploadRequest"
           accept=".xlsx,.xls"
