@@ -501,7 +501,7 @@ onMounted(() => {
         <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="depositType" label="存款类型" width="100" align="center">
           <template #default="{ row }">
-            {{ depositPeriodMap[row.depositPeriod] || '-' }}
+            {{ depositTypeMap[row.depositType] || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="startDate" label="起息日期" width="100" align="center">
@@ -510,7 +510,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right" sortable="custom">
+        <el-table-column prop="amount" label="金额(元)" width="130" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
