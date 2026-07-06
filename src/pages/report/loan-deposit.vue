@@ -40,6 +40,10 @@ const depositTypeMap = systemParamsStore.getArrayDict(1).reduce((acc, cur) => {
   acc[cur.value] = cur.name
   return acc
 }, {} as Record<string, number>)
+const receiveBankMap = systemParamsStore.getArrayDict(4).reduce((acc, cur) => {
+  acc[cur.value] = cur.name
+  return acc
+}, {} as Record<string, number>)
 
 const searchForm = reactive({
   keyword: ""
@@ -660,7 +664,11 @@ onMounted(() => {
             {{ formatAmount(row.accountAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center" />
+        <el-table-column prop="receiveBank" label="到款银行" width="120" align="center">
+          <template #default="{ row }">
+            {{ receiveBankMap[row.receiveBank] || row.receiveBank }}
+          </template>
+        </el-table-column>
         <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
         <el-table-column prop="dueDate" label="到期日" width="120" align="center" />
         <el-table-column prop="receiptDate" label="托收日期" width="120" align="center">
