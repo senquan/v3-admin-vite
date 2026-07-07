@@ -460,6 +460,7 @@ onMounted(() => {
         :data="tableData"
         border
         stripe
+        show-overflow-tooltip
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
@@ -470,7 +471,7 @@ onMounted(() => {
         <el-table-column prop="seq" label="序号" width="60" align="center" />
         <el-table-column prop="advanceCode" label="垫资编号" width="140" align="center" />
         <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
-        <el-table-column prop="expenseType" label="类型" width="180" show-overflow-tooltip>
+        <el-table-column prop="expenseType" label="类型" width="180">
           <template #default="{ row }">
             {{ expenseTypeMap.find(item => item.value === String(row.expenseType))?.name || '-' }}
           </template>
@@ -489,7 +490,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="导入批次" width="130" show-overflow-tooltip>
+        <el-table-column prop="batchNo" label="导入批次" width="130">
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>

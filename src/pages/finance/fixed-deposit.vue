@@ -258,13 +258,12 @@ function handleBatchDelete() {
     return
   }
 
-  const fileredSelection = multipleSelection.value.filter(item => item.status === 1)
-  if (fileredSelection.length === 0) {
-    ElMessage.warning("可删除的项目不存在")
+  if (multipleSelection.value.some(item => item.status === 2)) {
+    ElMessage.warning("所选项目存在 [已生效] 状态记录，不能删除")
     return
   }
   return ElMessageBox.confirm(
-    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    `确定要删除已选中的 ${multipleSelection.value.length} 个项目名吗？`,
     "提示",
     {
       confirmButtonText: "确定",
@@ -273,7 +272,7 @@ function handleBatchDelete() {
     }
   ).then(() => {
     return deleteFixedDepositBatch({
-      ids: fileredSelection.map(item => Number(item.id))
+      ids: multipleSelection.value.map(item => Number(item.id))
     }).then((response) => {
       if (response.code === 0) {
         ElMessage.success("删除成功")
@@ -490,6 +489,7 @@ onMounted(() => {
         :data="tableData"
         border
         stripe
+        show-overflow-tooltip
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
@@ -498,7 +498,14 @@ onMounted(() => {
       >
         <el-table-column width="50" type="selection" align="center" />
         <el-table-column prop="seq" label="序号" width="80" align="center" />
-        <el-table-column prop="depositCode" label="存款编号" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="depositCode" label="存款编号" width="120" align="center" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="depositType" label="存款类型" width="100" align="center">
           <template #default="{ row }">
             {{ depositTypeMap[row.depositType] || '-' }}
@@ -525,7 +532,7 @@ onMounted(() => {
             {{ formatDate(row.endDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" min-width="150" />
         <el-table-column prop="earlyRelease" label="提前释放" width="100" align="center">
           <template #default="{ row }">
             {{ row.earlyRelease === 1 ? '是' : '否' }}
@@ -543,20 +550,13 @@ onMounted(() => {
             {{ formattedMoney(row.remainingAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status) as any">
-              {{ getStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="creator.name" label="创建人" width="100" align="center" />
         <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="导入批次" width="130" show-overflow-tooltip>
+        <el-table-column prop="batchNo" label="导入批次" width="130">
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>

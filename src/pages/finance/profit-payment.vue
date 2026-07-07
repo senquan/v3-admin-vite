@@ -470,6 +470,7 @@ onMounted(() => {
         :data="tableData"
         border
         stripe
+        show-overflow-tooltip
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
@@ -502,7 +503,7 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="批次号" width="150" show-overflow-tooltip>
+        <el-table-column prop="batchNo" label="批次号" width="150">
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>
@@ -512,7 +513,7 @@ onMounted(() => {
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="checkPermission(['PROFIT_ADD']) ? 310 : 120" fixed="right" align="center">
+        <el-table-column label="操作" :width="checkPermission(['PROFIT_ADD']) ? 310 : 230" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" @click="handleDetail(row)">
               详情

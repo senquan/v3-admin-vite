@@ -280,13 +280,12 @@ function handleBatchDelete() {
     return
   }
 
-  const fileredSelection = multipleSelection.value.filter(item => item.status === 1)
-  if (fileredSelection.length === 0) {
-    ElMessage.warning("可删除的项目不存在")
+  if (multipleSelection.value.some(item => item.status === 2)) {
+    ElMessage.warning("所选项目存在 [已生效] 状态记录，不能删除")
     return
   }
   return ElMessageBox.confirm(
-    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    `确定要删除已选中的 ${multipleSelection.value.length} 个项目名吗？`,
     "提示",
     {
       confirmButtonText: "确定",
@@ -295,7 +294,7 @@ function handleBatchDelete() {
     }
   ).then(() => {
     return deleteReceiveBatch({
-      ids: fileredSelection.map(item => Number(item.id))
+      ids: multipleSelection.value.map(item => Number(item.id))
     }).then((response) => {
       if (response.code === 0) {
         ElMessage.success("删除成功")
@@ -504,6 +503,7 @@ onMounted(() => {
         :data="tableData"
         border
         stripe
+        show-overflow-tooltip
         v-loading="loading"
         :sort-config="{ remote: true }"
         @sort-change="handleSortChange"
@@ -523,15 +523,22 @@ onMounted(() => {
             {{ row.receiveType === 1 ? "银行到款" : "票据到款" }}
           </template>
         </el-table-column>
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status) as any">
+              {{ getStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="receiveDate" label="到款日期" width="110" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDate(row.receiveDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="sapCode" label="SAP代码" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="company.companyName" label="单位名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="customerName" label="客户名称" width="220" show-overflow-tooltip />
-        <el-table-column prop="projectName" label="项目名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="sapCode" label="SAP代码" width="120" align="center" />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="150" />
+        <el-table-column prop="customerName" label="客户名称" width="220" />
+        <el-table-column prop="projectName" label="项目名称" min-width="150" />
         <el-table-column prop="accountAmount" label="到款金额(元)" width="150" align="right" sortable="custom">
           <template #default="{ row }">
             {{ formatAmount(row.accountAmount) }}
@@ -547,7 +554,7 @@ onMounted(() => {
             {{ billTypeMap[row.billType] || "-" }}
           </template>
         </el-table-column>
-        <el-table-column prop="billNo" label="票据号码" width="120" show-overflow-tooltip />
+        <el-table-column prop="billNo" label="票据号码" width="120" />
         <el-table-column prop="dueDate" label="到期日" width="120" align="center" sortable="custom" />
         <el-table-column prop="collectionDate" label="托收日期" width="120" align="center" sortable="custom">
           <template #default="{ row }">
@@ -569,20 +576,13 @@ onMounted(() => {
         <el-table-column prop="discountAmount" label="贴现到款金额" width="120" align="center" sortable="custom" />
         <el-table-column prop="discountFee" label="贴现手续费" width="120" align="center" sortable="custom" />
         <el-table-column prop="company.accountName" label="账套" width="110" align="center" />
-        <el-table-column prop="status" label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status) as any">
-              {{ getStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="creator.name" label="创建人" width="120" align="center" />
         <el-table-column prop="createdAt" label="创建时间" width="160" align="center" sortable="custom">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="batchNo" label="批次号" width="130" show-overflow-tooltip>
+        <el-table-column prop="batchNo" label="批次号" width="130">
           <template #default="{ row }">
             <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
           </template>

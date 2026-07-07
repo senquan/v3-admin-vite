@@ -211,13 +211,12 @@ function handleBatchDelete() {
     return
   }
 
-  const fileredSelection = multipleSelection.value.filter(item => item.transferStatus === 1)
-  if (fileredSelection.length === 0) {
-    ElMessage.warning("可删除的项目不存在")
+  if (multipleSelection.value.some(item => item.transferStatus === 2)) {
+    ElMessage.warning("所选项目存在 [已生效] 状态记录，不能删除")
     return
   }
   return ElMessageBox.confirm(
-    `确定要删除已选中的 ${fileredSelection.length} 个项目名吗？`,
+    `确定要删除已选中的 ${multipleSelection.value.length} 个项目名吗？`,
     "提示",
     {
       confirmButtonText: "确定",
@@ -226,7 +225,7 @@ function handleBatchDelete() {
     }
   ).then(() => {
     return deleteTransferBatch({
-      ids: fileredSelection.map(item => Number(item.id))
+      ids: multipleSelection.value.map((item: any) => Number(item.id))
     }).then((response) => {
       if (response.code === 0) {
         ElMessage.success("删除成功")
@@ -447,6 +446,7 @@ onMounted(() => {
             :data="upTableData"
             border
             stripe
+            show-overflow-tooltip
             :summary-method="getSummaries"
             show-summary
             v-loading="loading"
@@ -457,7 +457,7 @@ onMounted(() => {
           >
             <el-table-column width="50" type="selection" align="center" />
             <el-table-column prop="seq" label="序号" width="60" align="center" />
-            <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
+            <el-table-column prop="transferCode" label="转账编号" width="120" />
             <el-table-column prop="transferDate" label="转账日期" width="120" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.transferDate) }}
@@ -483,7 +483,7 @@ onMounted(() => {
                 {{ formatDateTime(row.createdAt) }}
               </template>
             </el-table-column>
-            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip>
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center">
               <template #default="{ row }">
                 <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
               </template>
@@ -565,6 +565,7 @@ onMounted(() => {
             :data="downTableData"
             border
             stripe
+            show-overflow-tooltip
             :summary-method="getSummaries"
             show-summary
             v-loading="loading"
@@ -575,7 +576,7 @@ onMounted(() => {
           >
             <el-table-column width="50" type="selection" align="center" />
             <el-table-column prop="seq" label="序号" width="60" align="center" />
-            <el-table-column prop="transferCode" label="转账编号" width="120" show-overflow-tooltip />
+            <el-table-column prop="transferCode" label="转账编号" width="120" />
             <el-table-column prop="transferDate" label="转账日期" width="120" align="center" sortable="custom">
               <template #default="{ row }">
                 {{ formatDate(row.transferDate) }}
@@ -611,7 +612,7 @@ onMounted(() => {
                 {{ formatDate(row.createdAt) }}
               </template>
             </el-table-column>
-            <el-table-column prop="batchNo" label="导入批次" width="130" align="center" show-overflow-tooltip>
+            <el-table-column prop="batchNo" label="导入批次" width="130" align="center">
               <template #default="{ row }">
                 <span class="clickable" @click="handleBatchDetail(row.batchNo)">{{ row.batchNo }}</span>
               </template>
