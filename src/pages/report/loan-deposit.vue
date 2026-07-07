@@ -743,7 +743,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
-        <el-table-column prop="amount" label="金额(元)" width="120" align="right">
+        <el-table-column prop="amount" label="金额(元)" width="130" align="right">
           <template #default="{ row }">
             {{ formattedMoney(row.amount) }}
           </template>
