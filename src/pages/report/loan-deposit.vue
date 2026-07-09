@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { calculateSum, formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
+import * as XLSX from "xlsx"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getFixedDeposits, getFundTransfers, getPaymentClearings } from "../finance/apis"
 import { getDepositLoanSummary, getInterestDetail } from "./apis"
-import * as XLSX from "xlsx"
 
 const router = useRouter()
 
@@ -259,6 +259,8 @@ async function loadDrillData(type: number, fixedType?: string) {
       response = await getFixedDeposits(params)
     } else if (type === 5) {
       params.type = 2
+      params.status = 2
+      params.isLoan = 0
       response = await getFundTransfers(params)
     } else if (type === 6) {
       params.type = 2
@@ -348,13 +350,25 @@ async function handleExport() {
 
       // 构建列头
       const headers = [
-        "序号", "单位名称", "单位编号",
-        "内部贷款-余额", "内部贷款-利息", "内部贷款-合计",
-        "活期-期初额", "活期-到款", "活期-上划", "活期-定期转入", "活期-下拨", "活期-转入定期", "活期-小计",
+        "序号",
+        "单位名称",
+        "单位编号",
+        "内部贷款-余额",
+        "内部贷款-利息",
+        "内部贷款-合计",
+        "活期-期初额",
+        "活期-到款",
+        "活期-上划",
+        "活期-定期转入",
+        "活期-下拨",
+        "活期-转入定期",
+        "活期-小计",
         ...allFixedTypes.map(t => `定期-${depositPeriodMap[t] || t}`),
         "定期-小计",
         "内部存款余额小计",
-        "利息-活期利息", "利息-定期利息", "利息-小计",
+        "利息-活期利息",
+        "利息-定期利息",
+        "利息-小计",
         "内部存款合计"
       ]
 
@@ -364,23 +378,23 @@ async function handleExport() {
           index + 1,
           row.companyName,
           row.companyCode,
-          parseFloat(row.loanBalance.toFixed(2)),
-          parseFloat(row.loanInterest.toFixed(2)),
-          parseFloat(row.loanTotal.toFixed(2)),
-          parseFloat(row.initCurrentBalance.toFixed(2)),
-          parseFloat(row.depositIncoming.toFixed(2)),
-          parseFloat(row.depositTransferUp.toFixed(2)),
-          parseFloat(row.depositFromFixed.toFixed(2)),
-          parseFloat(row.depositTransferDown.toFixed(2)),
-          parseFloat(row.depositToFixed.toFixed(2)),
-          parseFloat(row.depositCurrentTotal.toFixed(2)),
-          ...allFixedTypes.map(t => parseFloat((row.depositFixed[t] || 0).toFixed(2))),
-          parseFloat(row.depositFixedTotal.toFixed(2)),
-          parseFloat(row.depositBalanceTotal.toFixed(2)),
-          parseFloat(row.depositCurrentInterest.toFixed(2)),
-          parseFloat(row.depositFixedInterest.toFixed(2)),
-          parseFloat(row.depositInterest.toFixed(2)),
-          parseFloat(row.depositTotal.toFixed(2))
+          Number.parseFloat(row.loanBalance.toFixed(2)),
+          Number.parseFloat(row.loanInterest.toFixed(2)),
+          Number.parseFloat(row.loanTotal.toFixed(2)),
+          Number.parseFloat(row.initCurrentBalance.toFixed(2)),
+          Number.parseFloat(row.depositIncoming.toFixed(2)),
+          Number.parseFloat(row.depositTransferUp.toFixed(2)),
+          Number.parseFloat(row.depositFromFixed.toFixed(2)),
+          Number.parseFloat(row.depositTransferDown.toFixed(2)),
+          Number.parseFloat(row.depositToFixed.toFixed(2)),
+          Number.parseFloat(row.depositCurrentTotal.toFixed(2)),
+          ...allFixedTypes.map(t => Number.parseFloat((row.depositFixed[t] || 0).toFixed(2))),
+          Number.parseFloat(row.depositFixedTotal.toFixed(2)),
+          Number.parseFloat(row.depositBalanceTotal.toFixed(2)),
+          Number.parseFloat(row.depositCurrentInterest.toFixed(2)),
+          Number.parseFloat(row.depositFixedInterest.toFixed(2)),
+          Number.parseFloat(row.depositInterest.toFixed(2)),
+          Number.parseFloat(row.depositTotal.toFixed(2))
         ]
         return data
       })
@@ -392,30 +406,46 @@ async function handleExport() {
         const dataIndex = colIndex + 3
         const sum = records.reduce((acc, row: any) => {
           let value = 0
-          if (headers[dataIndex].includes("内部贷款-余额")) value = row.loanBalance
-          else if (headers[dataIndex].includes("内部贷款-利息")) value = row.loanInterest
-          else if (headers[dataIndex] === "内部贷款-合计") value = row.loanTotal
-          else if (headers[dataIndex].includes("活期-期初额")) value = row.initCurrentBalance
-          else if (headers[dataIndex].includes("活期-到款")) value = row.depositIncoming
-          else if (headers[dataIndex].includes("活期-上划")) value = row.depositTransferUp
-          else if (headers[dataIndex].includes("活期-定期转入")) value = row.depositFromFixed
-          else if (headers[dataIndex].includes("活期-下拨")) value = row.depositTransferDown
-          else if (headers[dataIndex].includes("活期-转入定期")) value = row.depositToFixed
-          else if (headers[dataIndex] === "活期-小计") value = row.depositCurrentTotal
-          else if (headers[dataIndex].includes("定期-")) {
+          if (headers[dataIndex].includes("内部贷款-余额")) {
+            value = row.loanBalance
+          } else if (headers[dataIndex].includes("内部贷款-利息")) {
+            value = row.loanInterest
+          } else if (headers[dataIndex] === "内部贷款-合计") {
+            value = row.loanTotal
+          } else if (headers[dataIndex].includes("活期-期初额")) {
+            value = row.initCurrentBalance
+          } else if (headers[dataIndex].includes("活期-到款")) {
+            value = row.depositIncoming
+          } else if (headers[dataIndex].includes("活期-上划")) {
+            value = row.depositTransferUp
+          } else if (headers[dataIndex].includes("活期-定期转入")) {
+            value = row.depositFromFixed
+          } else if (headers[dataIndex].includes("活期-下拨")) {
+            value = row.depositTransferDown
+          } else if (headers[dataIndex].includes("活期-转入定期")) {
+            value = row.depositToFixed
+          } else if (headers[dataIndex] === "活期-小计") {
+            value = row.depositCurrentTotal
+          } else if (headers[dataIndex].includes("定期-")) {
             const type = headers[dataIndex].replace("定期-", "")
             const originalType = allFixedTypes.find(t => (depositPeriodMap[t] || t) === type)
             value = originalType ? (row.depositFixed[originalType] || 0) : 0
+          } else if (headers[dataIndex] === "定期-小计") {
+            value = row.depositFixedTotal
+          } else if (headers[dataIndex] === "内部存款余额小计") {
+            value = row.depositBalanceTotal
+          } else if (headers[dataIndex].includes("活期利息")) {
+            value = row.depositCurrentInterest
+          } else if (headers[dataIndex].includes("定期利息")) {
+            value = row.depositFixedInterest
+          } else if (headers[dataIndex] === "利息-小计") {
+            value = row.depositInterest
+          } else if (headers[dataIndex] === "内部存款合计") {
+            value = row.depositTotal
           }
-          else if (headers[dataIndex] === "定期-小计") value = row.depositFixedTotal
-          else if (headers[dataIndex] === "内部存款余额小计") value = row.depositBalanceTotal
-          else if (headers[dataIndex].includes("活期利息")) value = row.depositCurrentInterest
-          else if (headers[dataIndex].includes("定期利息")) value = row.depositFixedInterest
-          else if (headers[dataIndex] === "利息-小计") value = row.depositInterest
-          else if (headers[dataIndex] === "内部存款合计") value = row.depositTotal
           return acc + value
         }, 0)
-        summaryRow.push(parseFloat(sum.toFixed(2)))
+        summaryRow.push(Number.parseFloat(sum.toFixed(2)))
       })
 
       const wsData = [headers, ...dataRows, [], summaryRow]
