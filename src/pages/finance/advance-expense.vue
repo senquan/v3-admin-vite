@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus"
 import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney, range } from "@@/utils"
@@ -581,7 +581,6 @@ onMounted(() => {
               <el-input-number
                 v-model="form.amount"
                 placeholder="请输入垫资金额"
-                :min="0"
                 :step="10000"
                 controls-position="right"
                 :readonly="isAmountDisabled"
@@ -598,6 +597,9 @@ onMounted(() => {
             placeholder="请输入备注信息"
             :rows="3"
           />
+          <p v-if="form.amount && form.amount < 0" style="color: red; margin: 4px 0 0 0; font-size: 12px;">
+            输入金额为负值，请在备注写明原因
+          </p>
         </el-form-item>
 
         <el-table
@@ -631,7 +633,6 @@ onMounted(() => {
               <el-input-number
                 v-model="scope.row.amount"
                 placeholder="请输入金额"
-                :min="0"
                 :step="1"
                 :precision="2"
                 controls-position="right"
