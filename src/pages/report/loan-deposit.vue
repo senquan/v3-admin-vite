@@ -505,8 +505,8 @@ onMounted(() => {
         show-summary
         :summary-method="getSummaries"
       >
-        <el-table-column prop="seq" label="序号" width="80" align="center" />
-        <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
+        <el-table-column prop="seq" label="序号" width="80" align="center" fixed="left" />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="180" fixed="left" />
         <el-table-column prop="internalDepositBalance" label="内部贷款" class-name="header-internal-loan">
           <el-table-column prop="loanBalance" label="余额" width="140" align="right">
             <template #default="{ row }">

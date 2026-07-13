@@ -2,10 +2,10 @@
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useRouter } from "vue-router"
+import * as XLSX from "xlsx"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getAdvanceExpenses, getProfitPayments } from "../finance/apis"
-import { getClearingSummary, snapshotClearingSummary, updateClearingSummary } from "./apis"
-import * as XLSX from "xlsx"
+import { getClearingSummary, updateClearingSummary } from "./apis"
 
 const router = useRouter()
 const systemParamsStore = useSystemParamsStore()
@@ -179,36 +179,36 @@ function handleCurrentChange(val: number) {
   fetchData()
 }
 
-async function handleSave() {
-  try {
-    await ElMessageBox.confirm("确定要保存当前台账的快照吗？", "保存快照", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "info"
-    })
-  } catch (error) {
-    return ElMessage.info(`已取消保存${error}`)
-  }
+// async function handleSave() {
+//   try {
+//     await ElMessageBox.confirm("确定要保存当前台账的快照吗？", "保存快照", {
+//       confirmButtonText: "确定",
+//       cancelButtonText: "取消",
+//       type: "info"
+//     })
+//   } catch (error) {
+//     return ElMessage.info(`已取消保存${error}`)
+//   }
 
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: "正在生成快照，请稍候...",
-    background: "rgba(0, 0, 0, 0.7)"
-  })
+//   const loadingInstance = ElLoading.service({
+//     lock: true,
+//     text: "正在生成快照，请稍候...",
+//     background: "rgba(0, 0, 0, 0.7)"
+//   })
 
-  try {
-    const response = await snapshotClearingSummary({})
-    if (response.code === 0) {
-      ElMessage.success("保存快照成功")
-    } else {
-      ElMessage.error(response.message || "保存快照失败")
-    }
-  } catch (error: any) {
-    ElMessage.error(error.message || "保存快照失败")
-  } finally {
-    loadingInstance.close()
-  }
-}
+//   try {
+//     const response = await snapshotClearingSummary({})
+//     if (response.code === 0) {
+//       ElMessage.success("保存快照成功")
+//     } else {
+//       ElMessage.error(response.message || "保存快照失败")
+//     }
+//   } catch (error: any) {
+//     ElMessage.error(error.message || "保存快照失败")
+//   } finally {
+//     loadingInstance.close()
+//   }
+// }
 
 async function handleExport() {
   const loadingInstance = ElLoading.service({
@@ -243,36 +243,48 @@ async function handleExport() {
       })
 
       const headers = [
-        "序号", "单位名称", "单位编号",
-        "内部存款余额", "所得税清算", "代垫到期票据款", "代垫费用", "代垫职工薪酬",
-        "第一次应缴", "第二次应缴", "已缴", "剩余应缴利润",
-        "剩余代清算金额", "代开票据金额", "其他", "往来余额"
+        "序号",
+        "单位名称",
+        "单位编号",
+        "内部存款余额",
+        "所得税清算",
+        "代垫到期票据款",
+        "代垫费用",
+        "代垫职工薪酬",
+        "第一次应缴",
+        "第二次应缴",
+        "已缴",
+        "剩余应缴利润",
+        "剩余代清算金额",
+        "代开票据金额",
+        "其他",
+        "往来余额"
       ]
 
       const dataRows = records.map((row: any, index: number) => [
         index + 1,
         row.companyName,
         row.companyCode,
-        parseFloat(row.internalDepositBalance.toFixed(2)),
-        parseFloat(row.incomeTaxSettlement.toFixed(2)),
-        parseFloat(row.dueBillAdvance.toFixed(2)),
-        parseFloat(row.expenseAdvance.toFixed(2)),
-        parseFloat(row.salaryAdvance.toFixed(2)),
-        parseFloat(row.dueProfit1.toFixed(2)),
-        parseFloat(row.dueProfit2.toFixed(2)),
-        parseFloat(row.profitPaid.toFixed(2)),
-        parseFloat(row.remainingProfit.toFixed(2)),
-        parseFloat(row.remainingSettlementAmount.toFixed(2)),
-        parseFloat(row.billAmount.toFixed(2)),
-        parseFloat(row.other.toFixed(2)),
-        parseFloat(row.contactBalance.toFixed(2))
+        Number.parseFloat(row.internalDepositBalance.toFixed(2)),
+        Number.parseFloat(row.incomeTaxSettlement.toFixed(2)),
+        Number.parseFloat(row.dueBillAdvance.toFixed(2)),
+        Number.parseFloat(row.expenseAdvance.toFixed(2)),
+        Number.parseFloat(row.salaryAdvance.toFixed(2)),
+        Number.parseFloat(row.dueProfit1.toFixed(2)),
+        Number.parseFloat(row.dueProfit2.toFixed(2)),
+        Number.parseFloat(row.profitPaid.toFixed(2)),
+        Number.parseFloat(row.remainingProfit.toFixed(2)),
+        Number.parseFloat(row.remainingSettlementAmount.toFixed(2)),
+        Number.parseFloat(row.billAmount.toFixed(2)),
+        Number.parseFloat(row.other.toFixed(2)),
+        Number.parseFloat(row.contactBalance.toFixed(2))
       ])
 
       const summaryRow: (string | number)[] = ["合计", "", ""]
       const fieldKeys = ["internalDepositBalance", "incomeTaxSettlement", "dueBillAdvance", "expenseAdvance", "salaryAdvance", "dueProfit1", "dueProfit2", "profitPaid", "remainingProfit", "remainingSettlementAmount", "billAmount", "other", "contactBalance"]
       fieldKeys.forEach((key: string) => {
         const sum = records.reduce((acc, row: any) => acc + (row[key] || 0), 0)
-        summaryRow.push(parseFloat(sum.toFixed(2)))
+        summaryRow.push(Number.parseFloat(sum.toFixed(2)))
       })
 
       const wsData = [headers, ...dataRows, [], summaryRow]
@@ -507,10 +519,11 @@ onMounted(() => {
         v-loading="loading"
         header-cell-class-name="header-cell-fix"
         show-summary
+        header-align="center"
         :summary-method="getSummaries"
       >
-        <el-table-column prop="seq" label="序号" width="80" align="center" />
-        <el-table-column prop="company.companyName" label="单位名称" min-width="180" />
+        <el-table-column prop="seq" label="序号" width="80" align="center" fixed="left" />
+        <el-table-column prop="company.companyName" label="单位名称" min-width="180" fixed="left" />
         <el-table-column prop="internalDepositBalance" label="内部存款余额" width="140" align="right">
           <template #default="{ row }">
             <span class="drillable" @click="handleDrill(row, 1)">{{ formattedMoney(row.internalDepositBalance) }}</span>
