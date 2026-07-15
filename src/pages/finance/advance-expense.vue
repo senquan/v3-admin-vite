@@ -282,7 +282,7 @@ async function handleSubmit() {
 
   try {
     await formRef.value.validate()
-    form.expenseDetail = newItemTableData.value.filter((item: any) => Number(item.amount) > 0).map((item: any) => ({
+    form.expenseDetail = newItemTableData.value.map((item: any) => ({
       name: item.name,
       amount: Number(item.amount)
     }))
@@ -381,7 +381,7 @@ function handleAmountChange() {
   newItemTableData.value.forEach((item: any) => {
     total += Number(item.amount)
   })
-  form.amount = total
+  form.amount = Math.round(total * 100) / 100
 }
 
 // 初始化

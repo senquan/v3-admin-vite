@@ -73,10 +73,38 @@ const rules = computed<FormRules>(() => {
       { required: isCreateReceive, message: "请选择单位", trigger: "change" }
     ],
     accountAmount: [
-      { required: true, message: "请输入到款金额", trigger: "blur" }
+      { required: true, message: "请输入到款金额", trigger: "blur" },
+      {
+        validator: (rule: any, value: any, callback: any) => {
+          if (value === null || value === undefined) {
+            callback(new Error("请输入到款金额"))
+          } else if (Number.parseFloat(value) <= 0) {
+            callback(new Error("到款金额必须大于0"))
+          } else {
+            callback()
+          }
+        },
+        trigger: "blur"
+      }
     ],
     billAmount: [
-      { required: editForm.receiveType === 2, message: "请输入票据金额", trigger: "blur" }
+      { required: editForm.receiveType === 2, message: "请输入票据金额", trigger: "blur" },
+      {
+        validator: (rule: any, value: any, callback: any) => {
+          if (editForm.receiveType === 2) {
+            if (value === null || value === undefined) {
+              callback(new Error("请输入票据金额"))
+            } else if (Number.parseFloat(value) <= 0) {
+              callback(new Error("票据金额必须大于0"))
+            } else {
+              callback()
+            }
+          } else {
+            callback()
+          }
+        },
+        trigger: "blur"
+      }
     ],
     dueDate: [
       { required: editForm.receiveType === 2, message: "请选择到期日", trigger: "change" }
@@ -227,8 +255,7 @@ async function handleSubmit() {
   if (!formRef.value) return
 
   try {
-    const valid = await formRef.value.validate()
-    if (!valid) return
+    await formRef.value.validate()
 
     const submitData = { ...editForm }
 
@@ -248,6 +275,9 @@ async function handleSubmit() {
     }
   } catch (error) {
     console.error("提交失败:", error)
+    if ((error as any).message) {
+      ElMessage.error((error as any).message)
+    }
   }
 }
 
