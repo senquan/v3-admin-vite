@@ -40,7 +40,7 @@ const downTableRef = ref<any>(null)
 const multipleSelection = ref<FundTransfer[]>([])
 const downBalance = ref(0)
 const transferExceedsBalance = computed(() => {
-  if (!downBalance.value || !form.transferAmount) return false
+  if (downBalance.value == null || form.transferAmount == null) return false
   return Number(form.transferAmount) > downBalance.value
 })
 

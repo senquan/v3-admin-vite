@@ -5,7 +5,7 @@ import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { useSystemParamsStore } from "@/pinia/stores/system-params"
 import { getCompaniesTree } from "../basic/apis"
-import { createFixedDeposit, deleteFixedDepositBatch, depositConfirm, getFixedDeposits, releaseFixedDeposit } from "./apis"
+import { createFixedDeposit, deleteFixedDepositBatch, depositConfirm, getCompanyBalance, getFixedDeposits, releaseFixedDeposit } from "./apis"
 import ModalForm from "./forms/_batch_detail.vue"
 import DepositImport from "./forms/_deposit-import.vue"
 
@@ -46,6 +46,11 @@ const depositImportRef = ref<any>([])
 const batchFormRef = ref<InstanceType<typeof ModalForm>>()
 const batchFormVisibility = ref(false)
 const isCreate = ref(false)
+const downBalance = ref(0)
+const transferExceedsBalance = computed(() => {
+  if (downBalance.value == null || form.amount == null) return false
+  return Number(form.amount) > downBalance.value
+})
 const companyOptions = ref<CompanyTree[]>([])
 const statusOptions = { 1: "待确认", 2: "已生效", 3: "已删除" }
 
@@ -326,6 +331,12 @@ async function handleSubmit() {
       return
     }
 
+    // 活期转定期：校验转账金额不能超过活期余额
+    if (form.depositType === 2 && transferExceedsBalance.value) {
+      ElMessage.error(`转账金额超出当前活期余额 ${formattedMoney(downBalance.value)} 元`)
+      return
+    }
+
     submitLoading.value = true
     if (isCreate.value) {
       // 新增模式
@@ -391,7 +402,25 @@ function resetForm() {
     releaseAmount: 0
   })
   isCreate.value = false
+  downBalance.value = 0
 }
+
+// 活期转定期时监听单位变化，获取活期余额
+watch(
+  [() => form.companyId, () => form.depositType],
+  async ([companyId, depositType]) => {
+    if (depositType === 2 && companyId) {
+      try {
+        const response = await getCompanyBalance(companyId as number)
+        downBalance.value = response.code === 0 ? (response.data.balance || 0) : 0
+      } catch {
+        downBalance.value = 0
+      }
+    } else {
+      downBalance.value = 0
+    }
+  }
+)
 
 async function handleConfirm() {
   const selected = tableRef.value?.getSelectionRows().filter((row: any) => row.status === 1)
@@ -663,6 +692,12 @@ onMounted(() => {
                 :rows="2"
                 :disabled="!isCreate"
               />
+            </el-form-item>
+
+            <el-form-item v-if="isCreate && form.depositType === 2 && form.companyId" label="活期余额">
+              <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
+                {{ formattedMoney(downBalance) }} 元
+              </el-tag>
             </el-form-item>
           </el-col>
         </el-row>
