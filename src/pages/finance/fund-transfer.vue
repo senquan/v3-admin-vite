@@ -4,7 +4,7 @@ import type { CompanyTree } from "../basic/apis/type"
 import { formattedMoney } from "@@/utils"
 import { formatDateTime } from "@@/utils/datetime"
 import { getCompaniesTree } from "../basic/apis"
-import { createTransfer, deleteTransferBatch, getFundTransfers, transferConfirm } from "./apis"
+import { createTransfer, deleteTransferBatch, getCompanyBalance, getFundTransfers, transferConfirm } from "./apis"
 import ModalForm from "./forms/_batch_detail.vue"
 import TransferImport from "./forms/_transfer-import.vue"
 
@@ -38,6 +38,11 @@ const batchFormVisibility = ref(false)
 const upTableRef = ref<any>(null)
 const downTableRef = ref<any>(null)
 const multipleSelection = ref<FundTransfer[]>([])
+const downBalance = ref(0)
+const transferExceedsBalance = computed(() => {
+  if (!downBalance.value || !form.transferAmount) return false
+  return Number(form.transferAmount) > downBalance.value
+})
 
 const searchForm = reactive({
   keyword: "",
@@ -270,6 +275,13 @@ async function handleSubmit() {
 
   try {
     await formRef.value.validate()
+
+    // 下拨时校验转账金额不能超过活期余额
+    if (activeTab.value === "down" && transferExceedsBalance.value) {
+      ElMessage.error(`转账金额超出当前活期余额 ${formattedMoney(downBalance.value)} 元`)
+      return
+    }
+
     submitLoading.value = true
 
     const submitData = { ...form }
@@ -308,7 +320,25 @@ function resetForm() {
     dueDate: "",
     remark: ""
   })
+  downBalance.value = 0
 }
+
+// 下拨时监听单位变化，获取活期余额
+watch(
+  [() => form.companyId, () => activeTab.value],
+  async ([companyId, tab]) => {
+    if (tab === "down" && companyId) {
+      try {
+        const response = await getCompanyBalance(companyId as number)
+        downBalance.value = response.code === 0 ? (response.data.balance || 0) : 0
+      } catch {
+        downBalance.value = 0
+      }
+    } else {
+      downBalance.value = 0
+    }
+  }
+)
 
 async function handleConfirm() {
   const selected = activeTab.value === "up"
@@ -747,6 +777,12 @@ onMounted(() => {
             placeholder="请输入备注信息"
             :rows="3"
           />
+        </el-form-item>
+
+        <el-form-item v-if="activeTab === 'down' && form.companyId" label="活期余额">
+          <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
+            {{ formattedMoney(downBalance) }} 元
+          </el-tag>
         </el-form-item>
       </el-form>
 

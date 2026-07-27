@@ -175,6 +175,13 @@ export function transferConfirm(data: any) {
   })
 }
 
+export function getCompanyBalance(companyId: number) {
+  return request<Finance.CommonActionResult>({
+    url: `/finance/transfer/balance/${companyId}`,
+    method: "get"
+  })
+}
+
 export function deleteTransferBatch(data: any) {
   return request<Finance.CommonActionResult>({
     url: `/finance/fund-transfers`,
