@@ -730,6 +730,11 @@ onMounted(() => {
                 style="width: 100%"
               />
             </el-form-item>
+            <el-form-item v-if="activeTab === 'down' && form.companyId" label="活期余额">
+              <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
+                {{ formattedMoney(downBalance) }} 元
+              </el-tag>
+            </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="转账日期" prop="transferDate">
@@ -777,12 +782,6 @@ onMounted(() => {
             placeholder="请输入备注信息"
             :rows="3"
           />
-        </el-form-item>
-
-        <el-form-item v-if="activeTab === 'down' && form.companyId" label="活期余额">
-          <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
-            {{ formattedMoney(downBalance) }} 元
-          </el-tag>
         </el-form-item>
       </el-form>
 

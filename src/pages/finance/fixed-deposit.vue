@@ -672,6 +672,11 @@ onMounted(() => {
             <el-form-item label="金额" prop="amount">
               <el-input-number v-model="form.amount" :step="1" :precision="2" :disabled="!isCreate" style="width: 100%" />
             </el-form-item>
+            <el-form-item v-if="isCreate && form.depositType === 2 && form.companyId" label="活期余额">
+              <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
+                {{ formattedMoney(downBalance) }} 元
+              </el-tag>
+            </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="定存期限" prop="depositPeriod">
@@ -692,12 +697,6 @@ onMounted(() => {
                 :rows="2"
                 :disabled="!isCreate"
               />
-            </el-form-item>
-
-            <el-form-item v-if="isCreate && form.depositType === 2 && form.companyId" label="活期余额">
-              <el-tag :type="transferExceedsBalance ? 'danger' : 'info'" size="large">
-                {{ formattedMoney(downBalance) }} 元
-              </el-tag>
             </el-form-item>
           </el-col>
         </el-row>
