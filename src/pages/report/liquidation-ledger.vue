@@ -616,6 +616,7 @@ onMounted(() => {
         v-if="advanceExpenseTypes.includes(currentDrillType)"
         border
         stripe
+        show-overflow-tooltip
         v-loading="drillLoading"
         :data="drillData[currentDrillType as keyof typeof drillData]"
         header-cell-class-name="header-cell-fix"

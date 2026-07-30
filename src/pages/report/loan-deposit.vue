@@ -789,11 +789,23 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="isEarlyRelease" label="提前释放" width="100" align="center" />
+        <el-table-column prop="earlyRelease" label="提前释放" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.earlyRelease ? '是' : '否' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="releaseDate" label="释放日期" width="100" align="center" />
-        <el-table-column prop="daysCount" label="已计息天数" width="100" align="center" />
-        <el-table-column prop="releaseAmount" label="释放金额" width="120" align="center" />
-        <el-table-column prop="remainingAmount" label="剩余金额" width="120" align="center" />
+        <el-table-column prop="interestDays" label="已计息天数" width="100" align="center" />
+        <el-table-column prop="releaseAmount" label="释放金额" width="130" align="center">
+          <template #default="{ row }">
+            {{ formattedMoney(row.releaseAmount) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="remainingAmount" label="剩余金额" width="130" align="center">
+          <template #default="{ row }">
+            {{ formattedMoney(row.remainingAmount) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status) as any">
