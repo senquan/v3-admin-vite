@@ -237,6 +237,7 @@ async function processFile() {
 
             if (item.expenseType === "代垫费用") {
               const detailTotal = Math.round(calculateSum(details) * 100) / 100
+              total = Math.round(total * 100) / 100
               if (total !== detailTotal) {
                 console.log("cc", total, details, detailTotal)
                 errorMessages.value.push(`工作表 ${sheetName} 第 ${i + 1} 行合计与明细不一致。`)

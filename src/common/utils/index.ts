@@ -27,7 +27,7 @@ export function calculateSum(data: Record<string, number>[]): number {
   for (const obj of data) {
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        total += obj[key]
+        total += Number(obj[key]) || 0
       }
     }
   }

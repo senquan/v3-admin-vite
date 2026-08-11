@@ -908,7 +908,8 @@ onMounted(() => {
             {{ formatDate(row.interestDate) }}
           </template>
         </el-table-column>
-        <el-table-column prop="currentBalance" label="每日活期存款余额" min-width="150" align="right">
+        <el-table-column prop="remark" label="备注" min-width="180" align="left" />
+        <el-table-column prop="currentBalance" label="计息金额" width="180" align="right">
           <template #default="{ row }">
             {{ formattedMoney(row.currentBalance) }}
           </template>
